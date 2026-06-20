@@ -7,23 +7,63 @@ If you want to change the LLM and Embedding model:
 
 you can do it by changing all 'llm' and 'embedding_model' variables present in multiple classes below.
 
-Each llm definition has unique temperature value relevant to the specific class. 
+Each llm definition has unique temperature value relevant to the specific class.
+
+Model Registry:
+    Per-agent model routing via environment variables:
+    - DECISION_MODEL: Agent routing decisions (default: model_name)
+    - CONVERSATION_MODEL: General Q&A (default: model_name)
+    - RAG_MODEL: RAG retrieval+answering (default: model_name)
+    - WEB_SEARCH_MODEL: Web search processing (default: model_name)
+    - VISION_MODEL: Medical image analysis (default: model_name)
+    - SUMMARIZER_MODEL: Document summarization (default: model_name)
+    All fall back to model_name if not set.
 """
 
 import os
+import logging
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
 
-def _make_llm(temperature: float) -> ChatOpenAI:
-    """Create a ChatOpenAI instance using OpenAI-compatible API."""
+# ─── Model Registry (env-overridable per-agent routing) ──────────────────────
+_DEFAULT_MODEL = os.getenv("model_name", "gpt-4o-mini")
+_DEFAULT_API_KEY = os.getenv("openai_api_key") or os.getenv("OPENAI_API_KEY")
+_DEFAULT_API_BASE = os.getenv("OPENAI_BASE_URL") or os.getenv("openai_base_url")
+
+# Per-role model overrides (env vars); falls back to defaults above
+_MODEL_ROLES = {
+    "decision":     os.getenv("DECISION_MODEL",     _DEFAULT_MODEL),
+    "conversation": os.getenv("CONVERSATION_MODEL", _DEFAULT_MODEL),
+    "rag":          os.getenv("RAG_MODEL",           _DEFAULT_MODEL),
+    "web_search":   os.getenv("WEB_SEARCH_MODEL",   _DEFAULT_MODEL),
+    "vision":       os.getenv("VISION_MODEL",        _DEFAULT_MODEL),
+    "summarizer":   os.getenv("SUMMARIZER_MODEL",    _DEFAULT_MODEL),
+}
+
+
+def _make_llm(temperature: float, role: str = "conversation") -> ChatOpenAI:
+    """Create a ChatOpenAI instance with role-based model routing.
+
+    Args:
+        temperature: Sampling temperature.
+        role: Model role key (decision/conversation/rag/web_search/vision/summarizer).
+              Uses model_name env var as default; override per-role via DECISION_MODEL etc.
+    """
+    model = _MODEL_ROLES.get(role, _DEFAULT_MODEL)
+    if role != "conversation" and model != _DEFAULT_MODEL:
+        logger.info(f"[ModelRegistry] role={role}, model={model}")
     return ChatOpenAI(
-        model=os.getenv("model_name", "gpt-4o-mini"),
-        openai_api_key=os.getenv("openai_api_key") or os.getenv("OPENAI_API_KEY"),
-        openai_api_base=os.getenv("OPENAI_BASE_URL") or os.getenv("openai_base_url"),
+        model=model,
+        openai_api_key=_DEFAULT_API_KEY,
+        openai_api_base=_DEFAULT_API_BASE,
         temperature=temperature,
+        max_retries=3,
+        request_timeout=60,
     )
 
 def _make_embedding() -> OpenAIEmbeddings:
@@ -36,15 +76,15 @@ def _make_embedding() -> OpenAIEmbeddings:
 
 class AgentDecisoinConfig:
     def __init__(self):
-        self.llm = _make_llm(0.1)
+        self.llm = _make_llm(0.1, role="decision")
 
 class ConversationConfig:
     def __init__(self):
-        self.llm = _make_llm(0.7)
+        self.llm = _make_llm(0.7, role="conversation")
 
 class WebSearchConfig:
     def __init__(self):
-        self.llm = _make_llm(0.3)
+        self.llm = _make_llm(0.3, role="web_search")
         self.context_limit = 20     # include last 20 messsages (10 Q&A pairs) in history
 
 class RAGConfig:
@@ -62,10 +102,10 @@ class RAGConfig:
         self.chunk_size = 512  # Modify based on documents and performance
         self.chunk_overlap = 50  # Modify based on documents and performance
         self.embedding_model = _make_embedding()
-        self.llm = _make_llm(0.3)
-        self.summarizer_model = _make_llm(0.5)
-        self.chunker_model = _make_llm(0.0)
-        self.response_generator_model = _make_llm(0.3)
+        self.llm = _make_llm(0.3, role="rag")
+        self.summarizer_model = _make_llm(0.5, role="summarizer")
+        self.chunker_model = _make_llm(0.0, role="rag")
+        self.response_generator_model = _make_llm(0.3, role="rag")
         self.top_k = 5
         self.vector_search_type = 'similarity'  # or 'mmr'
 
@@ -89,7 +129,7 @@ class MedicalCVConfig:
         self.chest_xray_model_path = "./agents/image_analysis_agent/chest_xray_agent/models/covid_chest_xray_model.pth"
         self.skin_lesion_model_path = "./agents/image_analysis_agent/skin_lesion_agent/models/checkpointN25_.pth.tar"
         self.skin_lesion_segmentation_output_path = "./uploads/skin_lesion_output/segmentation_plot.png"
-        self.llm = _make_llm(0.1)
+        self.llm = _make_llm(0.1, role="vision")
 
 class SpeechConfig:
     def __init__(self):
