@@ -306,6 +306,10 @@
                                 <button type="button" id="voice-btn" class="btn-voice" title="Voice input">
                                     <i class="fas fa-microphone"></i>
                                 </button>
+                        <label class="streaming-toggle" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--foreground-muted); cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="streaming-toggle" style="width: 14px; height: 14px; accent-color: var(--primary);">
+                            <span>⚡ Stream</span>
+                        </label>
                                 <button type="submit" class="btn-send" id="send-btn">
                                     <i class="fas fa-paper-plane"></i>
                                 </button>
@@ -419,6 +423,17 @@
                 
                 // Store image data if available
                 let imageDataUrl = null;
+                    // Check if streaming mode is enabled (text-only)
+                    const streamToggle = document.getElementById('streaming-toggle');
+                    if (streamToggle && streamToggle.checked && imageUpload.files.length === 0) {
+                        await handleStreamChat(message, thinkingElement, agentStatus);
+                        // Clear image preview
+                        const imagePreview = document.getElementById('image-preview');
+                        if (imagePreview) imagePreview.style.display = 'none';
+                        imageUpload.value = '';
+                        return;
+                    }
+                    
                 if (imageUpload.files.length > 0) {
                     imageDataUrl = previewImage.src;
                 }
@@ -969,6 +984,136 @@
             return text;
         }
     </script>
+
+// ============================================================
+// 10. SSE Streaming Chat Handler
+// ============================================================
+async function handleStreamChat(message, thinkingElement, agentStatus) {
+    const chatBody = document.getElementById('chat-body');
+    const sendBtn = document.getElementById('send-btn');
+
+    // Create assistant message element with empty content
+    const assistantMessageElement = document.createElement('div');
+    assistantMessageElement.className = 'message assistant-message';
+    assistantMessageElement.innerHTML = `
+        <span class="message-agent-tag">STREAMING</span>
+        <div class="message-content"><span class="streaming-cursor" style="animation: blink 1s infinite;">▊</span></div>
+        <div class="audio-controls" style="display:none;">
+            <button class="btn btn-sm play-tts-btn" style="border: 1px solid var(--border); color: var(--foreground-muted); background: var(--background); border-radius: var(--radius-md); font-family: var(--font-family); font-size: var(--font-xs);">
+                <i class="fas fa-play"></i> Play Voice
+            </button>
+        </div>
+    `;
+
+    let fullText = '';
+    let agentName = '';
+
+    try {
+        const response = await fetch('/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: message, conversation_history: [] }),
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        // Remove thinking indicator and show message
+        chatBody.removeChild(thinkingElement);
+        chatBody.appendChild(assistantMessageElement);
+        const contentDiv = assistantMessageElement.querySelector('.message-content');
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const jsonStr = line.slice(6);
+
+                try {
+                    const event = JSON.parse(jsonStr);
+
+                    if (event.type === 'token') {
+                        fullText += event.content;
+                        contentDiv.innerHTML = marked.parse(fullText) + '<span class="streaming-cursor" style="animation: blink 1s infinite;">▊</span>';
+                        chatBody.scrollTop = chatBody.scrollHeight;
+                    } else if (event.type === 'agent') {
+                        agentName = event.content;
+                        assistantMessageElement.querySelector('.message-agent-tag').textContent = agentName;
+                    } else if (event.type === 'done') {
+                        // Finalize: remove cursor, show clean content
+                        contentDiv.innerHTML = marked.parse(fullText || event.full_response || '');
+                        agentName = agentName || event.agent || 'ASSISTANT';
+                        assistantMessageElement.querySelector('.message-agent-tag').textContent = agentName;
+
+                        // Show audio controls
+                        const audioCtrl = assistantMessageElement.querySelector('.audio-controls');
+                        if (audioCtrl) audioCtrl.style.display = '';
+                    } else if (event.type === 'error') {
+                        contentDiv.innerHTML = `<span style="color: var(--danger);">⚠️ Error: ${event.message}</span>`;
+                    }
+                } catch (parseErr) {
+                    // Skip non-JSON lines
+                }
+            }
+        }
+    } catch (fetchErr) {
+        // Remove thinking if still present
+        if (thinkingElement.parentNode) chatBody.removeChild(thinkingElement);
+        if (!fullText) {
+            assistantMessageElement.innerHTML = `<div class="message-content" style="color: var(--danger);">⚠️ Stream error: ${fetchErr.message}</div>`;
+            chatBody.appendChild(assistantMessageElement);
+        }
+    } finally {
+        if (agentStatus) agentStatus.style.display = 'none';
+        if (sendBtn) sendBtn.disabled = false;
+
+        // Add TTS click handler to play button
+        const playButton = assistantMessageElement.querySelector('.play-tts-btn');
+        if (playButton && fullText) {
+            const cleanText = removeMarkdown(fullText);
+            playButton.addEventListener('click', async function() {
+                const textForSpeech = cleanText.length > 1000 ? cleanText.substring(0, 1000) + '...' : cleanText;
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                try {
+                    const resp = await fetch('/generate-speech', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: textForSpeech }),
+                        credentials: 'include'
+                    });
+                    if (!resp.ok) throw new Error('TTS failed');
+                    const audioBlob = await resp.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                    this.innerHTML = '<i class="fas fa-stop"></i> Playing...';
+                    audio.onended = () => { this.innerHTML = '<i class="fas fa-play"></i> Play Voice'; this.disabled = false; URL.revokeObjectURL(audioUrl); };
+                } catch (err) {
+                    this.innerHTML = '<i class="fas fa-play"></i> Play Voice'; this.disabled = false;
+                }
+            });
+        }
+    }
+}
+
+// Add CSS animation for cursor blink
+const streamStyle = document.createElement('style');
+streamStyle.textContent = '@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }';
+document.head.appendChild(streamStyle);
+
     <script src="/static/js/main.js"></script>
 </body>
 </html>
