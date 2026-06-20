@@ -583,7 +583,16 @@ async def websocket_chat(websocket):
     """Real-time bidirectional chat via WebSocket (Phase 27).
     Client sends: {"message": "...", "session_id": "...", "image": "base64..." (optional)}
     Server sends: {"type": "token"|"done"|"error", "data": "..."}
+
+    Auth (Phase 48): If API_KEY env is set, client must pass ?token=<key> on connect.
     """
+    # --- Auth check (Phase 48) ---
+    token = websocket.query_params.get("token", "")
+    if API_KEY and token != API_KEY:
+        await websocket.close(code=4001, reason="Unauthorized")
+        logger.warning("[WS] Connection rejected: invalid token")
+        return
+
     await websocket.accept()
     logger.info("[WS] Client connected")
     try:
