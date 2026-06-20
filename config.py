@@ -22,10 +22,63 @@ Model Registry:
 
 import os
 import logging
+import time
+from typing import Optional
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
 
 logger = logging.getLogger(__name__)
+
+class LLMFallbackChain(BaseChatModel):
+    """Chat model wrapper with automatic fallback to secondary models on failure.
+
+    Usage: set FALLBACK_MODELS="gpt-4o-mini,deepseek-chat,qwen-plus" in .env
+    The primary model comes from model_name (existing). On repeated failures,
+    the chain automatically switches to the next model in the list.
+    """
+    models: list
+    active_index: int = 0
+    fail_threshold: int = 2  # consecutive failures before switching
+    _fail_counts: dict = {}
+    _last_switch: float = 0
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        last_err = None
+        for idx in range(self.active_index, len(self.models)):
+            model = self.models[idx]
+            try:
+                result = model._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+                # Success: reset fail count
+                self._fail_counts[idx] = 0
+                if idx != self.active_index:
+                    logger.info(f"[LLMFallback] Recovered to primary model, switching back")
+                    self.active_index = 0
+                return result
+            except Exception as e:
+                last_err = e
+                self._fail_counts[idx] = self._fail_counts.get(idx, 0) + 1
+                logger.warning(f"[LLMFallback] model={model.model} failed ({self._fail_counts[idx]}): {e}")
+                if self._fail_counts[idx] >= self.fail_threshold and idx + 1 < len(self.models):
+                    self.active_index = idx + 1
+                    logger.warning(f"[LLMFallback] Switching to fallback model: {self.models[idx+1].model}")
+        raise last_err
+
+    @property
+    def _llm_type(self) -> str:
+        return "llm-fallback-chain"
+
+    def bind_tools(self, tools, **kwargs):
+        """Delegate bind_tools to the active model."""
+        return self.models[self.active_index].bind_tools(tools, **kwargs)
+
+    @property
+    def model(self) -> str:
+        return self.models[self.active_index].model
 
 # Load environment variables from .env file
 load_dotenv()
@@ -46,18 +99,17 @@ _MODEL_ROLES = {
 }
 
 
-def _make_llm(temperature: float, role: str = "conversation") -> ChatOpenAI:
-    """Create a ChatOpenAI instance with role-based model routing.
+def _make_llm(temperature: float, role: str = "conversation") -> BaseChatModel:
+    """Create a ChatOpenAI instance with optional fallback chain.
 
     Args:
         temperature: Sampling temperature.
         role: Model role key (decision/conversation/rag/web_search/vision/summarizer).
               Uses model_name env var as default; override per-role via DECISION_MODEL etc.
+    Set FALLBACK_MODELS="model-a,model-b" in .env to enable automatic failover.
     """
     model = _MODEL_ROLES.get(role, _DEFAULT_MODEL)
-    if role != "conversation" and model != _DEFAULT_MODEL:
-        logger.info(f"[ModelRegistry] role={role}, model={model}")
-    return ChatOpenAI(
+    primary = ChatOpenAI(
         model=model,
         openai_api_key=_DEFAULT_API_KEY,
         openai_api_base=_DEFAULT_API_BASE,
@@ -65,6 +117,28 @@ def _make_llm(temperature: float, role: str = "conversation") -> ChatOpenAI:
         max_retries=3,
         request_timeout=60,
     )
+    # Build fallback chain if FALLBACK_MODELS is set
+    fallback_str = os.getenv("FALLBACK_MODELS", "")
+    if fallback_str:
+        fallback_names = [m.strip() for m in fallback_str.split(",") if m.strip()]
+        fallback_models = [
+            ChatOpenAI(
+                model=fm,
+                openai_api_key=_DEFAULT_API_KEY,
+                openai_api_base=_DEFAULT_API_BASE,
+                temperature=temperature,
+                max_retries=3,
+                request_timeout=60,
+            )
+            for fm in fallback_names
+        ]
+        all_models = [primary] + fallback_models
+        if len(all_models) > 1 and role != "conversation":
+            logger.info(f"[ModelRegistry] role={role}, primary={model}, fallbacks={fallback_names}")
+        return LLMFallbackChain(models=all_models)
+    if role != "conversation" and model != _DEFAULT_MODEL:
+        logger.info(f"[ModelRegistry] role={role}, model={model}")
+    return primary
 
 def _make_embedding() -> OpenAIEmbeddings:
     """Create OpenAI embeddings using OpenAI-compatible API."""
