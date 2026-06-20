@@ -12,7 +12,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Req
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import uvicorn
 import requests
@@ -73,6 +73,9 @@ else:
 # --- Security Middleware Registration ---
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
+if SLOWAPI_AVAILABLE:
+    from slowapi.middleware import SlowAPIMiddleware
+    app.add_middleware(SlowAPIMiddleware)
 
 # CSRF protection
 CSRF_SECRET = os.environ.get("CSRF_SECRET_KEY", _secrets.token_hex(32))
@@ -153,7 +156,7 @@ cleanup_thread = threading.Thread(target=cleanup_old_audio, daemon=True)
 cleanup_thread.start()
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1, max_length=4096, description="User query text")
     conversation_history: List = []
 
 class SpeechRequest(BaseModel):
@@ -197,6 +200,7 @@ async def health_check():
     }
 
 @app.post("/chat")
+@limiter.limit("10/minute")
 async def chat(
     request: QueryRequest, 
     response: Response, 
