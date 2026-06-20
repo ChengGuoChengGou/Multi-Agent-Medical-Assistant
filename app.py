@@ -143,6 +143,10 @@ except ImportError:
 
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
 
+# Phase 27: Register structured error handlers
+from error_handlers import register_error_handlers
+register_error_handlers(app)
+
 
 # ─── Observability: Request tracking middleware + /metrics ──────────
 @app.middleware("http")
@@ -257,10 +261,13 @@ client = ElevenLabs(
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'dcm', 'nii', 'nii.gz', 'mha'}
 
 # ==================== MCP Lifecycle ====================
-@app.on_event("startup")
-async def startup_mcp():
-    """Initialize MCP connections on application startup."""
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    """Graceful startup/shutdown lifecycle (Phase 27)."""
     global mcp_client
+    # --- Startup ---
     try:
         mcp_client = get_mcp_client()
         await mcp_client.initialize()
@@ -268,15 +275,14 @@ async def startup_mcp():
     except Exception as e:
         logger.warning(f"[MCP] Failed to initialize MCP Client: {e}")
         mcp_client = None
-
-@app.on_event("shutdown")
-async def shutdown_mcp():
-    """Clean up MCP connections on application shutdown."""
-    # Phase 17: Initialize structured JSON logging
-    setup_json_logging()
-    import logging as _logging
-    _logging.getLogger(__name__).info('Observability initialized: JSON logging + /metrics')
-    global mcp_client
+    try:
+        setup_json_logging()
+        logger.info("[Logging] JSON structured logging initialized")
+    except Exception:
+        pass
+    logger.info("[Lifespan] Application startup complete")
+    yield
+    # --- Shutdown ---
     if mcp_client:
         try:
             await shutdown_mcp_client()
@@ -284,6 +290,10 @@ async def shutdown_mcp():
         except Exception as e:
             logger.warning(f"[MCP] MCP cleanup error: {e}")
         mcp_client = None
+    logger.info("[Lifespan] Application shutdown complete")
+
+# Apply lifespan to app (replaces deprecated on_event)
+app.router.lifespan_context = lifespan
 # ==================== End MCP Lifecycle ====================
 
 def allowed_file(filename):
@@ -384,6 +394,53 @@ async def readiness():
 async def cache_statistics():
     """Cache performance statistics (Phase 26: Redis + in-memory hybrid)."""
     return await cache_stats()
+
+
+# ==================== WebSocket (Phase 27) ====================
+@app.websocket("/ws/chat")
+async def websocket_chat(websocket):
+    """Real-time bidirectional chat via WebSocket (Phase 27).
+    Client sends: {"message": "...", "session_id": "...", "image": "base64..." (optional)}
+    Server sends: {"type": "token"|"done"|"error", "data": "..."}
+    """
+    await websocket.accept()
+    logger.info("[WS] Client connected")
+    try:
+        while True:
+            raw = await websocket.receive_json()
+            message = raw.get("message", "").strip()
+            session_id = raw.get("session_id", str(uuid.uuid4()))
+            image_data = raw.get("image")
+
+            if not message:
+                await websocket.send_json({"type": "error", "data": "Empty message"})
+                continue
+
+            try:
+                if image_data:
+                    # Image query uses full pipeline
+                    result = await image_query(message, image_data, session_id)
+                else:
+                    # Text query - use the same logic as /chat
+                    from session_agent import SessionAgent
+                    agent = SessionAgent(llm_client=create_llm_client_from_config(config))
+                    result = await agent.process(message, session_id)
+
+                # Stream token-by-token if available, else send complete
+                if isinstance(result, dict):
+                    reply = result.get("reply") or result.get("response") or str(result)
+                    await websocket.send_json({"type": "token", "data": reply})
+                    await websocket.send_json({"type": "done", "data": ""})
+                else:
+                    await websocket.send_json({"type": "token", "data": str(result)})
+                    await websocket.send_json({"type": "done", "data": ""})
+
+            except Exception as e:
+                logger.error(f"[WS] Processing error: {e}", exc_info=True)
+                await websocket.send_json({"type": "error", "data": "Processing failed"})
+
+    except Exception as e:
+        logger.info(f"[WS] Client disconnected: {e}")
 
 
 from cache import _make_key as cache_make_key, cache_get, cache_set, cache_stats, init_redis
