@@ -7,6 +7,7 @@ It dynamically routes user queries to the appropriate agent based on content and
 
 import json
 from typing import Dict, List, Optional, Any, Literal, TypedDict, Union, Annotated
+from pydantic import BaseModel, Field, field_validator
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -121,11 +122,30 @@ class AgentState(MessagesState):
     insufficient_info: bool  # Flag indicating RAG response has insufficient information
 
 
-class AgentDecision(TypedDict):
-    """Output structure for the decision agent."""
-    agent: str
-    reasoning: str
-    confidence: float
+class AgentDecision(BaseModel):
+    """Output structure for the decision agent with validation."""
+    agent: str = Field(description="Agent name to route to")
+    reasoning: str = Field(default="", description="Step-by-step reasoning for selecting this agent")
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0")
+
+    VALID_AGENTS = {
+        "CONVERSATION_AGENT", "RAG_AGENT", "WEB_SEARCH_PROCESSOR_AGENT",
+        "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT", "MCP_AGENT"
+    }
+
+    @field_validator("agent")
+    @classmethod
+    def validate_agent_name(cls, v: str) -> str:
+        # Normalize: strip whitespace, uppercase
+        v = v.strip().upper().replace(" ", "_")
+        if v not in cls.VALID_AGENTS:
+            raise ValueError(f"Unknown agent '{v}'. Valid: {cls.VALID_AGENTS}")
+        return v
+
+    @field_validator("confidence")
+    @classmethod
+    def validate_confidence(cls, v: float) -> float:
+        return max(0.0, min(1.0, v))  # Clamp to [0, 1]
 
 
 def create_agent_graph():
@@ -234,23 +254,34 @@ def create_agent_graph():
         Based on this information, which agent should handle this query?
         """
         
-        # Make the decision
-        decision = decision_chain.invoke({"input": decision_input})
+        # Make the decision with structured output validation + fallback
+        try:
+            decision = decision_chain.invoke({"input": decision_input})
+            # Validate through Pydantic model
+            validated = AgentDecision(**decision)
+            agent_name = validated.agent
+            reasoning = validated.reasoning
+            confidence = validated.confidence
+        except Exception as e:
+            logger.warning(f"Decision chain parse/validation failed: {e}. Falling back to CONVERSATION_AGENT")
+            agent_name = "CONVERSATION_AGENT"
+            reasoning = f"Fallback due to parse error: {str(e)[:200]}"
+            confidence = 0.5
 
         # Decided agent
-        print(f"Decision: {decision['agent']}")
+        print(f"Decision: {agent_name} (confidence={confidence:.2f})")
         
         # Update state with decision
         updated_state = {
             **state,
-            "agent_name": decision["agent"],
+            "agent_name": agent_name,
         }
         
         # Route based on agent name and confidence
-        if decision["confidence"] < AgentConfig.CONFIDENCE_THRESHOLD:
+        if confidence < AgentConfig.CONFIDENCE_THRESHOLD:
             return {"agent_state": updated_state, "next": "needs_validation"}
         
-        return {"agent_state": updated_state, "next": decision["agent"]}
+        return {"agent_state": updated_state, "next": agent_name}
 
     # Define agent execution functions (these will be implemented in their respective modules)
     def run_conversation_agent(state: AgentState) -> AgentState:

@@ -166,18 +166,48 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/health")
-def health_check():
-    """Health check endpoint for Docker health checks"""
-    return {"status": "healthy"}
+async def health_check():
+    """Enhanced health check endpoint with dependency status."""
+    import time as _time
+    checks = {}
+    
+    # LLM config check
+    try:
+        api_key = config.main_llm_config.api_key
+        checks["llm_config"] = "ok" if api_key and len(api_key) > 10 else "missing_api_key"
+    except Exception:
+        checks["llm_config"] = "error"
+    
+    # MCP client check
+    checks["mcp_client"] = "connected" if mcp_client is not None else "not_initialized"
+    
+    # Upload directories check
+    for name, path in [("uploads_backend", UPLOAD_FOLDER), ("skin_lesion_output", SKIN_LESION_OUTPUT)]:
+        checks[name] = "ok" if os.path.isdir(path) else "missing"
+    
+    # Overall status
+    has_critical_error = any(v in ("error", "missing") for k, v in checks.items() if k != "mcp_client")
+    status = "degraded" if (mcp_client is None or has_critical_error) else "healthy"
+    
+    return {
+        "status": status,
+        "version": "3.1.0",
+        "checks": checks,
+        "timestamp": int(_time.time()),
+    }
 
 @app.post("/chat")
-def chat(
+async def chat(
     request: QueryRequest, 
     response: Response, 
     req: Request,
     session_id: Optional[str] = Cookie(None)
 ):
-    """Process user text query through the multi-agent system."""
+    """Process user text query through the multi-agent system (async with caching)."""
+    import asyncio
+    import hashlib
+    import time as _time
+    
     # Generate session ID for cookie if it doesn't exist
     if not session_id:
         session_id = str(uuid.uuid4())
@@ -186,8 +216,24 @@ def chat(
     response.headers["X-Session-ID"] = session_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     
+    # Response cache (TTL=300s, max 256 entries)
+    if not hasattr(chat, "_cache"):
+        chat._cache = {}  # {hash: (timestamp, result)}
+        chat._cache_ttl = 300
+        chat._cache_max = 256
+    
+    # Check cache for identical query (same session + same text)
+    cache_key = hashlib.sha256(f"{session_id}:{request.query}".encode()).hexdigest()[:16]
+    cached = chat._cache.get(cache_key)
+    if cached and (_time.time() - cached[0]) < chat._cache_ttl:
+        result = cached[1].copy()
+        result["cached"] = True
+        return result
+    
     try:
-        response_data = process_query(request.query, session_id=session_id)
+        # Run synchronous process_query in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        response_data = await loop.run_in_executor(None, process_query, request.query, session_id)
         response_text = response_data['messages'][-1].content
         
         # Set session cookie
@@ -208,9 +254,15 @@ def chat(
             else:
                 print("Skin Lesion Output path does not exist.")
         
+        # Store in cache (evict oldest if full)
+        if len(chat._cache) >= chat._cache_max:
+            oldest_key = min(chat._cache, key=lambda k: chat._cache[k][0])
+            del chat._cache[oldest_key]
+        chat._cache[cache_key] = (_time.time(), result.copy())
+        
         return result
     except Exception as e:
-        logging.error(f"[upload] Internal error: {e}")
+        logging.error(f"[chat] Internal error: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
 
 @app.post("/upload")
