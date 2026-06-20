@@ -321,6 +321,19 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(APIVersionMiddleware)
 
+# --- API Version Prefix Routing (Phase 46) ---
+class APIVersionPrefixMiddleware(BaseHTTPMiddleware):
+    """Strip /v1 prefix to route versioned API requests to existing handlers."""
+    async def dispatch(self, request, call_next):
+        path = request.url.path
+        if path.startswith("/v1/"):
+            # Rewrite path: /v1/chat -> /chat, /v1/health -> /health
+            request.scope["path"] = path[3:]
+            logger.debug(f"[APIVersion] Stripped /v1 prefix: {path} -> {path[3:]}")
+        return await call_next(request)
+
+app.add_middleware(APIVersionPrefixMiddleware)
+
 if SLOWAPI_AVAILABLE:
     from slowapi.middleware import SlowAPIMiddleware
     app.add_middleware(SlowAPIMiddleware)
