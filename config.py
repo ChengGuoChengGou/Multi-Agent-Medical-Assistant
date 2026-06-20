@@ -211,6 +211,8 @@ class Config:
         self.eleven_labs_api_key = os.getenv("ELEVEN_LABS_API_KEY")
         self.tavily_api_key = os.getenv("TAVILY_API_KEY")
         self.max_conversation_history = 20  # Include last 20 messsages (10 Q&A pairs) in history
+        self.summarize_conversation_history = True  # Phase 51: Summarize old messages before truncating
+        self.summary_keep_recent = 8  # Phase 51: Keep last 8 messages (4 Q&A pairs) when summarizing
 
 # # Example usage
 # config = Config()

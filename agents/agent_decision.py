@@ -886,8 +886,44 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     # print("######### DEBUG 4:", result)
     # state["messages"] = [result["messages"][-1].content]
 
-    # Keep history to reasonable size (ANOTHER OPTION: summarize and store before truncating history)
-    if len(result["messages"]) > config.max_conversation_history:  # Keep last config.max_conversation_history messages
+    # Phase 51: Summarize old conversation messages before truncating
+    if config.summarize_conversation_history and len(result["messages"]) > config.max_conversation_history:
+        try:
+            messages = result["messages"]
+            keep = config.summary_keep_recent
+            old_messages = messages[:-keep]
+            recent_messages = messages[-keep:]
+            
+            # Build summary text from old messages
+            summary_parts = []
+            for m in old_messages:
+                role = getattr(m, "type", "unknown")
+                content = getattr(m, "content", str(m))
+                if content:
+                    summary_parts.append(f"{role}: {content[:200]}")
+            
+            if summary_parts:
+                summary_prompt = (
+                    "Summarize the following medical conversation history concisely, "
+                    "preserving key medical topics, symptoms discussed, and recommendations given:\n\n"
+                    + "\n".join(summary_parts)
+                )
+                summary_response = config.conversation.llm.invoke(summary_prompt)
+                summary_text = getattr(summary_response, "content", str(summary_response))
+                
+                from langchain_core.messages import SystemMessage
+                summary_msg = SystemMessage(
+                    content=f"[Conversation Summary]\n{summary_text}"
+                )
+                result["messages"] = [summary_msg] + recent_messages
+                logger.info(f"[Phase51] Summarized {len(old_messages)} messages → summary + {keep} recent")
+            else:
+                result["messages"] = recent_messages
+        except Exception as e:
+            logger.warning(f"[Phase51] Summarization failed, falling back to truncation: {e}")
+            result["messages"] = result["messages"][-config.max_conversation_history:]
+    elif len(result["messages"]) > config.max_conversation_history:
+        # Fallback: simple truncation (original behavior)
         result["messages"] = result["messages"][-config.max_conversation_history:]
 
     # visualize conversation history in console
