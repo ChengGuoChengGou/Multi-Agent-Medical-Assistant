@@ -30,6 +30,7 @@ from exceptions import MedicalAssistantError, AgentError, ValidationError, FileU
 
 # Security middleware
 import secrets as _secrets
+import uuid as _uuid
 from middleware.security import (
     SecurityHeadersMiddleware,
     RequestLoggingMiddleware,
@@ -65,12 +66,16 @@ async def metrics_middleware(request: Request, call_next):
     path = request.url.path
     method = request.method
     metrics.inc("http_requests_total", labels={"method": method, "path": path})
+    # Request tracing: generate and propagate X-Request-ID
+    request_id = request.headers.get("X-Request-ID") or str(_uuid.uuid4())[:12]
     start = _time.monotonic()
     try:
         response = await call_next(request)
         elapsed = _time.monotonic() - start
         metrics.observe("http_request_duration_seconds", elapsed, labels={"method": method, "path": path})
         metrics.inc("http_responses_total", labels={"status": str(response.status_code)})
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Response-Time"] = f"{elapsed:.3f}s"
         return response
     except Exception as exc:
         elapsed = _time.monotonic() - start
@@ -237,10 +242,39 @@ async def health_check():
     
     return {
         "status": status,
-        "version": "3.1.0",
+        "version": "3.3.0",
         "checks": checks,
         "timestamp": int(_time.time()),
     }
+
+
+@app.get("/health/live")
+async def liveness():
+    """Kubernetes liveness probe - is the process alive?"""
+    return {"status": "alive", "timestamp": int(time.time())}
+
+@app.get("/health/ready")
+async def readiness():
+    """Kubernetes readiness probe - can we serve traffic?"""
+    checks = {}
+    
+    # LLM config
+    try:
+        api_key = config.main_llm_config.api_key
+        checks["llm_config"] = bool(api_key and len(api_key) > 10)
+    except Exception:
+        checks["llm_config"] = False
+    
+    # Upload dirs accessible
+    checks["uploads"] = os.path.isdir(UPLOAD_FOLDER)
+    
+    ready = all(checks.values())
+    return Response(
+        content=json.dumps({"ready": ready, "checks": checks}),
+        status_code=200 if ready else 503,
+        media_type="application/json"
+    )
+
 
 @app.post("/chat")
 @limiter.limit("10/minute")
