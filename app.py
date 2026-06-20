@@ -219,6 +219,8 @@ from starlette.middleware.gzip import GZipMiddleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # --- Security Middleware Registration ---
+from starlette.middleware.gzip import GZipMiddleware  # Phase 29: response compression
+app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
