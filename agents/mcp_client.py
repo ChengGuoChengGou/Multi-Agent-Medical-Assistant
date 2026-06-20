@@ -295,17 +295,31 @@ def get_project_mcp_dir() -> str:
 def create_default_mcp_client() -> MCPClientManager:
     """
     Create and configure the default MCP client with all three servers.
-    
+
     Server paths are relative to the project's mcp_servers/ directory.
+    On Windows, uses absolute paths for executables to avoid PATH issues.
     """
     mcp_dir = get_project_mcp_dir()
     client = MCPClientManager()
 
+    # Resolve absolute paths for Windows compatibility
+    def _resolve_cmd(cmd_name: str, venv_relative: str = "") -> str:
+        """Try absolute path in venv first, fall back to bare command."""
+        if venv_relative:
+            abs_path = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),  # project root
+                ".venv", "Scripts", venv_relative,
+            )
+            if os.path.isfile(abs_path):
+                return abs_path
+        return cmd_name
+
     # 1. BioMCP - Biomedical data (Python, via pip biomcp-cli)
     biomcp_dir = os.path.join(mcp_dir, "biomcp")
+    biomcp_cmd = _resolve_cmd("biomcp", "biomcp.exe")
     client.register_server(
         name="biomcp",
-        command="biomcp",
+        command=biomcp_cmd,
         args=["serve"],
         cwd=biomcp_dir,
     )
@@ -315,9 +329,11 @@ def create_default_mcp_client() -> MCPClientManager:
     autoicd_env = {
         "AUTOICD_API_KEY": os.environ.get("AUTOICD_API_KEY", ""),
     }
+    # On Windows npx.cmd is needed; npx alone may fail with subprocess
+    npx_cmd = "npx.cmd" if os.name == "nt" else "npx"
     client.register_server(
         name="autoicd",
-        command="npx",
+        command=npx_cmd,
         args=["-y", "autoicd-mcp"],
         env=autoicd_env,
         cwd=autoicd_dir,

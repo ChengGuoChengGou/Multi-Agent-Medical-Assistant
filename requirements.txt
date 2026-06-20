@@ -275,3 +275,8 @@ yarl==1.18.3
 zipp==3.21.0
 zstandard==0.23.0
 mcp>=1.0.0
+
+# === Phase 1: Observability + Memory + Evaluation ===
+langfuse>=2.0.0,<3.0.0  # LLM observability (tracing, cost tracking)
+mem0ai>=0.1.0  # Long-term memory for agents (vector-based)
+deepeval>=1.0.0  # LLM evaluation framework (RAGAS, hallucination)

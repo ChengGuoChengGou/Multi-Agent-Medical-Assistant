@@ -21,6 +21,21 @@ from agents.mcp_agent import mcp_agent_node
 from agents.guardrails.local_guardrails import LocalGuardrails
 
 from langgraph.checkpoint.memory import MemorySaver
+import uuid
+
+# Optional: Langfuse observability (graceful degradation if not installed)
+try:
+    from langfuse.callback import CallbackHandler as LangfuseCallbackHandler
+    langfuse_handler = LangfuseCallbackHandler(
+        public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
+        secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
+        host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+    )
+    LANGFUSE_ENABLED = bool(os.getenv("LANGFUSE_PUBLIC_KEY"))
+except ImportError:
+    langfuse_handler = None
+    LANGFUSE_ENABLED = False
+    print("[Langfuse] Not installed, observability disabled. Install: pip install langfuse")
 
 import cv2
 import numpy as np
@@ -36,7 +51,14 @@ config = Config()
 memory = MemorySaver()
 
 # Specify a thread
-thread_config = {"configurable": {"thread_id": "1"}}
+# Dynamic thread config - each session gets unique thread_id
+def _make_thread_config(session_id: str = None) -> dict:
+    """Generate thread config with unique session_id for multi-user support."""
+    tid = session_id or str(uuid.uuid4())
+    return {"configurable": {"thread_id": tid}}
+
+# Default config for backward compatibility
+thread_config = _make_thread_config("default")
 
 
 # Agent that takes the decision of routing the request further to correct task specific agent
@@ -723,8 +745,12 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     
     state["messages"] = [HumanMessage(content=query)]
 
-    # result = graph.invoke(state, thread_config)
-    result = graph.invoke(state, thread_config)
+    # Invoke with Langfuse callbacks if available
+    invoke_kwargs = {"state": state, "config": config}
+    if LANGFUSE_ENABLED and langfuse_handler:
+        result = graph.invoke(state, config, callbacks=[langfuse_handler])
+    else:
+        result = graph.invoke(state, config)
     # print("######### DEBUG 4:", result)
     # state["messages"] = [result["messages"][-1].content]
 

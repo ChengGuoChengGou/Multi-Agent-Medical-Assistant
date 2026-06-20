@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import AzureOpenAIEmbeddings, AzureChatOpenAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
 class ContentProcessor:
     """
