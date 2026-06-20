@@ -10,6 +10,7 @@ from io import BytesIO
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response, Cookie
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, PlainTextResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -203,9 +204,18 @@ if SLOWAPI_AVAILABLE:
 
     @app.exception_handler(RateLimitExceeded)
     async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        import re as _re
+        retry_match = _re.search(r'(\d+)', str(exc.detail))
+        retry_seconds = int(retry_match.group(1)) if retry_match else 60
         return JSONResponse(
             status_code=429,
-            content={"error": "Rate limit exceeded. Please wait.", "retry_after": str(exc.detail)}
+            content={"error": "Rate limit exceeded. Please wait.", "retry_after": str(exc.detail)},
+            headers={
+                "X-RateLimit-Limit": "30",
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(int(time.time()) + retry_seconds),
+                "Retry-After": str(retry_seconds),
+            }
         )
 else:
     # No-op decorator when slowapi not installed
@@ -213,6 +223,17 @@ else:
         def decorator(func):
             return func
         return decorator
+
+# --- Global Exception Handler (Phase 38) ---
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all for unhandled exceptions - prevents stack trace leaks."""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "An internal error occurred. Please try again later."},
+    )
+
 
 # --- GZip Compression Middleware (Phase 29) ---
 from starlette.middleware.gzip import GZipMiddleware

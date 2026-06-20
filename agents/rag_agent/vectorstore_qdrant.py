@@ -6,7 +6,11 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 
 from langchain_core.documents import Document
-from langchain.storage import InMemoryStore, LocalFileStore
+from langchain_core.stores import InMemoryStore
+try:
+    from langchain_community.storage import LocalFileStore
+except ImportError:
+    LocalFileStore = InMemoryStore  # fallback if langchain-community sunset
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, SparseVectorParams, VectorParams, OptimizersConfigDiff
