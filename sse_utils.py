@@ -80,9 +80,27 @@ async def sse_stream_chat(
             ):
                 yield chunk
 
-            # Response chunk (full text - underlying model isn't streaming yet)
+            # Phase 52: Split response into streaming chunks for better UX
+            chunk_size = 50  # Characters per chunk
+            total = len(response_text)
+            for i in range(0, total, chunk_size):
+                text_chunk = response_text[i:i + chunk_size]
+                async for chunk in sse_generator(
+                    {
+                        "text": text_chunk,
+                        "done": False,
+                        "progress": round((i + len(text_chunk)) / total, 2) if total > 0 else 1.0,
+                    },
+                    event="chunk",
+                ):
+                    yield chunk
+                # Small delay to simulate streaming and prevent overwhelming the client
+                if i + chunk_size < total:
+                    await asyncio.sleep(0.02)
+
+            # Final chunk marker
             async for chunk in sse_generator(
-                {"text": response_text},
+                {"text": "", "done": True, "progress": 1.0},
                 event="chunk",
             ):
                 yield chunk
