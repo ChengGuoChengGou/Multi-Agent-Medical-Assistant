@@ -132,6 +132,9 @@ def sanitize_input(text: str, max_length: int = 10000) -> str:
 
 def sanitize_filename(filename: str) -> str:
     """Sanitize filename to prevent path traversal."""
+    if not filename:
+        return "unnamed"
+
     # Remove path separators and null bytes
     filename = os.path.basename(filename)
     filename = filename.replace('\x00', '')
@@ -162,6 +165,9 @@ ALLOWED_MIME_TYPES = {
 
 def validate_mime_type(content: bytes, filename: str) -> bool:
     """Validate file MIME type against content and extension."""
+    if not content or not isinstance(content, (bytes, bytearray)):
+        return False
+
     # Check file magic bytes for common image formats
     if content[:8] == b'\x89PNG\r\n\x1a\n':
         return filename.lower().endswith('.png')
@@ -177,9 +183,12 @@ def validate_mime_type(content: bytes, filename: str) -> bool:
     if ext in ('.nii', '.gz', '.mha', '.dcm'):
         return True
 
-    # For other image types, check extension
+    # For other image types (tiff), check extension
     for mime, extensions in ALLOWED_MIME_TYPES.items():
         if ext in extensions:
+            # Known image formats without matching magic bytes → reject
+            if ext in ('.png', '.jpg', '.jpeg', '.gif', '.bmp'):
+                return False
             return True
 
     return False
