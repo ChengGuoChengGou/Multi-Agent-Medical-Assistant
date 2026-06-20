@@ -442,18 +442,34 @@ async def liveness():
 async def readiness():
     """Kubernetes readiness probe - can we serve traffic?"""
     checks = {}
-    
+
     # LLM config
     try:
         api_key = config.main_llm_config.api_key
         checks["llm_config"] = bool(api_key and len(api_key) > 10)
     except Exception:
         checks["llm_config"] = False
-    
+
     # Upload dirs accessible
     checks["uploads"] = os.path.isdir(UPLOAD_FOLDER)
-    
-    ready = all(checks.values())
+
+    # MCP client initialized
+    checks["mcp_client"] = mcp_client is not None
+
+    # Redis connectivity (Phase 41)
+    try:
+        from cache import _redis_client
+        if _redis_client is not None:
+            _redis_client.ping()
+            checks["redis"] = True
+        else:
+            checks["redis"] = False
+    except Exception:
+        checks["redis"] = False
+
+    # Only non-critical checks gate readiness
+    critical_checks = {k: v for k, v in checks.items() if k != "mcp_client"}
+    ready = all(critical_checks.values())
     return Response(
         content=_json.dumps({"ready": ready, "checks": checks}),
         status_code=200 if ready else 503,
