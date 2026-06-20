@@ -54,7 +54,80 @@ except ImportError:
 # Load configuration
 config = Config()
 
+# ─── Structured Logging with JSON + RotatingFileHandler ────────────
+import json as _json
+from logging.handlers import RotatingFileHandler
+from datetime import datetime as _dt
+
+class JSONFormatter(logging.Formatter):
+    """Emit log records as JSON lines for structured log aggregation."""
+    def format(self, record):
+        log_entry = {
+            "timestamp": _dt.utcnow().isoformat() + "Z",
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+        }
+        if record.exc_info and record.exc_info[0]:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        if hasattr(record, 'request_id'):
+            log_entry["request_id"] = record.request_id
+        return _json.dumps(log_entry, ensure_ascii=False)
+
+# Configure root logger
+logger = logging.getLogger("medical_chatbot")
+logger.setLevel(logging.INFO)
+
+# Console handler (human-readable)
+_console_handler = logging.StreamHandler()
+_console_handler.setLevel(logging.INFO)
+_console_handler.setFormatter(logging.Formatter(
+    "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+    datefmt="%H:%M:%S"
+))
+logger.addHandler(_console_handler)
+
+# File handler with rotation (JSON lines, 5MB x 5 backups)
+_log_dir = os.path.join(os.path.dirname(__file__), "log")
+os.makedirs(_log_dir, exist_ok=True)
+_file_handler = RotatingFileHandler(
+    os.path.join(_log_dir, "app.log.json"),
+    maxBytes=5 * 1024 * 1024,
+    backupCount=5,
+    encoding="utf-8"
+)
+_file_handler.setLevel(logging.INFO)
+_file_handler.setFormatter(JSONFormatter())
+logger.addHandler(_file_handler)
+
+# Suppress noisy libraries
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
 # Initialize FastAPI app
+
+# ─── OpenTelemetry Tracing (optional, graceful fallback) ──────────
+try:
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    _resource = Resource.create({"service.name": "medical-chatbot", "service.version": app.version})
+    _provider = TracerProvider(resource=_resource)
+    _provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+    trace.set_tracer_provider(_provider)
+    tracer = trace.get_tracer("medical_chatbot")
+    logger.info("[OTEL] OpenTelemetry tracing enabled")
+except ImportError:
+    tracer = None
+    logger.info("[OTEL] opentelemetry not installed — tracing disabled (pip install opentelemetry-sdk opentelemetry-instrumentation-fastapi)")
+
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
 
 
@@ -74,6 +147,13 @@ async def metrics_middleware(request: Request, call_next):
         elapsed = _time.monotonic() - start
         metrics.observe("http_request_duration_seconds", elapsed, labels={"method": method, "path": path})
         metrics.inc("http_responses_total", labels={"status": str(response.status_code)})
+
+# Instrument FastAPI with OpenTelemetry
+try:
+    FastAPIInstrumentor.instrument_app(app)
+except Exception:
+    pass
+
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Response-Time"] = f"{elapsed:.3f}s"
         return response
@@ -237,7 +317,7 @@ async def health_check():
     
     return {
         "status": status,
-        "version": "3.3.0",
+        "version": "3.4.0",
         "checks": checks,
         "timestamp": int(_time.time()),
     }
