@@ -23,6 +23,7 @@ from elevenlabs.client import ElevenLabs
 from config import Config
 from agents.agent_decision import process_query
 from agents.mcp_client import get_mcp_client, shutdown_mcp_client
+from agents.memory_module import get_memory_store
 
 # Security middleware
 import secrets as _secrets
@@ -235,10 +236,37 @@ async def chat(
         return result
     
     try:
+        # --- Memory recall: inject relevant long-term memories into query context ---
+        memory_context = ""
+        try:
+            mem_store = get_memory_store()
+            recalled = mem_store.recall(request.query, user_id=session_id, limit=3)
+            if recalled:
+                memory_context = "\n\n[Patient Memory Context]\n" + "\n".join(
+                    f"- {m}" for m in recalled
+                )
+                logger.info(f"[chat] Recalled {len(recalled)} memories for session {session_id[:8]}...")
+        except Exception as mem_err:
+            logger.warning(f"[chat] Memory recall failed (non-fatal): {mem_err}")
+        
+        enhanced_query = request.query + memory_context if memory_context else request.query
+        
         # Run synchronous process_query in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
-        response_data = await loop.run_in_executor(None, process_query, request.query, session_id)
+        response_data = await loop.run_in_executor(None, process_query, enhanced_query, session_id)
         response_text = response_data['messages'][-1].content
+        
+        # --- Memory store: extract and persist medical facts from conversation ---
+        try:
+            mem_store = get_memory_store()
+            # Store the Q&A pair for long-term memory
+            mem_store.remember(
+                f"Q: {request.query}\nA: {response_text}",
+                user_id=session_id,
+                metadata={"agent": response_data.get("agent_name", "unknown")},
+            )
+        except Exception as mem_err:
+            logger.warning(f"[chat] Memory store failed (non-fatal): {mem_err}")
         
         # Set session cookie
         response.set_cookie(key="session_id", value=session_id)
