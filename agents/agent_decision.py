@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from agents.rag_agent import MedicalRAG
 from agents.web_search_processor_agent import WebSearchProcessorAgent
 from agents.image_analysis_agent import ImageAnalysisAgent
+from agents.mcp_agent import mcp_agent_node
 from agents.guardrails.local_guardrails import LocalGuardrails
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -63,13 +64,15 @@ class AgentConfig:
     4. BRAIN_TUMOR_AGENT - For analysis of brain MRI images to detect and segment tumors.
     5. CHEST_XRAY_AGENT - For analysis of chest X-ray images to detect abnormalities.
     6. SKIN_LESION_AGENT - For analysis of skin lesion images to classify them as benign or malignant.
+    7. MCP_AGENT - For queries requiring external biomedical databases and medical coding systems: gene/variant research (ClinVar, UniProt), clinical trials (ClinicalTrials.gov), drug information (FDA, OpenFDA), medical coding (ICD-10-CM, ICD-11, SNOMED CT, LOINC, RxNorm), PubMed literature search, and biomedical entity lookup. Use this when the user asks about specific drugs, genes, clinical trials, medical codes, or needs cross-referencing between medical ontologies.
 
     Make your decision based on these guidelines:
-    - If the user has not uploaded any image, always route to the conversation agent.
+    - If the user has not uploaded any image, consider the query content: for general chat/greetings use CONVERSATION_AGENT; for medical knowledge questions use RAG_AGENT; for recent/current health situations use WEB_SEARCH_PROCESSOR_AGENT; for queries about drugs, genes, clinical trials, medical codes (ICD/SNOMED/LOINC), or biomedical database lookups use MCP_AGENT.
     - If the user uploads a medical image, decide which medical vision agent is appropriate based on the image type and the user's query. If the image is uploaded without a query, always route to the correct medical vision agent based on the image type.
     - If the user asks about recent medical developments or current health situations, use the web search pocessor agent.
     - If the user asks specific medical knowledge questions, use the RAG agent.
     - For general conversation, greetings, or non-medical questions, use the conversation agent. But if image is uploaded, always go to the medical vision agents first.
+    - For queries about specific drugs, genes/variants, clinical trials, medical coding systems (ICD-10/ICD-11/SNOMED CT/LOINC/RxNorm), or biomedical entity lookups, use MCP_AGENT.
 
     You must provide your answer in JSON format with the following structure:
     {{
@@ -608,6 +611,7 @@ def create_agent_graph():
     workflow.add_node("BRAIN_TUMOR_AGENT", run_brain_tumor_agent)
     workflow.add_node("CHEST_XRAY_AGENT", run_chest_xray_agent)
     workflow.add_node("SKIN_LESION_AGENT", run_skin_lesion_agent)
+    workflow.add_node("MCP_AGENT", mcp_agent_node)
     workflow.add_node("check_validation", handle_human_validation)
     workflow.add_node("human_validation", perform_human_validation)
     workflow.add_node("apply_guardrails", apply_output_guardrails)
@@ -636,6 +640,7 @@ def create_agent_graph():
             "BRAIN_TUMOR_AGENT": "BRAIN_TUMOR_AGENT",
             "CHEST_XRAY_AGENT": "CHEST_XRAY_AGENT",
             "SKIN_LESION_AGENT": "SKIN_LESION_AGENT",
+            "MCP_AGENT": "MCP_AGENT",
             "needs_validation": "RAG_AGENT"  # Default to RAG if confidence is low
         }
     )
@@ -648,6 +653,7 @@ def create_agent_graph():
     workflow.add_edge("BRAIN_TUMOR_AGENT", "check_validation")
     workflow.add_edge("CHEST_XRAY_AGENT", "check_validation")
     workflow.add_edge("SKIN_LESION_AGENT", "check_validation")
+    workflow.add_edge("MCP_AGENT", "check_validation")
 
     workflow.add_edge("human_validation", "apply_guardrails")
     workflow.add_edge("apply_guardrails", END)

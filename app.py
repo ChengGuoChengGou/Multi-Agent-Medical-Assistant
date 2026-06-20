@@ -21,12 +21,16 @@ from elevenlabs.client import ElevenLabs
 
 from config import Config
 from agents.agent_decision import process_query
+from agents.mcp_client import get_mcp_client, shutdown_mcp_client
 
 # Load configuration
 config = Config()
 
 # Initialize FastAPI app
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
+
+# MCP Agent instance (initialized on startup)
+mcp_client = None  # MCP client manager, initialized on startup
 
 # Set up directories
 UPLOAD_FOLDER = "uploads/backend"
@@ -51,7 +55,33 @@ client = ElevenLabs(
 )
 
 # Define allowed file extensions
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'dcm', 'nii', 'nii.gz', 'mha'}
+
+# ==================== MCP Lifecycle ====================
+@app.on_event("startup")
+async def startup_mcp():
+    """Initialize MCP connections on application startup."""
+    global mcp_client
+    try:
+        mcp_client = get_mcp_client()
+        await mcp_client.initialize()
+        print("[MCP] MCP Client initialized successfully")
+    except Exception as e:
+        print(f"[MCP] Warning: Failed to initialize MCP Client: {e}")
+        mcp_client = None
+
+@app.on_event("shutdown")
+async def shutdown_mcp():
+    """Clean up MCP connections on application shutdown."""
+    global mcp_client
+    if mcp_client:
+        try:
+            await shutdown_mcp_client()
+            print("[MCP] MCP Client cleaned up")
+        except Exception as e:
+            print(f"[MCP] Warning: MCP cleanup error: {e}")
+        mcp_client = None
+# ==================== End MCP Lifecycle ====================
 
 def allowed_file(filename):
     """Check if file has an allowed extension"""

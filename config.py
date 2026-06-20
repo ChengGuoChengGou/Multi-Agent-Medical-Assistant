@@ -171,6 +171,34 @@ class UIConfig:
         self.enable_speech = True
         self.enable_image_upload = True
 
+class MCPConfig:
+    def __init__(self):
+        self.biomcp = {
+            "enabled": True,
+            "transport": "stdio",
+            "command": "uv",
+            "args": ["run", "biomcp", "stdio"],
+            "cwd": "./biomcp",
+            "timeout": 30,
+        }
+        self.autoicd = {
+            "enabled": True,
+            "transport": "stdio",
+            "command": "uv",
+            "args": ["run", "python", "server.py"],
+            "cwd": "./autoicd-mcp",
+            "timeout": 30,
+        }
+        self.healthcare = {
+            "enabled": True,
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "@biantylabs/healthcare-mcp-public", "stdio"],
+            "timeout": 30,
+        }
+        self.max_iterations = 5
+        self.tool_timeout = 60
+
 class Config:
     def __init__(self):
         self.agent_decision = AgentDecisoinConfig()
@@ -182,6 +210,7 @@ class Config:
         self.speech = SpeechConfig()
         self.validation = ValidationConfig()
         self.ui = UIConfig()
+        self.mcp = MCPConfig()
         self.eleven_labs_api_key = os.getenv("ELEVEN_LABS_API_KEY")
         self.tavily_api_key = os.getenv("TAVILY_API_KEY")
         self.max_conversation_history = 20  # Include last 20 messsages (10 Q&A pairs) in history
