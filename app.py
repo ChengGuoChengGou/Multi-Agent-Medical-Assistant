@@ -23,11 +23,39 @@ from config import Config
 from agents.agent_decision import process_query
 from agents.mcp_client import get_mcp_client, shutdown_mcp_client
 
+# Rate limiting
+try:
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    SLOWAPI_AVAILABLE = True
+except ImportError:
+    SLOWAPI_AVAILABLE = False
+    print("[SlowAPI] Not installed, rate limiting disabled. Install: pip install slowapi")
+
 # Load configuration
 config = Config()
 
 # Initialize FastAPI app
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
+
+# Rate limiter: 30 requests/minute per IP
+if SLOWAPI_AVAILABLE:
+    limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
+    app.state.limiter = limiter
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Rate limit exceeded. Please wait.", "retry_after": str(exc.detail)}
+        )
+else:
+    # No-op decorator when slowapi not installed
+    def limiter(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
 
 # MCP Agent instance (initialized on startup)
 mcp_client = None  # MCP client manager, initialized on startup
@@ -125,12 +153,17 @@ def health_check():
 def chat(
     request: QueryRequest, 
     response: Response, 
+    req: Request,
     session_id: Optional[str] = Cookie(None)
 ):
     """Process user text query through the multi-agent system."""
     # Generate session ID for cookie if it doesn't exist
     if not session_id:
         session_id = str(uuid.uuid4())
+    
+    # Session fingerprint header for client-side tracking
+    response.headers["X-Session-ID"] = session_id
+    response.headers["X-Content-Type-Options"] = "nosniff"
     
     try:
         response_data = process_query(request.query, session_id=session_id)
@@ -160,12 +193,19 @@ def chat(
 
 @app.post("/upload")
 async def upload_image(
+    request: Request,
     response: Response,
     image: UploadFile = File(...), 
     text: str = Form(""),
     session_id: Optional[str] = Cookie(None)
 ):
     """Process medical image uploads with optional text input."""
+    # Generate session ID for cookie if it doesn't exist
+    if not session_id:
+        session_id = str(uuid.uuid4())
+    response.headers["X-Session-ID"] = session_id
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    
     # Validate file type
     if not allowed_file(image.filename):
         return JSONResponse(
@@ -188,10 +228,6 @@ async def upload_image(
                 "response": f"File too large. Maximum size allowed: {config.api.max_image_upload_size}MB"
             }
         )
-    
-    # Generate session ID for cookie if it doesn't exist
-    if not session_id:
-        session_id = str(uuid.uuid4())
     
     # Save file securely
     filename = secure_filename(f"{uuid.uuid4()}_{image.filename}")

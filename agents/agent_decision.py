@@ -473,16 +473,55 @@ def create_agent_graph():
         return "check_validation"  # No transition needed if confidence is high and info is sufficient
     
     def run_brain_tumor_agent(state: AgentState) -> AgentState:
-        """Handle brain MRI image analysis."""
+        """Handle brain MRI image analysis using EfficientNet-B0 classifier."""
+
+        current_input = state["current_input"]
+        image_path = current_input.get("image", None)
 
         print(f"Selected agent: BRAIN_TUMOR_AGENT")
 
-        response = AIMessage(content="This would be handled by the brain tumor agent, analyzing the MRI image.")
+        # Classify brain MRI: glioma, meningioma, pituitary, no_tumor
+        result = AgentConfig.image_analyzer.classify_brain_tumor(image_path)
+
+        if isinstance(result, dict):
+            pred = result.get('prediction', 'unknown')
+            conf = result.get('confidence', 0.0)
+            probs = result.get('all_probabilities', {})
+            
+            if pred == 'no_tumor':
+                response = AIMessage(
+                    content=f"The analysis of the uploaded brain MRI image indicates **NO TUMOR** detected. "
+                            f"Confidence: {conf:.1%}. This is a reassuring result, but please consult a neurologist for confirmation."
+                )
+            elif pred == 'error':
+                response = AIMessage(content=f"Error analyzing the brain MRI image: {result.get('error', 'Unknown error')}")
+            else:
+                # Tumor detected (glioma, meningioma, or pituitary)
+                tumor_info = {
+                    'glioma': 'glioma tumor - a type that originates in the glial cells of the brain',
+                    'meningioma': 'meningioma - a tumor arising from the meninges (membranes surrounding the brain)',
+                    'pituitary': 'pituitary adenoma - a tumor in the pituitary gland at the base of the brain'
+                }
+                desc = tumor_info.get(pred, pred)
+                
+                # Build probability breakdown
+                prob_str = ", ".join(f"{k}: {v:.1%}" for k, v in probs.items())
+                
+                response = AIMessage(
+                    content=f"The analysis of the uploaded brain MRI image indicates a **POSITIVE** result for **{pred.upper()}**. "
+                            f"\n\nDetails: The image shows characteristics consistent with {desc}. "
+                            f"Confidence: {conf:.1%}. "
+                            f"\n\nProbability breakdown: {prob_str}. "
+                            f"\n\n⚠️ **Important**: This is an AI-assisted analysis and should NOT be used as a final diagnosis. "
+                            f"Please consult a qualified neurologist or neurosurgeon for professional evaluation."
+                )
+        else:
+            response = AIMessage(content="The uploaded image could not be processed. Please ensure it is a valid brain MRI scan.")
 
         return {
             **state,
             "output": response,
-            "needs_human_validation": True,  # Medical diagnosis always needs validation
+            "needs_human_validation": True,
             "agent_name": "BRAIN_TUMOR_AGENT"
         }
     
