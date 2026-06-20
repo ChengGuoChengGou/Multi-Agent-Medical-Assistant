@@ -269,6 +269,26 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RequestIDMiddleware)
 
+# --- Request Timeout Middleware (Phase 42) ---
+import asyncio
+
+class RequestTimeoutMiddleware(BaseHTTPMiddleware):
+    """Enforce max request processing time. Returns 504 on timeout."""
+    TIMEOUT_SECONDS = int(os.getenv("REQUEST_TIMEOUT", "60"))
+
+    async def dispatch(self, request: Request, call_next):
+        try:
+            return await asyncio.wait_for(call_next(request), timeout=self.TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            request_id = getattr(request.state, "request_id", "unknown")
+            logger.error(f"[{request_id}] Request timeout after {self.TIMEOUT_SECONDS}s: {request.method} {request.url.path}")
+            return JSONResponse(
+                status_code=504,
+                content={"error": "Gateway Timeout", "message": f"Request exceeded {self.TIMEOUT_SECONDS}s limit"}
+            )
+
+app.add_middleware(RequestTimeoutMiddleware)
+
 if SLOWAPI_AVAILABLE:
     from slowapi.middleware import SlowAPIMiddleware
     app.add_middleware(SlowAPIMiddleware)
