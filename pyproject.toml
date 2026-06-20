@@ -1,0 +1,63 @@
+[project]
+name = "multi-agent-medical-assistant"
+version = "3.1.0"
+description = "Multi-agent medical chatbot with RAG, image analysis, and speech"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests requiring external services",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "*/conftest.py",
+    "*/__pycache__/*",
+    "*.egg-info/*",
+    "uploads/*",
+    "data/*",
+    "sample_images/*",
+    "ingest_rag_data.py",
+    "mcp_demo.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+precision = 1
+fail_under = 30
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError",
+]
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "E741", "W503"]
+
+[tool.ruff.format]
+quote-style = "double"
