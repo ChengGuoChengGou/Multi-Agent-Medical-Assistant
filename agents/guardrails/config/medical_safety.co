@@ -1,0 +1,109 @@
+# Medical Safety Rails - Colang 2.0 rules for NeMo Guardrails
+# Extends existing LocalGuardrails with declarative safety rules
+
+# ─── Define user intents ─────────────────────────────────────────
+
+# Self-harm / Suicide detection
+define user express suicidal intent
+  "I want to kill myself"
+  "I want to end my life"
+  "I'm thinking about suicide"
+  "How to hurt myself"
+  "I don't want to live anymore"
+  "I want to die"
+  "Better off dead"
+  "No reason to live"
+  "I'm going to hurt myself"
+  "Give me ways to commit suicide"
+
+define user express self-harm intent
+  "How to cut myself"
+  "Ways to self-harm"
+  "I've been hurting myself"
+  "I want to harm myself"
+  "Self-injury methods"
+
+# Dangerous medical advice requests
+define user request dangerous medication dosage
+  "What happens if I take [0-9]+ pills of"
+  "How many [a-z]+ can I overdose on"
+  "Lethal dose of"
+  "Overdose on"
+  "Can I die from taking too much"
+  "How to overdose"
+
+define user request prescription drug abuse
+  "How to get high on prescription drugs"
+  "Best drugs to get high"
+  "How to abuse medication"
+  "Recreational drug use"
+
+# PII / Privacy leakage attempts
+define user share sensitive PII
+  "My SSN is"
+  "My credit card number is"
+  "My social security"
+  "My bank account"
+  "My passport number"
+
+# ─── Define bot responses ────────────────────────────────────────
+
+define bot express crisis resources
+  "I'm concerned about what you're sharing. If you're in crisis, please reach out to:
+   🆘 **National Suicide Prevention Lifeline**: 988 (call or text)
+   🆘 **Crisis Text Line**: Text HOME to 741741
+   🆘 **Emergency**: Call 911
+   You are not alone. A trained counselor can help right now."
+
+define bot decline dangerous dosage request
+  "I cannot provide specific medication dosage information that could be harmful. Please consult your doctor or pharmacist for medication guidance. If you're experiencing a medical emergency, call 911 immediately."
+
+define bot decline prescription abuse
+  "I cannot assist with medication misuse. If you're struggling with substance use, please contact:
+   📞 SAMHSA Helpline: 1-800-662-4357 (free, confidential, 24/7)"
+
+define bot warn PII sharing
+  "⚠️ **Privacy Alert**: Please do not share personal identifying information (SSN, credit card numbers, etc.) in this chat. I've removed it for your protection. For secure medical records, use your healthcare provider's official portal."
+
+define bot require professional consultation
+  "This question requires a professional medical evaluation. I recommend scheduling an appointment with your healthcare provider for personalized advice."
+
+# ─── Input Rails ─────────────────────────────────────────────────
+
+define flow self check medical input
+  user express suicidal intent
+  bot express crisis resources
+  stop
+
+define flow self check medical input
+  user express self-harm intent
+  bot express crisis resources
+  stop
+
+define flow self check medical input
+  user request dangerous medication dosage
+  bot decline dangerous dosage request
+  stop
+
+define flow self check medical input
+  user request prescription drug abuse
+  bot decline prescription abuse
+  stop
+
+# ─── Output Rails ────────────────────────────────────────────────
+
+define flow self check medical output
+  $response = $bot_message
+  # Check for unqualified diagnosis language
+  if "you definitely have" in $response.lower()
+    or "you are diagnosed with" in $response.lower()
+    or "you certainly have" in $response.lower()
+    bot require professional consultation
+    stop
+
+define flow check PII in output
+  $response = $bot_message
+  if any(char.isdigit() for char in $response[:50])  # Quick SSN/card pattern check
+    if len([w for w in $response.split() if w.replace('-','').isdigit() and len(w.replace('-','')) >= 9]) > 0
+      bot warn PII sharing
+      stop

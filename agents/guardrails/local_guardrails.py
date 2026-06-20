@@ -2,6 +2,27 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import AIMessage
 import re
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _try_load_nemo_rails(config_dir: str | None = None):
+    """Attempt to load NeMo Guardrails RailsApp. Returns (rails_app, error_msg)."""
+    try:
+        from nemoguardrails import RailsConfig, LLMRails
+        if config_dir is None:
+            config_dir = os.path.join(os.path.dirname(__file__), "config")
+        if not os.path.isdir(config_dir):
+            return None, f"Config dir not found: {config_dir}"
+        config = RailsConfig.from_path(config_dir)
+        rails = LLMRails(config)
+        logger.info("[guardrails] NeMo Guardrails loaded from %s", config_dir)
+        return rails, None
+    except Exception as e:
+        logger.warning("[guardrails] NeMo Guardrails unavailable: %s", e)
+        return None, str(e)
 
 
 class LocalGuardrails:
@@ -43,6 +64,7 @@ class LocalGuardrails:
             llm: Optional LLM for deep safety check. If None, only regex filtering is used.
         """
         self.llm = llm
+        self.nemo_rails, self.nemo_error = _try_load_nemo_rails()
         
         # Compact input safety prompt (replaces 47-item list)
         self.input_check_prompt = PromptTemplate.from_template(
@@ -103,7 +125,7 @@ REVISED RESPONSE:"""
     def check_input(self, user_input: str) -> tuple[bool, str | AIMessage]:
         """Check if user input passes safety filters.
         
-        Pipeline: regex (fast) → LLM (if available)
+        Pipeline: regex (fast) → NeMo Colang (declarative rules) → LLM (if available)
         
         Returns:
             (True, original_input) if safe
@@ -115,6 +137,20 @@ REVISED RESPONSE:"""
             return False, AIMessage(
                 content=f"I cannot process this request. Reason: Content safety violation detected."
             )
+
+        # Stage 1.5: NeMo Guardrails Colang check (declarative rules, no LLM cost for keyword matches)
+        if self.nemo_rails:
+            try:
+                nemo_result = self.nemo_rails.generate(
+                    messages=[{"role": "user", "content": user_input}]
+                )
+                if nemo_result and nemo_result.get("content"):
+                    resp = nemo_result["content"]
+                    # If NeMo intercepted with a safety response, block it
+                    if any(kw in resp.lower() for kw in ["cannot", "crisis", "concerned", "decline", "emergency", "988", "911"]):
+                        return False, AIMessage(content=resp)
+            except Exception as e:
+                logger.debug("[guardrails] NeMo check skipped: %s", e)
 
         # Stage 2: LLM deep check (only if LLM provided)
         if self.llm:

@@ -280,3 +280,5 @@ mcp>=1.0.0
 langfuse>=2.0.0,<3.0.0  # LLM observability (tracing, cost tracking)
 mem0ai>=0.1.0  # Long-term memory for agents (vector-based)
 deepeval>=1.0.0  # LLM evaluation framework (RAGAS, hallucination)
+
+nemoguardrails>=0.22.0

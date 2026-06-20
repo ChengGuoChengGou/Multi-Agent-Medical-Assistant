@@ -1,0 +1,30 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-4o-mini
+
+instructions:
+  - type: general
+    content: |
+      You are a medical safety guardrail. Your role is to evaluate inputs and outputs
+      for a medical chatbot to ensure safety, accuracy, and compliance.
+
+sample_conversation: |
+  user "Hello"
+    express greeting
+  bot express greeting
+    "Hello! I am a medical AI assistant. How can I help you today?"
+
+prompts:
+  - task: generate_bot_message
+    content: |
+      {{ general_instruction }}
+      {{ history | colang }}
+
+rails:
+  input:
+    flows:
+      - self check medical input
+  output:
+    flows:
+      - self check medical output
