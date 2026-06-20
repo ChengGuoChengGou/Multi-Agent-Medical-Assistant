@@ -212,12 +212,9 @@ async def metrics_middleware(request: Request, call_next):
         metrics.inc("http_errors_total", labels={"path": path})
         raise
 
-@app.get("/metrics", tags=["System"])
-async def prometheus_metrics():
-    """Prometheus-compatible metrics endpoint."""
-    return Response(content=metrics.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
+# Metrics endpoint defined at L524 (with lazy import from observability)
 
-# Instrument FastAPI with OpenTelemetry (optional, graceful fallback)
+# Instrument FastAPI with OpenTelemetrymetry (optional, graceful fallback)
 try:
     FastAPIInstrumentor.instrument_app(app)
 except Exception:

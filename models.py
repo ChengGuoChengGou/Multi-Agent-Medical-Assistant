@@ -1,26 +1,41 @@
 """Pydantic request/response models for structured API contracts.
 
 Phase 20: Centralized models for consistent API responses.
+Phase 54: Pydantic V2 modernization (model_config, field_validator, model_dump).
 """
 from __future__ import annotations
 
 import time
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ─── Request Models ─────────────────────────────────────────────────
 
 class QueryRequest(BaseModel):
     """Chat query request with optional conversation history."""
+
+    model_config = {"json_schema_extra": {"examples": [{"query": "What is hypertension?"}]}}
+
     query: str = Field(..., min_length=1, max_length=4096, description="User query text")
     conversation_history: List = Field(default=[], description="Previous conversation messages")
+
+    @field_validator("query")
+    @classmethod
+    def strip_and_validate_query(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Query must not be empty or whitespace-only")
+        return v
 
 
 class SpeechRequest(BaseModel):
     """TTS speech generation request."""
-    text: str = Field(..., description="Text to synthesize")
+
+    model_config = {"json_schema_extra": {"examples": [{"text": "Hello, how can I help you?"}]}}
+
+    text: str = Field(..., min_length=1, max_length=5000, description="Text to synthesize")
     voice_id: str = Field(default="zh-CN-XiaoxiaoNeural", description="Edge TTS voice identifier")
 
 
@@ -28,6 +43,9 @@ class SpeechRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     """Standard chat response envelope."""
+
+    model_config = {"json_schema_extra": {"examples": [{"status": "success", "response": "...", "agent": "decision"}]}}
+
     status: str = "success"
     response: str = ""
     agent: str = "unknown"
@@ -38,6 +56,9 @@ class ChatResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Standard error response envelope."""
+
+    model_config = {"json_schema_extra": {"examples": [{"status": "error", "detail": "...", "agent": "System"}]}}
+
     status: str = "error"
     detail: str
     agent: str = "System"
@@ -46,15 +67,50 @@ class ErrorResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     """Health check response with dependency status."""
+
+    model_config = {"json_schema_extra": {"examples": [{"status": "healthy", "version": "3.3.0", "checks": {"llm": "ok"}}]}}
+
     status: str  # "healthy" | "degraded"
     version: str = "3.3.0"
-    checks: Dict[str, str] = {}
+    checks: Dict[str, str] = Field(default_factory=dict)
     timestamp: int = Field(default_factory=lambda: int(time.time()))
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        if v not in ("healthy", "degraded", "unhealthy"):
+            raise ValueError(f"status must be healthy/degraded/unhealthy, got {v}")
+        return v
 
 
 class MetricsResponse(BaseModel):
     """Prometheus-compatible metrics (rendered as text/plain)."""
     pass  # Rendered by observability module directly
+
+
+# ─── Agent Routing Models ───────────────────────────────────────────
+
+class AgentRouteInfo(BaseModel):
+    """Internal model for agent routing decisions."""
+
+    agent_name: str = Field(..., description="Target agent identifier")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Routing confidence score")
+    reasoning: Optional[str] = Field(default=None, description="Why this agent was selected")
+
+
+class ConversationMessage(BaseModel):
+    """Typed conversation message (replaces raw dicts in history)."""
+
+    role: str = Field(..., description="Message role: user/assistant/system")
+    content: str = Field(..., min_length=1, description="Message content")
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        allowed = {"user", "assistant", "system"}
+        if v not in allowed:
+            raise ValueError(f"role must be one of {allowed}, got {v}")
+        return v
 
 
 # ─── Response Factory ───────────────────────────────────────────────
@@ -66,19 +122,19 @@ def api_success(
     result_image: Optional[str] = None,
     request_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Build a standardized success response dict."""
-    resp: Dict[str, Any] = {
-        "status": "success",
-        "response": response,
-        "agent": agent,
-    }
-    if cached:
-        resp["cached"] = True
-    if result_image:
-        resp["result_image"] = result_image
-    if request_id:
-        resp["request_id"] = request_id
-    return resp
+    """Build a standardized success response dict.
+
+    Uses ChatResponse model for validation, then returns dict for backward compat.
+    """
+    model = ChatResponse(
+        response=response,
+        agent=agent,
+        cached=cached if cached else None,
+        result_image=result_image,
+        request_id=request_id,
+    )
+    # model_dump with exclude_none for clean JSON
+    return model.model_dump(exclude_none=True)
 
 
 def api_error(
@@ -86,12 +142,13 @@ def api_error(
     agent: str = "System",
     request_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Build a standardized error response dict."""
-    resp: Dict[str, Any] = {
-        "status": "error",
-        "detail": detail,
-        "agent": agent,
-    }
-    if request_id:
-        resp["request_id"] = request_id
-    return resp
+    """Build a standardized error response dict.
+
+    Uses ErrorResponse model for validation, then returns dict for backward compat.
+    """
+    model = ErrorResponse(
+        detail=detail,
+        agent=agent,
+        request_id=request_id,
+    )
+    return model.model_dump(exclude_none=True)
