@@ -307,6 +307,18 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(BodySizeLimitMiddleware)
 
+# --- API Version Header Middleware (Phase 44) ---
+class APIVersionMiddleware(BaseHTTPMiddleware):
+    """Add X-API-Version header to all responses for version tracking."""
+    API_VERSION = os.getenv("API_VERSION", "1.0.0")
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-API-Version"] = self.API_VERSION
+        return response
+
+app.add_middleware(APIVersionMiddleware)
+
 if SLOWAPI_AVAILABLE:
     from slowapi.middleware import SlowAPIMiddleware
     app.add_middleware(SlowAPIMiddleware)
@@ -361,11 +373,26 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'dcm', 'nii', 
 # ==================== MCP Lifecycle ====================
 from contextlib import asynccontextmanager
 
+import signal
+
 @asynccontextmanager
 async def lifespan(app):
-    """Graceful startup/shutdown lifecycle (Phase 27)."""
+    """Graceful startup/shutdown lifecycle with SIGTERM/SIGINT handling (Phase 27+44)."""
     global mcp_client
     # --- Startup ---
+    loop = asyncio.get_event_loop()
+    shutdown_event = asyncio.Event()
+
+    def _signal_handler(sig):
+        logger.info(f"[Lifespan] Received signal {sig.name}, initiating graceful shutdown...")
+        shutdown_event.set()
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, _signal_handler, sig)
+        except NotImplementedError:
+            pass  # Windows doesn't support add_signal_handler for some signals
+
     try:
         mcp_client = get_mcp_client()
         await mcp_client.initialize()
@@ -381,6 +408,7 @@ async def lifespan(app):
     logger.info("[Lifespan] Application startup complete")
     yield
     # --- Shutdown ---
+    logger.info("[Lifespan] Shutdown initiated, cleaning up resources...")
     if mcp_client:
         try:
             await shutdown_mcp_client()
