@@ -279,9 +279,63 @@
             background-color: #64b5f6;
             border-color: #64b5f6;
         }
+    
+        /* Phase 22: Skeleton loading animation */
+        @keyframes skeleton-shimmer {
+            0% { background-position: -200px 0; }
+            100% { background-position: calc(200px + 100%) 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-card) 25%, var(--border-color) 50%, var(--bg-card) 75%);
+            background-size: 200px 100%;
+            animation: skeleton-shimmer 1.5s ease-in-out infinite;
+            border-radius: var(--radius-md);
+        }
+        .skeleton-line { height: 14px; margin-bottom: 8px; border-radius: 4px; }
+        .skeleton-line:last-child { width: 60%; }
+        .skeleton-avatar { width: 40px; height: 40px; border-radius: 50%; }
+        
+        /* Phase 22: Focus ring per ui_design_sop */
+        *:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+        }
+        
+        /* Phase 22: Skip to content link for keyboard a11y */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--primary);
+            color: #fff;
+            padding: 8px 16px;
+            z-index: 10000;
+            transition: top 0.2s;
+        }
+        .skip-link:focus { top: 0; }
+        
+        /* Phase 22: Keyboard shortcut hints */
+        .kbd-hint {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-family: monospace;
+            background: var(--bg-muted);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
     </style>
 </head>
 <body>
+        <a href="#chat-body" class="skip-link" aria-label="Skip to chat content">Skip to content</a>
     <div class="container-fluid py-4">
         <div class="row">
             <!-- Sidebar -->
@@ -343,10 +397,10 @@
                             <div class="agent-status-dot"></div>
                             <span class="agent-status-text">Processing...</span>
                         </div>
-                        <button id="themeToggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode" style="position:absolute;top:12px;right:15px;background:var(--bg-agent-tag);color:var(--text-agent-tag);border:1px solid var(--border-color);border-radius:20px;padding:4px 12px;cursor:pointer;font-size:0.9em;transition:all 0.3s;">🌙</button>
+                        <button id="themeToggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode" aria-label="Toggle dark mode" role="switch" aria-checked="false" style="position:absolute;top:12px;right:15px;background:var(--bg-agent-tag);color:var(--text-agent-tag);border:1px solid var(--border-color);border-radius:20px;padding:4px 12px;cursor:pointer;font-size:0.9em;transition:all 0.3s;">🌙</button>
                     </div>
                     
-                    <div id="chat-body" class="chat-body">
+                    <div id="chat-body" class="chat-body" role="log" aria-live="polite" aria-label="Chat messages">
                         <div class="message assistant-message">
                             <div class="agent-tag">System</div>
                             <p>Hello! I'm your medical assistant. You can ask me health-related questions or upload medical images for analysis.</p>
@@ -368,10 +422,11 @@
                                     <button type="button" class="file-upload-btn">
                                         <i class="fas fa-paperclip"></i>
                                     </button>
-                                    <input type="file" class="file-upload-input" id="image-upload" accept="image/*">
+                                    <input type="file" class="file-upload-input" id="image-upload" accept="image/*" aria-label="Upload medical image">
                                 </div>
-                                <textarea id="message-input" rows="1" placeholder="Ask a medical question..."></textarea>
-                                <button type="button" id="voice-btn" class="btn-voice" title="Voice input">
+                                <textarea id="message-input" rows="1" placeholder="Ask a medical question..." aria-label="Type your medical question" aria-describedby="input-hint"></textarea>
+                                <span id="input-hint" class="sr-only" aria-live="polite"></span>
+                                <button type="button" id="voice-btn" class="btn-voice" title="Voice input" aria-label="Voice input">
                                     <i class="fas fa-microphone"></i>
                                 </button>
                         <label class="streaming-toggle" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--foreground-muted); cursor: pointer; user-select: none;">
@@ -1209,6 +1264,77 @@ document.head.appendChild(streamStyle);
                 }
             });
         })();
+
+        
+        
+        // Phase 22: Keyboard shortcuts + skeleton loading
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+Enter or Cmd+Enter to send message
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                const form = document.getElementById('chat-form');
+                if (form) form.dispatchEvent(new Event('submit', {cancelable: true}));
+            }
+            // Escape to clear input
+            if (e.key === 'Escape') {
+                const input = document.getElementById('message-input');
+                if (document.activeElement === input) {
+                    input.value = '';
+                    input.style.height = 'auto';
+                }
+            }
+            // Ctrl+L to focus input
+            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                e.preventDefault();
+                document.getElementById('message-input')?.focus();
+            }
+            // Ctrl+D to toggle dark mode
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
+        
+        // Skeleton loading helper
+        function showSkeleton(container) {
+            const skel = document.createElement('div');
+            skel.className = 'skeleton-message';
+            skel.innerHTML = `
+                <div style="display:flex;gap:12px;padding:16px;">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div style="flex:1">
+                        <div class="skeleton skeleton-line" style="width:80%"></div>
+                        <div class="skeleton skeleton-line" style="width:95%"></div>
+                        <div class="skeleton skeleton-line" style="width:60%"></div>
+                    </div>
+                </div>`;
+            container.appendChild(skel);
+            container.scrollTop = container.scrollHeight;
+            return skel;
+        }
+        
+        function removeSkeleton(el) { if (el) el.remove(); }
+        
+        // Update theme toggle aria-checked
+        function updateThemeAria() {
+            const btn = document.getElementById('themeToggle');
+            if (btn) {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                btn.setAttribute('aria-checked', isDark.toString());
+                btn.textContent = isDark ? '☀️' : '🌙';
+            }
+        }
+        const origToggle = window.toggleTheme;
+        if (origToggle) {
+            window.toggleTheme = function() { origToggle(); setTimeout(updateThemeAria, 50); };
+        }
+        updateThemeAria();
+        
+        // Add shortcut hints to footer
+        const hintSpan = document.getElementById('input-hint');
+        if (hintSpan) {
+            hintSpan.innerHTML = '<span class="kbd-hint">Ctrl+Enter</span> send · <span class="kbd-hint">Esc</span> clear · <span class="kbd-hint">Ctrl+L</span> focus';
+        }
 
         </script>
 </body>
