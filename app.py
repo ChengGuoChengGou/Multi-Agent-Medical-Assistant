@@ -141,7 +141,18 @@ except ImportError:
     tracer = None
     logger.info("[OTEL] opentelemetry not installed — tracing disabled (pip install opentelemetry-sdk opentelemetry-instrumentation-fastapi)")
 
-app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
+app = FastAPI(
+    title="Multi-Agent Medical Chatbot",
+    version="2.0",
+    description="AI-powered medical consultation with multimodal analysis",
+    openapi_tags=[
+        {"name": "Health", "description": "Health checks and readiness probes"},
+        {"name": "Chat", "description": "Chat and conversation endpoints"},
+        {"name": "Analysis", "description": "Medical image/document analysis"},
+        {"name": "WebSocket", "description": "Real-time bidirectional communication"},
+        {"name": "Admin", "description": "Administrative and monitoring endpoints"},
+    ]
+)
 
 # Phase 27: Register structured error handlers
 from error_handlers import register_error_handlers
@@ -210,6 +221,21 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # --- Security Middleware Registration ---
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
+
+# --- Request ID Middleware (Phase 28) ---
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Inject X-Request-ID into every request/response for distributed tracing."""
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+app.add_middleware(RequestIDMiddleware)
+
 if SLOWAPI_AVAILABLE:
     from slowapi.middleware import SlowAPIMiddleware
     app.add_middleware(SlowAPIMiddleware)
@@ -234,6 +260,7 @@ csrf_protection = CSRFProtection(CSRF_SECRET)
 
 # MCP Agent instance (initialized on startup)
 mcp_client = None  # MCP client manager, initialized on startup
+_app_start_time = time.time()  # Phase 28: uptime tracking
 
 # Set up directories
 UPLOAD_FOLDER = "uploads/backend"
@@ -330,7 +357,7 @@ async def medical_error_handler(request: Request, exc: MedicalAssistantError):
     """Global handler for structured application errors."""
     return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
     """Enhanced health check endpoint with dependency status."""
     import time as _time
@@ -357,6 +384,7 @@ async def health_check():
     return {
         "status": status,
         "version": "3.4.0",
+        "uptime_seconds": round(time.time() - _app_start_time, 1),
         "checks": checks,
         "timestamp": int(_time.time()),
     }
