@@ -214,13 +214,11 @@ else:
             return func
         return decorator
 
-# --- GZip Compression Middleware (Phase 26) ---
+# --- GZip Compression Middleware (Phase 29) ---
 from starlette.middleware.gzip import GZipMiddleware
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # --- Security Middleware Registration ---
-from starlette.middleware.gzip import GZipMiddleware  # Phase 29: response compression
-app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 
@@ -389,6 +387,17 @@ async def health_check():
         "uptime_seconds": round(time.time() - _app_start_time, 1),
         "checks": checks,
         "timestamp": int(_time.time()),
+    }
+
+
+@app.get("/metrics", tags=["Observability"])
+async def metrics_endpoint():
+    """Application metrics: request counts, latency, error rates, uptime."""
+    from observability import metrics_collector
+    return {
+        "uptime_seconds": round(time.time() - _app_start_time, 1),
+        "metrics": metrics_collector.get_metrics(),
+        "timestamp": int(time.time()),
     }
 
 
