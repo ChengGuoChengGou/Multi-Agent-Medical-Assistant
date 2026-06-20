@@ -577,8 +577,10 @@ async def readiness():
 
 @app.get("/cache/stats")
 async def cache_statistics():
-    """Cache performance statistics (Phase 26: Redis + in-memory hybrid)."""
-    return await cache_stats()
+    """Cache performance statistics (Phase 26: Redis + in-memory hybrid, Phase 50: semantic cache)."""
+    stats = await cache_stats()
+    stats["semantic"] = await semantic_stats()
+    return stats
 
 
 # ==================== WebSocket (Phase 27) ====================
@@ -638,6 +640,7 @@ async def websocket_chat(websocket):
 
 
 from cache import _make_key as cache_make_key, cache_get, cache_set, cache_stats, init_redis
+from cache import semantic_get, semantic_set, semantic_stats
 
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("10/minute")
@@ -665,6 +668,14 @@ async def chat(
     if cached:
         result = cached.copy()
         result["cached"] = True
+        return result
+    
+    # Phase 50: Semantic cache — find similar (not identical) queries
+    sem_cached = await semantic_get(request.query)
+    if sem_cached:
+        result = sem_cached.copy()
+        result["cached"] = True
+        result["cache_type"] = "semantic"
         return result
     
     try:
@@ -720,6 +731,12 @@ async def chat(
         
         # Store in cache (Redis + in-memory fallback)
         await cache_set(cache_key, result, ttl=300)
+        
+        # Phase 50: Also store in semantic cache for similar-query hits
+        try:
+            await semantic_set(request.query, result, ttl=600)
+        except Exception as sem_err:
+            logger.debug(f"[chat] Semantic cache set failed (non-fatal): {sem_err}")
         
         return result
     except Exception as e:
