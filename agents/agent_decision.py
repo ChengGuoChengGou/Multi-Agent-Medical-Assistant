@@ -29,17 +29,17 @@ import uuid
 
 # Optional: Langfuse observability (graceful degradation if not installed)
 try:
-    from langfuse.callback import CallbackHandler as LangfuseCallbackHandler
+    from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
     langfuse_handler = LangfuseCallbackHandler(
         public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
         secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
         host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
     )
     LANGFUSE_ENABLED = bool(os.getenv("LANGFUSE_PUBLIC_KEY"))
-except ImportError:
+except (ImportError, Exception):
     langfuse_handler = None
     LANGFUSE_ENABLED = False
-    logger.warning("[Langfuse] Not installed, observability disabled. Install: pip install langfuse")
+    logger.warning("[Langfuse] Not installed or misconfigured. Install: pip install langfuse")
 
 import cv2
 import numpy as np
