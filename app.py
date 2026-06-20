@@ -24,6 +24,7 @@ from config import Config
 from agents.agent_decision import process_query
 from agents.mcp_client import get_mcp_client, shutdown_mcp_client
 from agents.memory_module import get_memory_store
+from edge_tts_service import edge_tts_generate, list_chinese_voices, get_voice_id
 
 # Security middleware
 import secrets as _secrets
@@ -513,62 +514,75 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 
 @app.post("/generate-speech")
 async def generate_speech(request: SpeechRequest):
-    """Endpoint to generate speech using ElevenLabs API"""
+    """Endpoint to generate speech using Edge TTS (free) with ElevenLabs fallback."""
     try:
         text = request.text
-        selected_voice_id = request.voice_id
-        
         if not text:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Text is required"}
-            )
-        
-        # Define API request to ElevenLabs
-        elevenlabs_url = f"https://api.elevenlabs.io/v1/text-to-speech/{selected_voice_id}/stream"
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json",
-            "xi-api-key": config.speech.eleven_labs_api_key
-        }
-        payload = {
-            "text": text,
-            "model_id": "eleven_monolingual_v1",
-            "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.5
-            }
-        }
+            return JSONResponse(status_code=400, content={"error": "Text is required"})
 
-        # Send request to ElevenLabs API
-        response = requests.post(elevenlabs_url, headers=headers, json=payload)
-
-        if response.status_code != 200:
-            logger.error(f"[generate-speech] ElevenLabs API error, status: {response.status_code}")
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Text-to-speech service unavailable. Please try again later."}
-            )
-        
-        # Save the audio file temporarily
         os.makedirs(SPEECH_DIR, exist_ok=True)
         temp_audio_path = f"./{SPEECH_DIR}/{uuid.uuid4()}.mp3"
-        with open(temp_audio_path, "wb") as f:
-            f.write(response.content)
 
-        # Return the generated audio file
-        return FileResponse(
-            path=temp_audio_path,
-            media_type="audio/mpeg",
-            filename="generated_speech.mp3"
-        )
+        # --- Strategy 1: Edge TTS (free, no API key) ---
+        try:
+            voice_id = get_voice_id(request.voice_id) if request.voice_id != "EXAMPLE_VOICE_ID" \
+                else config.speech.edge_tts_voice
+            audio_bytes = await edge_tts_generate(
+                text=text,
+                voice=voice_id,
+                rate=config.speech.edge_tts_rate,
+                pitch=config.speech.edge_tts_pitch,
+            )
+            with open(temp_audio_path, "wb") as f:
+                f.write(audio_bytes)
+            logger.info(f"[generate-speech] Edge TTS OK ({len(audio_bytes)} bytes, voice={voice_id})")
+            return FileResponse(path=temp_audio_path, media_type="audio/mpeg", filename="generated_speech.mp3")
+        except Exception as edge_err:
+            logger.warning(f"[generate-speech] Edge TTS failed: {edge_err}, trying ElevenLabs...")
+
+        # --- Strategy 2: ElevenLabs fallback (requires API key) ---
+        if config.speech.eleven_labs_api_key:
+            try:
+                selected_voice_id = request.voice_id if request.voice_id != "EXAMPLE_VOICE_ID" \
+                    else config.speech.eleven_labs_voice_id
+                elevenlabs_url = f"https://api.elevenlabs.io/v1/text-to-speech/{selected_voice_id}/stream"
+                headers = {
+                    "Accept": "audio/mpeg",
+                    "Content-Type": "application/json",
+                    "xi-api-key": config.speech.eleven_labs_api_key,
+                }
+                payload = {
+                    "text": text,
+                    "model_id": "eleven_monolingual_v1",
+                    "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
+                }
+                response = requests.post(elevenlabs_url, headers=headers, json=payload, timeout=15)
+                if response.status_code == 200:
+                    with open(temp_audio_path, "wb") as f:
+                        f.write(response.content)
+                    logger.info(f"[generate-speech] ElevenLabs fallback OK ({len(response.content)} bytes)")
+                    return FileResponse(path=temp_audio_path, media_type="audio/mpeg", filename="generated_speech.mp3")
+                else:
+                    logger.error(f"[generate-speech] ElevenLabs API error: {response.status_code}")
+            except Exception as el_err:
+                logger.error(f"[generate-speech] ElevenLabs fallback failed: {el_err}")
+
+        return JSONResponse(status_code=503, content={"error": "All TTS services unavailable. Please try again later."})
 
     except Exception as e:
         logger.error(f"[generate-speech] Error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Speech generation failed. Please try again."}
-        )
+        return JSONResponse(status_code=500, content={"error": "Speech generation failed. Please try again."})
+
+
+@app.get("/list-voices")
+async def list_voices_endpoint():
+    """List available Chinese TTS voices (Edge TTS, free)."""
+    try:
+        voices = await list_chinese_voices()
+        return {"voices": voices, "default": config.speech.edge_tts_voice}
+    except Exception as e:
+        logger.error(f"[list-voices] Error: {e}")
+        return JSONResponse(status_code=500, content={"error": "Failed to list voices."})
 
 # Add exception handler for request entity too large
 @app.exception_handler(413)

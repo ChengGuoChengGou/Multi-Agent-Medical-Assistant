@@ -133,8 +133,12 @@ class MedicalCVConfig:
 
 class SpeechConfig:
     def __init__(self):
-        self.eleven_labs_api_key = os.getenv("ELEVEN_LABS_API_KEY")  # Replace with your actual key
+        self.eleven_labs_api_key = os.getenv("ELEVEN_LABS_API_KEY")  # Fallback TTS
         self.eleven_labs_voice_id = "21m00Tcm4TlvDq8ikWAM"    # Default voice ID (Rachel)
+        # Edge TTS (free, no API key needed)
+        self.edge_tts_voice = os.getenv("EDGE_TTS_VOICE", "zh-CN-XiaoxiaoNeural")
+        self.edge_tts_rate = os.getenv("EDGE_TTS_RATE", "+0%")
+        self.edge_tts_pitch = os.getenv("EDGE_TTS_PITCH", "+0Hz")
 
 class ValidationConfig:
     def __init__(self):
