@@ -54,6 +54,19 @@ except ImportError:
 # Load configuration
 config = Config()
 
+# ─── Observability: Metrics collector (Prometheus-style) ───────────
+try:
+    from observability import metrics
+except ImportError:
+    from collections import defaultdict
+    class _DummyMetrics:
+        """No-op metrics collector when observability module unavailable."""
+        def __init__(self): self._counters = defaultdict(float)
+        def inc(self, *a, **kw): pass
+        def observe(self, *a, **kw): pass
+        def render(self): return ""
+    metrics = _DummyMetrics()
+
 # ─── Structured Logging with JSON + RotatingFileHandler ────────────
 import json as _json
 from logging.handlers import RotatingFileHandler
@@ -148,12 +161,6 @@ async def metrics_middleware(request: Request, call_next):
         metrics.observe("http_request_duration_seconds", elapsed, labels={"method": method, "path": path})
         metrics.inc("http_responses_total", labels={"status": str(response.status_code)})
 
-# Instrument FastAPI with OpenTelemetry
-try:
-    FastAPIInstrumentor.instrument_app(app)
-except Exception:
-    pass
-
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Response-Time"] = f"{elapsed:.3f}s"
         return response
@@ -168,7 +175,11 @@ async def prometheus_metrics():
     """Prometheus-compatible metrics endpoint."""
     return Response(content=metrics.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
-
+# Instrument FastAPI with OpenTelemetry (optional, graceful fallback)
+try:
+    FastAPIInstrumentor.instrument_app(app)
+except Exception:
+    pass
 
 # Rate limiter: 30 requests/minute per IP
 if SLOWAPI_AVAILABLE:
@@ -283,7 +294,7 @@ from models import QueryRequest, SpeechRequest, ChatResponse, ErrorResponse, Hea
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the main HTML page"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.exception_handler(MedicalAssistantError)
@@ -345,7 +356,7 @@ async def readiness():
     
     ready = all(checks.values())
     return Response(
-        content=json.dumps({"ready": ready, "checks": checks}),
+        content=_json.dumps({"ready": ready, "checks": checks}),
         status_code=200 if ready else 503,
         media_type="application/json"
     )
@@ -363,7 +374,6 @@ async def chat(
     import asyncio
     import hashlib
     import time as _time
-from observability import metrics, setup_json_logging
     
     # Generate session ID for cookie if it doesn't exist
     if not session_id:
