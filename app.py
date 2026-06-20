@@ -1,4 +1,5 @@
 import os
+import logging
 import uuid
 import tempfile
 from typing import Dict, Union, Optional, List
@@ -22,6 +23,18 @@ from elevenlabs.client import ElevenLabs
 from config import Config
 from agents.agent_decision import process_query
 from agents.mcp_client import get_mcp_client, shutdown_mcp_client
+
+# Security middleware
+import secrets as _secrets
+from middleware.security import (
+    SecurityHeadersMiddleware,
+    RequestLoggingMiddleware,
+    CSRFProtection,
+    sanitize_input,
+    sanitize_filename as sec_sanitize_filename,
+    validate_mime_type,
+    secure_error_response,
+)
 
 # Rate limiting
 try:
@@ -56,6 +69,14 @@ else:
         def decorator(func):
             return func
         return decorator
+
+# --- Security Middleware Registration ---
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
+
+# CSRF protection
+CSRF_SECRET = os.environ.get("CSRF_SECRET_KEY", _secrets.token_hex(32))
+csrf_protection = CSRFProtection(CSRF_SECRET)
 
 # MCP Agent instance (initialized on startup)
 mcp_client = None  # MCP client manager, initialized on startup
@@ -189,7 +210,8 @@ def chat(
         
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"[upload] Internal error: {e}")
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
 
 @app.post("/upload")
 async def upload_image(
@@ -206,7 +228,7 @@ async def upload_image(
     response.headers["X-Session-ID"] = session_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     
-    # Validate file type
+    # Validate file type (extension + MIME)
     if not allowed_file(image.filename):
         return JSONResponse(
             status_code=400, 
@@ -214,6 +236,18 @@ async def upload_image(
                 "status": "error",
                 "agent": "System",
                 "response": "Unsupported file type. Allowed formats: PNG, JPG, JPEG"
+            }
+        )
+    
+    # MIME type validation (defense-in-depth)
+    if not validate_mime_type(image.filename, image.content_type):
+        logging.warning(f"[upload] MIME mismatch: {image.filename} / {image.content_type}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "agent": "System",
+                "response": "File type mismatch detected. Please upload a valid image file."
             }
         )
     
@@ -266,7 +300,8 @@ async def upload_image(
         
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"[upload-image] Internal error: {e}")
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
 
 @app.post("/validate")
 def validate_medical_output(
@@ -305,7 +340,8 @@ def validate_medical_output(
                 "response": response_data['messages'][-1].content
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"[validate] Internal error: {e}")
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
 
 @app.post("/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
@@ -371,23 +407,24 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             if transcription.text:
                 return {"transcript": transcription.text}
             else:
+                logging.error("[transcribe] API returned empty transcription")
                 return JSONResponse(
                     status_code=500,
-                    content={"error": f"API error: {transcription}", "details": transcription.text}
+                    content={"error": "Speech transcription failed. Please try again."}
                 )
 
         except Exception as e:
-            print(f"Error processing audio: {str(e)}")
+            logging.error(f"[transcribe] Audio processing error: {e}")
             return JSONResponse(
                 status_code=500,
-                content={"error": f"Error processing audio: {str(e)}"}
+                content={"error": "Error processing audio. Please try again."}
             )
                 
     except Exception as e:
-        print(f"Transcription error: {str(e)}")
+        logging.error(f"[transcribe] Transcription error: {e}")
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "Transcription service unavailable. Please try again."}
         )
 
 @app.post("/generate-speech")
@@ -423,9 +460,10 @@ async def generate_speech(request: SpeechRequest):
         response = requests.post(elevenlabs_url, headers=headers, json=payload)
 
         if response.status_code != 200:
+            logging.error(f"[generate-speech] ElevenLabs API error, status: {response.status_code}")
             return JSONResponse(
                 status_code=500,
-                content={"error": f"Failed to generate speech, status: {response.status_code}", "details": response.text}
+                content={"error": "Text-to-speech service unavailable. Please try again later."}
             )
         
         # Save the audio file temporarily
@@ -442,9 +480,10 @@ async def generate_speech(request: SpeechRequest):
         )
 
     except Exception as e:
+        logging.error(f"[generate-speech] Error: {e}")
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": "Speech generation failed. Please try again."}
         )
 
 # Add exception handler for request entity too large
