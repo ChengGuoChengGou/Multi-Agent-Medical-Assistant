@@ -10,14 +10,58 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
+        /* CSS Custom Properties for theming */
+        :root {
+            --bg-body: #f5f5f5;
+            --bg-card: #ffffff;
+            --bg-header: #f8f9fa;
+            --bg-user-msg: #e3f2fd;
+            --bg-assistant-msg: #f5f5f5;
+            --bg-agent-tag: #ebf5ff;
+            --bg-input: #ffffff;
+            --bg-sidebar: #f8f9fa;
+            --text-primary: #1a1a2e;
+            --text-secondary: #666;
+            --text-agent-tag: #0d6efd;
+            --border-color: #eaeaea;
+            --border-light: #ddd;
+            --shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            --dot-color: #0d6efd;
+            --table-header-bg: #f2f2f2;
+            --table-row-even: #f9f9f9;
+            --table-row-hover: #f0f0f0;
+            --transition-speed: 0.3s;
+        }
+        [data-theme="dark"] {
+            --bg-body: #0f0f1a;
+            --bg-card: #1a1a2e;
+            --bg-header: #16213e;
+            --bg-user-msg: #1e3a5f;
+            --bg-assistant-msg: #252540;
+            --bg-agent-tag: #1e3a5f;
+            --bg-input: #252540;
+            --bg-sidebar: #16213e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --text-agent-tag: #64b5f6;
+            --border-color: #2a2a4a;
+            --border-light: #333355;
+            --shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            --dot-color: #64b5f6;
+            --table-header-bg: #1e1e3a;
+            --table-row-even: #1a1a30;
+            --table-row-hover: #252548;
+        }
         body {
-            background-color: #f5f5f5;
+            background-color: var(--bg-body);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color var(--transition-speed);
         }
         .chat-container {
             max-width: 1200px;
             margin: 0 auto;
-            background-color: #fff;
+            background-color: var(--bg-card);
+            transition: background-color var(--transition-speed);
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             height: 90vh;
@@ -26,10 +70,12 @@
         }
         .chat-header {
             padding: 15px 20px;
-            border-bottom: 1px solid #eaeaea;
-            background-color: #f8f9fa;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-header);
+            transition: background-color var(--transition-speed);
             border-top-left-radius: 15px;
             border-top-right-radius: 15px;
+            position: relative;
         }
         .chat-body {
             flex: 1;
@@ -40,8 +86,8 @@
         }
         .chat-footer {
             padding: 15px;
-            border-top: 1px solid #eaeaea;
-            background-color: #f8f9fa;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-header);
             border-bottom-left-radius: 15px;
             border-bottom-right-radius: 15px;
         }
@@ -53,21 +99,21 @@
             position: relative;
         }
         .user-message {
-            background-color: #e3f2fd;
-            color: #000;
+            background-color: var(--bg-user-msg);
+            color: var(--text-primary);
             align-self: flex-end;
             border-bottom-right-radius: 0;
         }
         .assistant-message {
-            background-color: #f5f5f5;
-            color: #000;
+            background-color: var(--bg-assistant-msg);
+            color: var(--text-primary);
             align-self: flex-start;
             border-bottom-left-radius: 0;
         }
         .agent-tag {
             display: inline-block;
-            background-color: #ebf5ff;
-            color: #0d6efd;
+            background-color: var(--bg-agent-tag);
+            color: var(--text-agent-tag);
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 0.8em;
@@ -133,7 +179,7 @@
             font-size: 0.85em;
             text-align: center;
             margin-top: 5px;
-            color: #666;
+            color: var(--text-secondary);
         }
         .thinking {
             display: flex;
@@ -144,7 +190,7 @@
             height: 8px;
             width: 8px;
             margin-right: 5px;
-            background-color: #0d6efd;
+            background-color: var(--dot-color);
             border-radius: 50%;
             display: inline-block;
             animation: pulse 1.5s infinite ease-in-out;
@@ -161,7 +207,8 @@
             100% { transform: scale(0.8); opacity: 0.5; }
         }
         .sidebar {
-            background-color: #f8f9fa;
+            background-color: var(--bg-sidebar);
+            transition: background-color var(--transition-speed);
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
@@ -170,14 +217,14 @@
         }
         .sidebar h5 {
             margin-bottom: 15px;
-            border-bottom: 1px solid #eaeaea;
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
         }
         .agent-info {
             margin-bottom: 15px;
         }
         .agent-info h6 {
-            color: #0d6efd;
+            color: var(--text-agent-tag);
         }
         @media (max-width: 768px) {
             .sidebar {
@@ -195,22 +242,42 @@
         }
         
         .message th, .message td {
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-light);
             padding: 8px;
             text-align: left;
         }
         
         .message th {
-            background-color: #f2f2f2;
+            background-color: var(--table-header-bg);
             font-weight: bold;
         }
         
         .message tr:nth-child(even) {
-            background-color: #f9f9f9;
+            background-color: var(--table-row-even);
         }
         
         .message tr:hover {
-            background-color: #f0f0f0;
+            background-color: var(--table-row-hover);
+        }
+
+        [data-theme="dark"] .text-muted {
+            color: #a0a0a0 !important;
+        }
+        [data-theme="dark"] .chat-header h4 {
+            color: #e0e0e0;
+        }
+        [data-theme="dark"] .message-input {
+            background-color: var(--bg-input);
+            color: var(--text-primary);
+            border-color: var(--border-light);
+        }
+        [data-theme="dark"] .btn-outline-secondary {
+            color: #a0a0a0;
+            border-color: var(--border-light);
+        }
+        [data-theme="dark"] .form-check-input:checked {
+            background-color: #64b5f6;
+            border-color: #64b5f6;
         }
     </style>
 </head>
@@ -266,7 +333,7 @@
             <!-- Chat Container -->
             <div class="col-md-9">
                 <div class="chat-container">
-                    <div class="chat-header">
+                    <div class="chat-header" style="position: relative;">
                         <h4>
                             <i class="fas fa-stethoscope"></i>
                             Multi-Agent Medical Assistant
@@ -276,6 +343,7 @@
                             <div class="agent-status-dot"></div>
                             <span class="agent-status-text">Processing...</span>
                         </div>
+                        <button id="themeToggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode" style="position:absolute;top:12px;right:15px;background:var(--bg-agent-tag);color:var(--text-agent-tag);border:1px solid var(--border-color);border-radius:20px;padding:4px 12px;cursor:pointer;font-size:0.9em;transition:all 0.3s;">🌙</button>
                     </div>
                     
                     <div id="chat-body" class="chat-body">
@@ -1114,6 +1182,34 @@ const streamStyle = document.createElement('style');
 streamStyle.textContent = '@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }';
 document.head.appendChild(streamStyle);
 
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js">
+        // === Dark Mode Toggle (Phase 21) ===
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
+        }
+        // Apply saved theme on load
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved) {
+                document.documentElement.setAttribute('data-theme', saved);
+                // Button will be set after DOM loads
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                const btn = document.getElementById('themeToggle');
+                if (btn) {
+                    const t = document.documentElement.getAttribute('data-theme');
+                    btn.textContent = t === 'dark' ? '☀️' : '🌙';
+                }
+            });
+        })();
+
+        </script>
 </body>
 </html>
