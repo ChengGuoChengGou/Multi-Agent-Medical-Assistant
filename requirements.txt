@@ -282,3 +282,5 @@ mem0ai>=0.1.0  # Long-term memory for agents (vector-based)
 deepeval>=1.0.0  # LLM evaluation framework (RAGAS, hallucination)
 
 nemoguardrails>=0.22.0
+
+ragas>=0.4.0

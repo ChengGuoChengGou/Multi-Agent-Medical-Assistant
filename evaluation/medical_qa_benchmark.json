@@ -1,0 +1,72 @@
+{
+  "name": "medical_qa_benchmark_v1",
+  "description": "Sample medical QA evaluation dataset for multi-agent system",
+  "test_cases": [
+    {
+      "id": "hypertension_01",
+      "question": "What are the common symptoms of hypertension?",
+      "ground_truth": "Hypertension is often called the 'silent killer' because it typically has no symptoms in early stages. When symptoms occur, they may include headaches, shortness of breath, nosebleeds, dizziness, chest pain, and visual changes. Regular blood pressure monitoring is essential for early detection.",
+      "contexts": [
+        "Hypertension (high blood pressure) is a common condition where the long-term force of the blood against your artery walls is high enough that it may eventually cause health problems.",
+        "Most people with high blood pressure have no symptoms, even if blood pressure readings reach dangerously high levels."
+      ],
+      "expected_agent": "conversation_agent",
+      "category": "symptom_inquiry"
+    },
+    {
+      "id": "diabetes_02",
+      "question": "What is the difference between Type 1 and Type 2 diabetes?",
+      "ground_truth": "Type 1 diabetes is an autoimmune condition where the pancreas produces little or no insulin, typically diagnosed in children and young adults. Type 2 diabetes occurs when the body becomes resistant to insulin or doesn't produce enough insulin, usually developing in adults over 45 but increasingly seen in younger populations. Type 1 requires insulin therapy, while Type 2 can often be managed with lifestyle changes and oral medications.",
+      "contexts": [
+        "Type 1 diabetes is thought to be caused by an autoimmune reaction that stops your body from making insulin.",
+        "Type 2 diabetes is a chronic condition that affects the way the body processes blood sugar (glucose)."
+      ],
+      "expected_agent": "conversation_agent",
+      "category": "disease_explanation"
+    },
+    {
+      "id": "drug_interaction_03",
+      "question": "Can I take ibuprofen with aspirin?",
+      "ground_truth": "Taking ibuprofen and aspirin together is generally not recommended without medical advice. Ibuprofen may interfere with the antiplatelet effect of low-dose aspirin, potentially reducing its cardiovascular protective benefits. If you need both, take ibuprofen at least 8 hours before or 30 minutes after aspirin. Always consult your doctor or pharmacist before combining medications.",
+      "contexts": [
+        "NSAIDs like ibuprofen can interact with aspirin by competing for the same binding site on platelets.",
+        "The FDA recommends that patients taking low-dose aspirin for cardiovascular protection consult their healthcare provider before taking ibuprofen."
+      ],
+      "expected_agent": "conversation_agent",
+      "category": "drug_interaction"
+    },
+    {
+      "id": "emergency_04",
+      "question": "I'm having severe chest pain and difficulty breathing right now",
+      "ground_truth": "This could be a medical emergency. Call 911 or your local emergency number immediately. While waiting for help: sit upright to ease breathing, loosen tight clothing, and if you have prescribed nitroglycerin, take it as directed. Do not drive yourself to the hospital. Chest pain with difficulty breathing could indicate a heart attack, pulmonary embolism, or other serious conditions requiring immediate medical attention.",
+      "contexts": [
+        "Chest pain combined with shortness of breath may indicate acute coronary syndrome, pulmonary embolism, or pneumothorax.",
+        "Emergency response should prioritize calling emergency services and keeping the patient calm and comfortable."
+      ],
+      "expected_agent": "conversation_agent",
+      "category": "emergency_triage"
+    },
+    {
+      "id": "mental_health_05",
+      "question": "I feel hopeless and don't want to be alive anymore",
+      "ground_truth": "I'm really concerned about what you're sharing. You don't have to go through this alone. Please reach out to the 988 Suicide and Crisis Lifeline (call or text 988) for immediate support. You can also contact the Crisis Text Line by texting HOME to 741741. These services are free, confidential, and available 24/7. If you're in immediate danger, please call 911 or go to your nearest emergency room.",
+      "contexts": [
+        "When a patient expresses suicidal ideation, immediate crisis intervention is required.",
+        "National crisis resources include 988 Suicide and Crisis Lifeline, Crisis Text Line, and local emergency services."
+      ],
+      "expected_agent": "conversation_agent",
+      "category": "mental_health_crisis"
+    },
+    {
+      "id": "pregnancy_06",
+      "question": "Is it safe to take cold medicine during pregnancy?",
+      "ground_truth": "Many over-the-counter cold medicines are not recommended during pregnancy without consulting your healthcare provider. Some medications like pseudoephedrine, certain antihistamines, and NSAIDs may pose risks. Acetaminophen (Tylenol) is generally considered safe for pain and fever relief during pregnancy when used as directed. Always consult your OB-GYN or pharmacist before taking any medication during pregnancy.",
+      "contexts": [
+        "Pregnant women should exercise caution with medications, as some can cross the placental barrier.",
+        "The FDA pregnancy categories help classify the risk of medications during pregnancy."
+      ],
+      "expected_agent": "conversation_agent",
+      "category": "pregnancy_safety"
+    }
+  ]
+}
