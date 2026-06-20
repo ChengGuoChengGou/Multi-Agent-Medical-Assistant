@@ -368,11 +368,11 @@ def create_agent_graph():
 
         # print("Conversation Prompt:", conversation_prompt)
 
-        response = config.conversation.llm.invoke(conversation_prompt)
-
-        # print("Conversation respone:", response)
-
-        # response = AIMessage(content="This would be handled by the conversation agent.")
+        try:
+            response = config.conversation.llm.invoke(conversation_prompt)
+        except Exception as e:
+            logger.error(f"[CONVERSATION_AGENT] LLM invocation failed: {e}", exc_info=True)
+            response = AIMessage(content="I apologize, but I'm experiencing technical difficulties. Please try again.")
 
         return {
             **state,
@@ -401,7 +401,17 @@ def create_agent_graph():
                 # print("######### DEBUG 2:", msg)
                 recent_context += f"Assistant: {msg.content}\n"
 
-        response = rag_agent.process_query(query, chat_history=recent_context)
+        try:
+            response = rag_agent.process_query(query, chat_history=recent_context)
+        except Exception as e:
+            logger.error(f"[RAG_AGENT] RAG query failed: {e}", exc_info=True)
+            return {
+                **state,
+                "output": AIMessage(content="I apologize, but the medical knowledge retrieval system encountered an error. Please try again."),
+                "agent_name": "RAG_AGENT",
+                "retrieval_confidence": 0.0,
+                "insufficient_info": True
+            }
         retrieval_confidence = response.get("confidence", 0.0)  # Default to 0.0 if not provided
 
         logger.info(f"Retrieval Confidence: {retrieval_confidence}")
@@ -475,7 +485,11 @@ def create_agent_graph():
 
         web_search_processor = WebSearchProcessorAgent(config)
 
-        processed_response = web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
+        try:
+            processed_response = web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
+        except Exception as e:
+            logger.error(f"[WEB_SEARCH_PROCESSOR_AGENT] Web search processing failed: {e}", exc_info=True)
+            processed_response = AIMessage(content="I apologize, but the web search system encountered an error. Please try again.")
 
         # print("######### DEBUG WEB SEARCH:", processed_response)
         
@@ -515,7 +529,16 @@ def create_agent_graph():
         logger.info(f"Selected agent: BRAIN_TUMOR_AGENT")
 
         # Classify brain MRI: glioma, meningioma, pituitary, no_tumor
-        result = AgentConfig.image_analyzer.classify_brain_tumor(image_path)
+        try:
+            result = AgentConfig.image_analyzer.classify_brain_tumor(image_path)
+        except Exception as e:
+            logger.error(f"[BRAIN_TUMOR_AGENT] Image analysis failed: {e}", exc_info=True)
+            return {
+                **state,
+                "output": AIMessage(content="I apologize, but the brain tumor analysis encountered an error. Please ensure the image is a valid brain MRI scan and try again."),
+                "needs_human_validation": True,
+                "agent_name": "BRAIN_TUMOR_AGENT"
+            }
 
         if isinstance(result, dict):
             pred = result.get('prediction', 'unknown')
@@ -568,7 +591,16 @@ def create_agent_graph():
         logger.info(f"Selected agent: CHEST_XRAY_AGENT")
 
         # classify chest x-ray into covid or normal
-        predicted_class = AgentConfig.image_analyzer.classify_chest_xray(image_path)
+        try:
+            predicted_class = AgentConfig.image_analyzer.classify_chest_xray(image_path)
+        except Exception as e:
+            logger.error(f"[CHEST_XRAY_AGENT] Chest X-ray analysis failed: {e}", exc_info=True)
+            return {
+                **state,
+                "output": AIMessage(content="I apologize, but the chest X-ray analysis encountered an error. Please ensure the image is a valid chest X-ray and try again."),
+                "needs_human_validation": True,
+                "agent_name": "CHEST_XRAY_AGENT"
+            }
 
         if predicted_class == "covid19":
             response = AIMessage(content="The analysis of the uploaded chest X-ray image indicates a **POSITIVE** result for **COVID-19**.")
@@ -594,8 +626,17 @@ def create_agent_graph():
 
         logger.info(f"Selected agent: SKIN_LESION_AGENT")
 
-        # classify chest x-ray into covid or normal
-        predicted_mask = AgentConfig.image_analyzer.segment_skin_lesion(image_path)
+        # Segment skin lesion
+        try:
+            predicted_mask = AgentConfig.image_analyzer.segment_skin_lesion(image_path)
+        except Exception as e:
+            logger.error(f"[SKIN_LESION_AGENT] Skin lesion analysis failed: {e}", exc_info=True)
+            return {
+                **state,
+                "output": AIMessage(content="I apologize, but the skin lesion analysis encountered an error. Please ensure the image is a valid dermoscopy image and try again."),
+                "needs_human_validation": True,
+                "agent_name": "SKIN_LESION_AGENT"
+            }
 
         if predicted_mask:
             response = AIMessage(content="Following is the analyzed **segmented** output of the uploaded skin lesion image:")
