@@ -56,6 +56,35 @@ config = Config()
 # Initialize FastAPI app
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
 
+
+# ─── Observability: Request tracking middleware + /metrics ──────────
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Track request count and latency for all endpoints."""
+    import time as _time
+    path = request.url.path
+    method = request.method
+    metrics.inc("http_requests_total", labels={"method": method, "path": path})
+    start = _time.monotonic()
+    try:
+        response = await call_next(request)
+        elapsed = _time.monotonic() - start
+        metrics.observe("http_request_duration_seconds", elapsed, labels={"method": method, "path": path})
+        metrics.inc("http_responses_total", labels={"status": str(response.status_code)})
+        return response
+    except Exception as exc:
+        elapsed = _time.monotonic() - start
+        metrics.observe("http_request_duration_seconds", elapsed, labels={"method": method, "path": path})
+        metrics.inc("http_errors_total", labels={"path": path})
+        raise
+
+@app.get("/metrics", tags=["System"])
+async def prometheus_metrics():
+    """Prometheus-compatible metrics endpoint."""
+    return Response(content=metrics.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
+
+
+
 # Rate limiter: 30 requests/minute per IP
 if SLOWAPI_AVAILABLE:
     limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
@@ -129,6 +158,10 @@ async def startup_mcp():
 @app.on_event("shutdown")
 async def shutdown_mcp():
     """Clean up MCP connections on application shutdown."""
+    # Phase 17: Initialize structured JSON logging
+    setup_json_logging()
+    import logging as _logging
+    _logging.getLogger(__name__).info('Observability initialized: JSON logging + /metrics')
     global mcp_client
     if mcp_client:
         try:
@@ -221,6 +254,7 @@ async def chat(
     import asyncio
     import hashlib
     import time as _time
+from observability import metrics, setup_json_logging
     
     # Generate session ID for cookie if it doesn't exist
     if not session_id:
