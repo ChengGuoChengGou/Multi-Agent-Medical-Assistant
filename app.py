@@ -199,12 +199,30 @@ else:
             return func
         return decorator
 
+# --- GZip Compression Middleware (Phase 26) ---
+from starlette.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # --- Security Middleware Registration ---
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 if SLOWAPI_AVAILABLE:
     from slowapi.middleware import SlowAPIMiddleware
     app.add_middleware(SlowAPIMiddleware)
+
+# --- API Key Authentication (Phase 26) ---
+API_KEY = os.environ.get("API_KEY", "")  # Set via env var; empty = disabled
+API_KEY_HEADER = "X-API-Key"
+
+from fastapi import Security
+from fastapi.security import APIKeyHeader
+
+api_key_header = APIKeyHeader(name=API_KEY_HEADER, auto_error=False)
+
+async def verify_api_key(key: str = Security(api_key_header)):
+    """Optional API key verification. Disabled when API_KEY env is empty."""
+    if API_KEY and key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 # CSRF protection
 CSRF_SECRET = os.environ.get("CSRF_SECRET_KEY", _secrets.token_hex(32))
@@ -362,6 +380,14 @@ async def readiness():
     )
 
 
+@app.get("/cache/stats")
+async def cache_statistics():
+    """Cache performance statistics (Phase 26: Redis + in-memory hybrid)."""
+    return await cache_stats()
+
+
+from cache import _make_key as cache_make_key, cache_get, cache_set, cache_stats, init_redis
+
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("10/minute")
 async def chat(
@@ -372,7 +398,6 @@ async def chat(
 ):
     """Process user text query through the multi-agent system (async with caching)."""
     import asyncio
-    import hashlib
     import time as _time
     
     # Generate session ID for cookie if it doesn't exist
@@ -383,17 +408,11 @@ async def chat(
     response.headers["X-Session-ID"] = session_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     
-    # Response cache (TTL=300s, max 256 entries)
-    if not hasattr(chat, "_cache"):
-        chat._cache = {}  # {hash: (timestamp, result)}
-        chat._cache_ttl = 300
-        chat._cache_max = 256
-    
-    # Check cache for identical query (same session + same text)
-    cache_key = hashlib.sha256(f"{session_id}:{request.query}".encode()).hexdigest()[:16]
-    cached = chat._cache.get(cache_key)
-    if cached and (_time.time() - cached[0]) < chat._cache_ttl:
-        result = cached[1].copy()
+    # Check cache for identical query (Redis + in-memory fallback)
+    cache_key = cache_make_key("chat", {"session": session_id, "query": request.query})
+    cached = await cache_get(cache_key)
+    if cached:
+        result = cached.copy()
         result["cached"] = True
         return result
     
@@ -448,11 +467,8 @@ async def chat(
             else:
                 logger.warning("Skin Lesion Output path does not exist.")
         
-        # Store in cache (evict oldest if full)
-        if len(chat._cache) >= chat._cache_max:
-            oldest_key = min(chat._cache, key=lambda k: chat._cache[k][0])
-            del chat._cache[oldest_key]
-        chat._cache[cache_key] = (_time.time(), result.copy())
+        # Store in cache (Redis + in-memory fallback)
+        await cache_set(cache_key, result, ttl=300)
         
         return result
     except Exception as e:
