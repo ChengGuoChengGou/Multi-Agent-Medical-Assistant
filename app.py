@@ -9,7 +9,7 @@ import time
 from io import BytesIO
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response, Cookie
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -392,13 +392,12 @@ async def health_check():
 
 @app.get("/metrics", tags=["Observability"])
 async def metrics_endpoint():
-    """Application metrics: request counts, latency, error rates, uptime."""
-    from observability import metrics_collector
-    return {
-        "uptime_seconds": round(time.time() - _app_start_time, 1),
-        "metrics": metrics_collector.get_metrics(),
-        "timestamp": int(time.time()),
-    }
+    """Application metrics in Prometheus text format."""
+    from observability import metrics
+    return PlainTextResponse(
+        content=metrics.render(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 @app.get("/health/live")

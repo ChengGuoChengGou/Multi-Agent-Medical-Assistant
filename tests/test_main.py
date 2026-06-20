@@ -55,6 +55,23 @@ class TestHealthEndpoints:
         assert "ready" in data
 
 
+# === Metrics Endpoint (Phase 36) ===
+
+class TestMetricsEndpoint:
+    def test_metrics_returns_200(self, client):
+        r = client.get("/metrics")
+        assert r.status_code == 200
+
+    def test_metrics_is_prometheus_text(self, client):
+        """Metrics endpoint returns Prometheus text format."""
+        r = client.get("/metrics")
+        assert "medical_app_" in r.text
+
+    def test_metrics_has_uptime(self, client):
+        r = client.get("/metrics")
+        assert "medical_app_uptime_seconds" in r.text
+
+
 # === Security Headers ===
 
 class TestSecurityHeaders:
