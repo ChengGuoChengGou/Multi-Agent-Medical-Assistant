@@ -144,19 +144,42 @@ except ImportError:
 app = FastAPI(
     title="Multi-Agent Medical Chatbot",
     version="2.0",
-    description="AI-powered medical consultation with multimodal analysis",
+    description=(
+        "AI-powered medical consultation with multimodal analysis.\n\n"
+        "Features:\n"
+        "- 🩺 Multi-agent clinical decision support\n"
+        "- 🖼️ Medical image analysis (X-ray, CT, MRI, pathology)\n"
+        "- 📄 Medical document parsing and summarization\n"
+        "- 💊 Drug interaction checking via MCP tools\n"
+        "- 🔒 HIPAA-aligned security with CSRF, rate limiting, and audit logging"
+    ),
     openapi_tags=[
         {"name": "Health", "description": "Health checks and readiness probes"},
         {"name": "Chat", "description": "Chat and conversation endpoints"},
         {"name": "Analysis", "description": "Medical image/document analysis"},
         {"name": "WebSocket", "description": "Real-time bidirectional communication"},
         {"name": "Admin", "description": "Administrative and monitoring endpoints"},
-    ]
+    ],
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 # Phase 27: Register structured error handlers
 from error_handlers import register_error_handlers
 register_error_handlers(app)
+
+# Phase 40: CORS middleware
+from fastapi.middleware.cors import CORSMiddleware
+import os
+_cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else ["http://localhost:3000", "http://localhost:8080"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in _cors_origins if o.strip()],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-CSRF-Token"],
+)
 
 
 # ─── Observability: Request tracking middleware + /metrics ──────────
