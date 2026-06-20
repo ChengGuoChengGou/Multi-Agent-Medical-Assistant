@@ -20,6 +20,9 @@ from werkzeug.utils import secure_filename
 from pydub import AudioSegment
 from elevenlabs.client import ElevenLabs
 
+# Per-request trace context (Phase 49): set in middleware, read anywhere
+from request_context import request_id_var
+
 from config import Config
 from agents.agent_decision import process_query
 from agents.mcp_client import get_mcp_client, shutdown_mcp_client
@@ -192,6 +195,7 @@ async def metrics_middleware(request: Request, call_next):
     metrics.inc("http_requests_total", labels={"method": method, "path": path})
     # Request tracing: generate and propagate X-Request-ID
     request_id = request.headers.get("X-Request-ID") or str(_uuid.uuid4())[:12]
+    request_id_var.set(request_id)
     start = _time.monotonic()
     try:
         response = await call_next(request)

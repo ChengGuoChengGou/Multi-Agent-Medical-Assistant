@@ -23,6 +23,7 @@ from agents.web_search_processor_agent import WebSearchProcessorAgent
 from agents.image_analysis_agent import ImageAnalysisAgent
 from agents.mcp_agent import mcp_agent_node
 from agents.guardrails.local_guardrails import LocalGuardrails
+from request_context import request_id_var
 
 from langgraph.checkpoint.memory import MemorySaver
 import uuid
@@ -277,7 +278,7 @@ def create_agent_graph():
             confidence = 0.5
 
         # Decided agent
-        logger.info(f"Decision: {agent_name} (confidence={confidence:.2f})")
+        logger.info(f"[{request_id_var.get()}] Decision: {agent_name} (confidence={confidence:.2f})")
         
         # Update state with decision
         updated_state = {
