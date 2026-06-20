@@ -44,7 +44,7 @@ try:
     SLOWAPI_AVAILABLE = True
 except ImportError:
     SLOWAPI_AVAILABLE = False
-    print("[SlowAPI] Not installed, rate limiting disabled. Install: pip install slowapi")
+    logger.warning("[SlowAPI] Not installed, rate limiting disabled. Install: pip install slowapi")
 
 # Load configuration
 config = Config()
@@ -114,9 +114,9 @@ async def startup_mcp():
     try:
         mcp_client = get_mcp_client()
         await mcp_client.initialize()
-        print("[MCP] MCP Client initialized successfully")
+        logger.info("[MCP] MCP Client initialized successfully")
     except Exception as e:
-        print(f"[MCP] Warning: Failed to initialize MCP Client: {e}")
+        logger.warning(f"[MCP] Failed to initialize MCP Client: {e}")
         mcp_client = None
 
 @app.on_event("shutdown")
@@ -126,9 +126,9 @@ async def shutdown_mcp():
     if mcp_client:
         try:
             await shutdown_mcp_client()
-            print("[MCP] MCP Client cleaned up")
+            logger.info("[MCP] MCP Client cleaned up")
         except Exception as e:
-            print(f"[MCP] Warning: MCP cleanup error: {e}")
+            logger.warning(f"[MCP] MCP cleanup error: {e}")
         mcp_client = None
 # ==================== End MCP Lifecycle ====================
 
@@ -143,9 +143,9 @@ def cleanup_old_audio():
             files = glob.glob(f"{SPEECH_DIR}/*.mp3")
             for file in files:
                 os.remove(file)
-            print("Cleaned up old speech files.")
+            logger.info("Cleaned up old speech files.")
         except Exception as e:
-            print(f"Error during cleanup: {e}")
+            logger.warning(f"Error during cleanup: {e}")
         time.sleep(300)  # Runs every 5 minutes
 
 # Start background cleanup thread
@@ -247,12 +247,12 @@ async def chat(
         }
         
         # If it's the skin lesion segmentation agent, check for output image
-        if response_data["agent_name"] == "SKIN_LESION_AGENT, HUMAN_VALIDATION":
+        if response_data["agent_name"] in ("SKIN_LESION_AGENT", "HUMAN_VALIDATION"):
             segmentation_path = os.path.join(SKIN_LESION_OUTPUT, "segmentation_plot.png")
             if os.path.exists(segmentation_path):
                 result["result_image"] = f"/uploads/skin_lesion_output/segmentation_plot.png"
             else:
-                print("Skin Lesion Output path does not exist.")
+                logger.warning("Skin Lesion Output path does not exist.")
         
         # Store in cache (evict oldest if full)
         if len(chat._cache) >= chat._cache_max:
@@ -262,7 +262,7 @@ async def chat(
         
         return result
     except Exception as e:
-        logging.error(f"[chat] Internal error: {e}")
+        logger.error(f"[chat] Internal error: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
 
 @app.post("/upload")
@@ -293,7 +293,7 @@ async def upload_image(
     
     # MIME type validation (defense-in-depth)
     if not validate_mime_type(image.filename, image.content_type):
-        logging.warning(f"[upload] MIME mismatch: {image.filename} / {image.content_type}")
+        logger.warning(f"[upload] MIME mismatch: {image.filename} / {image.content_type}")
         return JSONResponse(
             status_code=400,
             content={
@@ -337,22 +337,22 @@ async def upload_image(
         }
         
         # If it's the skin lesion segmentation agent, check for output image
-        if response_data["agent_name"] == "SKIN_LESION_AGENT, HUMAN_VALIDATION":
+        if response_data["agent_name"] in ("SKIN_LESION_AGENT", "HUMAN_VALIDATION"):
             segmentation_path = os.path.join(SKIN_LESION_OUTPUT, "segmentation_plot.png")
             if os.path.exists(segmentation_path):
                 result["result_image"] = f"/uploads/skin_lesion_output/segmentation_plot.png"
             else:
-                print("Skin Lesion Output path does not exist.")
+                logger.warning("Skin Lesion Output path does not exist.")
         
         # Remove temporary file after sending
         try:
             os.remove(file_path)
         except Exception as e:
-            print(f"Failed to remove temporary file: {str(e)}")
+            logger.warning(f"Failed to remove temporary file: {e}")
         
         return result
     except Exception as e:
-        logging.error(f"[upload-image] Internal error: {e}")
+        logger.error(f"[upload-image] Internal error: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
 
 @app.post("/validate")
@@ -392,7 +392,7 @@ def validate_medical_output(
                 "response": response_data['messages'][-1].content
             }
     except Exception as e:
-        logging.error(f"[validate] Internal error: {e}")
+        logger.error(f"[validate] Internal error: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
 
 @app.post("/transcribe")
@@ -416,7 +416,7 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         
         # Debug: Print file size to check if it's empty
         file_size = os.path.getsize(temp_audio)
-        print(f"Received audio file size: {file_size} bytes")
+        logger.info(f"Received audio file size: {file_size} bytes")
         
         if file_size == 0:
             return JSONResponse(
@@ -434,11 +434,11 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             
             # Debug: Print MP3 file size
             mp3_size = os.path.getsize(mp3_path)
-            print(f"Converted MP3 file size: {mp3_size} bytes")
+            logger.info(f"Converted MP3 file size: {mp3_size} bytes")
 
             with open(mp3_path, "rb") as mp3_file:
                 audio_data = mp3_file.read()
-            print(f"Converted audio file into byte array successfully!")
+            logger.info("Converted audio file into byte array successfully")
 
             transcription = client.speech_to_text.convert(
                 file=audio_data,
@@ -452,28 +452,28 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             try:
                 os.remove(temp_audio)
                 os.remove(mp3_path)
-                print(f"Deleted temp files: {temp_audio}, {mp3_path}")
+                logger.debug(f"Deleted temp files: {temp_audio}, {mp3_path}")
             except Exception as e:
-                print(f"Could not delete file: {e}")
+                logger.warning(f"Could not delete file: {e}")
             
             if transcription.text:
                 return {"transcript": transcription.text}
             else:
-                logging.error("[transcribe] API returned empty transcription")
+                logger.error("[transcribe] API returned empty transcription")
                 return JSONResponse(
                     status_code=500,
                     content={"error": "Speech transcription failed. Please try again."}
                 )
 
         except Exception as e:
-            logging.error(f"[transcribe] Audio processing error: {e}")
+            logger.error(f"[transcribe] Audio processing error: {e}")
             return JSONResponse(
                 status_code=500,
                 content={"error": "Error processing audio. Please try again."}
             )
                 
     except Exception as e:
-        logging.error(f"[transcribe] Transcription error: {e}")
+        logger.error(f"[transcribe] Transcription error: {e}")
         return JSONResponse(
             status_code=500,
             content={"error": "Transcription service unavailable. Please try again."}
@@ -512,7 +512,7 @@ async def generate_speech(request: SpeechRequest):
         response = requests.post(elevenlabs_url, headers=headers, json=payload)
 
         if response.status_code != 200:
-            logging.error(f"[generate-speech] ElevenLabs API error, status: {response.status_code}")
+            logger.error(f"[generate-speech] ElevenLabs API error, status: {response.status_code}")
             return JSONResponse(
                 status_code=500,
                 content={"error": "Text-to-speech service unavailable. Please try again later."}
@@ -532,7 +532,7 @@ async def generate_speech(request: SpeechRequest):
         )
 
     except Exception as e:
-        logging.error(f"[generate-speech] Error: {e}")
+        logger.error(f"[generate-speech] Error: {e}")
         return JSONResponse(
             status_code=500,
             content={"error": "Speech generation failed. Please try again."}

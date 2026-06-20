@@ -6,7 +6,10 @@ It dynamically routes user queries to the appropriate agent based on content and
 """
 
 import json
+import logging
 from typing import Dict, List, Optional, Any, Literal, TypedDict, Union, Annotated
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field, field_validator
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -36,7 +39,7 @@ try:
 except ImportError:
     langfuse_handler = None
     LANGFUSE_ENABLED = False
-    print("[Langfuse] Not installed, observability disabled. Install: pip install langfuse")
+    logger.warning("[Langfuse] Not installed, observability disabled. Install: pip install langfuse")
 
 import cv2
 import numpy as np
@@ -188,7 +191,7 @@ def create_agent_graph():
             is_allowed, message = guardrails.check_input(input_text)
             if not is_allowed:
                 # If input is blocked, return early with guardrail message
-                print(f"Selected agent: INPUT GUARDRAILS, Message: ", message)
+                logger.info(f"Selected agent: INPUT GUARDRAILS, Message: {message}")
                 return {
                     **state,
                     "messages": message,
@@ -204,7 +207,7 @@ def create_agent_graph():
             image_path = current_input.get("image", None)
             image_type_response = AgentConfig.image_analyzer.analyze_image(image_path)
             image_type = image_type_response['image_type']
-            print("ANALYZED IMAGE TYPE: ", image_type)
+            logger.info(f"ANALYZED IMAGE TYPE: {image_type}")
         
         return {
             **state,
@@ -269,7 +272,7 @@ def create_agent_graph():
             confidence = 0.5
 
         # Decided agent
-        print(f"Decision: {agent_name} (confidence={confidence:.2f})")
+        logger.info(f"Decision: {agent_name} (confidence={confidence:.2f})")
         
         # Update state with decision
         updated_state = {
@@ -287,7 +290,7 @@ def create_agent_graph():
     def run_conversation_agent(state: AgentState) -> AgentState:
         """Handle general conversation."""
 
-        print(f"Selected agent: CONVERSATION_AGENT")
+        logger.info(f"Selected agent: CONVERSATION_AGENT")
 
         messages = state["messages"]
         current_input = state["current_input"]
@@ -381,7 +384,7 @@ def create_agent_graph():
         """Handle medical knowledge queries using RAG."""
         # Initialize the RAG agent
 
-        print(f"Selected agent: RAG_AGENT")
+        logger.info(f"Selected agent: RAG_AGENT")
 
         rag_agent = MedicalRAG(config)
         
@@ -401,8 +404,8 @@ def create_agent_graph():
         response = rag_agent.process_query(query, chat_history=recent_context)
         retrieval_confidence = response.get("confidence", 0.0)  # Default to 0.0 if not provided
 
-        print(f"Retrieval Confidence: {retrieval_confidence}")
-        print(f"Sources: {len(response['sources'])}")
+        logger.info(f"Retrieval Confidence: {retrieval_confidence}")
+        logger.info(f"Sources: {len(response['sources'])}")
 
         # Check if response indicates insufficient information
         insufficient_info = False
@@ -416,8 +419,8 @@ def create_agent_graph():
             # If it's already a string
             response_text = response_content
             
-        print(f"Response text type: {type(response_text)}")
-        print(f"Response text preview: {response_text[:100]}...")
+        logger.debug(f"Response text type: {type(response_text)}")
+        logger.debug(f"Response text preview: {response_text[:100]}...")
         
         if isinstance(response_text, str) and (
             "I don't have enough information to answer this question based on the provided context" in response_text or 
@@ -429,11 +432,11 @@ def create_agent_graph():
             "unable to answer" in response_text.lower()
             ):
             
-            print("RAG response indicates insufficient information")
-            print(f"Response text that triggered insufficient_info: {response_text[:100]}...")
+            logger.warning("RAG response indicates insufficient information")
+            logger.warning(f"Response text that triggered insufficient_info: {response_text[:100]}...")
             insufficient_info = True
 
-        print(f"Insufficient info flag set to: {insufficient_info}")
+        logger.debug(f"Insufficient info flag set to: {insufficient_info}")
 
         # Store RAG output ONLY if confidence is high
         if retrieval_confidence >= config.rag.min_retrieval_confidence:
@@ -455,8 +458,8 @@ def create_agent_graph():
     def run_web_search_processor_agent(state: AgentState) -> AgentState:
         """Handles web search results, processes them with LLM, and generates a refined response."""
 
-        print(f"Selected agent: WEB_SEARCH_PROCESSOR_AGENT")
-        print("[WEB_SEARCH_PROCESSOR_AGENT] Processing Web Search Results...")
+        logger.info(f"Selected agent: WEB_SEARCH_PROCESSOR_AGENT")
+        logger.info("[WEB_SEARCH_PROCESSOR_AGENT] Processing Web Search Results...")
         
         messages = state["messages"]
         web_search_context_limit = config.web_search.context_limit
@@ -493,13 +496,13 @@ def create_agent_graph():
     def confidence_based_routing(state: AgentState) -> Dict[str, str]:
         """Route based on RAG confidence score and response content."""
         # Debug prints
-        print(f"Routing check - Retrieval confidence: {state.get('retrieval_confidence', 0.0)}")
-        print(f"Routing check - Insufficient info flag: {state.get('insufficient_info', False)}")
+        logger.debug(f"Routing check - Retrieval confidence: {state.get('retrieval_confidence', 0.0)}")
+        logger.debug(f"Routing check - Insufficient info flag: {state.get('insufficient_info', False)}")
         
         # Redirect if confidence is low or if response indicates insufficient info
         if (state.get("retrieval_confidence", 0.0) < config.rag.min_retrieval_confidence or 
             state.get("insufficient_info", False)):
-            print("Re-routed to Web Search Agent due to low confidence or insufficient information...")
+            logger.info("Re-routed to Web Search Agent due to low confidence or insufficient information...")
             return "WEB_SEARCH_PROCESSOR_AGENT"  # Correct format
         return "check_validation"  # No transition needed if confidence is high and info is sufficient
     
@@ -509,7 +512,7 @@ def create_agent_graph():
         current_input = state["current_input"]
         image_path = current_input.get("image", None)
 
-        print(f"Selected agent: BRAIN_TUMOR_AGENT")
+        logger.info(f"Selected agent: BRAIN_TUMOR_AGENT")
 
         # Classify brain MRI: glioma, meningioma, pituitary, no_tumor
         result = AgentConfig.image_analyzer.classify_brain_tumor(image_path)
@@ -562,7 +565,7 @@ def create_agent_graph():
         current_input = state["current_input"]
         image_path = current_input.get("image", None)
 
-        print(f"Selected agent: CHEST_XRAY_AGENT")
+        logger.info(f"Selected agent: CHEST_XRAY_AGENT")
 
         # classify chest x-ray into covid or normal
         predicted_class = AgentConfig.image_analyzer.classify_chest_xray(image_path)
@@ -589,7 +592,7 @@ def create_agent_graph():
         current_input = state["current_input"]
         image_path = current_input.get("image", None)
 
-        print(f"Selected agent: SKIN_LESION_AGENT")
+        logger.info(f"Selected agent: SKIN_LESION_AGENT")
 
         # classify chest x-ray into covid or normal
         predicted_mask = AgentConfig.image_analyzer.segment_skin_lesion(image_path)
@@ -616,7 +619,7 @@ def create_agent_graph():
     
     def perform_human_validation(state: AgentState) -> AgentState:
         """Handle human validation process."""
-        print(f"Selected agent: HUMAN_VALIDATION")
+        logger.info(f"Selected agent: HUMAN_VALIDATION")
 
         # Append validation request to the existing output
         validation_prompt = f"{state['output'].content}\n\n**Human Validation Required:**\n- If you're a healthcare professional: Please validate the output. Select **Yes** or **No**. If No, provide comments.\n- If you're a patient: Simply click Yes to confirm."
@@ -830,7 +833,7 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
 
     # visualize conversation history in console
     for m in result["messages"]:
-        m.pretty_print()
+        logger.debug(f"Graph:\n{m}")
     
     # Add the response to conversation history
     return result
