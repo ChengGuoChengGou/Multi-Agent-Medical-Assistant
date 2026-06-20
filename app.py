@@ -282,6 +282,7 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
         except asyncio.TimeoutError:
             request_id = getattr(request.state, "request_id", "unknown")
             logger.error(f"[{request_id}] Request timeout after {self.TIMEOUT_SECONDS}s: {request.method} {request.url.path}")
+            metrics.inc("http_timeouts_total", labels={"path": request.url.path})
             return JSONResponse(
                 status_code=504,
                 content={"error": "Gateway Timeout", "message": f"Request exceeded {self.TIMEOUT_SECONDS}s limit"}
@@ -299,6 +300,7 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
         if request.method in ("POST", "PUT", "PATCH") and request.url.path not in self.SKIP_PATHS:
             content_length = request.headers.get("content-length")
             if content_length and int(content_length) > self.MAX_BODY_SIZE:
+                metrics.inc("http_body_rejected_total", labels={"path": request.url.path})
                 return JSONResponse(
                     status_code=413,
                     content={"error": "Payload Too Large", "message": f"Body exceeds {self.MAX_BODY_SIZE // (1024*1024)}MB limit"}
