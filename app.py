@@ -289,6 +289,24 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RequestTimeoutMiddleware)
 
+# --- Request Body Size Limit Middleware (Phase 43) ---
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject request bodies exceeding MAX_BODY_SIZE. Protects against oversized uploads."""
+    MAX_BODY_SIZE = int(os.getenv("MAX_BODY_SIZE_MB", "10")) * 1024 * 1024  # Default 10MB
+    SKIP_PATHS = {"/upload", "/transcribe"}  # These have their own limits
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH") and request.url.path not in self.SKIP_PATHS:
+            content_length = request.headers.get("content-length")
+            if content_length and int(content_length) > self.MAX_BODY_SIZE:
+                return JSONResponse(
+                    status_code=413,
+                    content={"error": "Payload Too Large", "message": f"Body exceeds {self.MAX_BODY_SIZE // (1024*1024)}MB limit"}
+                )
+        return await call_next(request)
+
+app.add_middleware(BodySizeLimitMiddleware)
+
 if SLOWAPI_AVAILABLE:
     from slowapi.middleware import SlowAPIMiddleware
     app.add_middleware(SlowAPIMiddleware)
