@@ -473,8 +473,10 @@ async def medical_error_handler(request: Request, exc: MedicalAssistantError):
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
-    """Enhanced health check endpoint with dependency status."""
+    """Enhanced health check endpoint with dependency status and circuit breaker stats."""
     import time as _time
+    from circuit_breaker import get_all_breaker_stats
+    from observability import agent_metrics
     checks = {}
     
     # LLM config check
@@ -491,15 +493,26 @@ async def health_check():
     for name, path in [("uploads_backend", UPLOAD_FOLDER), ("skin_lesion_output", SKIN_LESION_OUTPUT)]:
         checks[name] = "ok" if os.path.isdir(path) else "missing"
     
+    # Circuit breaker stats
+    cb_stats = get_all_breaker_stats()
+    for name, stats in cb_stats["breakers"].items():
+        checks[f"cb_{name}"] = stats["state"]
+    
+    # Per-agent metrics summary
+    agent_stats = agent_metrics.get_all_stats()
+    
     # Overall status
+    any_breaker_open = any(s["state"] == "open" for s in cb_stats["breakers"].values())
     has_critical_error = any(v in ("error", "missing") for k, v in checks.items() if k != "mcp_client")
-    status = "degraded" if (mcp_client is None or has_critical_error) else "healthy"
+    status = "degraded" if (mcp_client is None or has_critical_error or any_breaker_open) else "healthy"
     
     return {
         "status": status,
-        "version": "3.4.0",
+        "version": "3.5.0",
         "uptime_seconds": round(time.time() - _app_start_time, 1),
         "checks": checks,
+        "circuit_breakers": cb_stats,
+        "agent_metrics": agent_stats,
         "timestamp": int(_time.time()),
     }
 

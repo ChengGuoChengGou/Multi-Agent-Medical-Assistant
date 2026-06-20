@@ -45,6 +45,8 @@ import cv2
 import numpy as np
 
 from config import Config
+from circuit_breaker import llm_breaker, mcp_breaker, web_search_breaker, get_all_breaker_stats
+from observability import agent_metrics
 
 load_dotenv()
 
@@ -259,7 +261,10 @@ def create_agent_graph():
         
         # Make the decision with structured output validation + fallback
         try:
-            decision = decision_chain.invoke({"input": decision_input})
+            with agent_metrics.track("DECISION_AGENT"):
+                decision = llm_breaker.call(
+                    lambda: decision_chain.invoke({"input": decision_input})
+                )
             # Validate through Pydantic model
             validated = AgentDecision(**decision)
             agent_name = validated.agent
@@ -369,7 +374,10 @@ def create_agent_graph():
         # print("Conversation Prompt:", conversation_prompt)
 
         try:
-            response = config.conversation.llm.invoke(conversation_prompt)
+            with agent_metrics.track("CONVERSATION_AGENT"):
+                response = llm_breaker.call(
+                    lambda: config.conversation.llm.invoke(conversation_prompt)
+                )
         except Exception as e:
             logger.error(f"[CONVERSATION_AGENT] LLM invocation failed: {e}", exc_info=True)
             response = AIMessage(content="I apologize, but I'm experiencing technical difficulties. Please try again.")
@@ -402,7 +410,10 @@ def create_agent_graph():
                 recent_context += f"Assistant: {msg.content}\n"
 
         try:
-            response = rag_agent.process_query(query, chat_history=recent_context)
+            with agent_metrics.track("RAG_AGENT"):
+                response = llm_breaker.call(
+                    lambda: rag_agent.process_query(query, chat_history=recent_context)
+                )
         except Exception as e:
             logger.error(f"[RAG_AGENT] RAG query failed: {e}", exc_info=True)
             return {
@@ -486,7 +497,10 @@ def create_agent_graph():
         web_search_processor = WebSearchProcessorAgent(config)
 
         try:
-            processed_response = web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
+            with agent_metrics.track("WEB_SEARCH_PROCESSOR_AGENT"):
+                processed_response = web_search_breaker.call(
+                    lambda: web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
+                )
         except Exception as e:
             logger.error(f"[WEB_SEARCH_PROCESSOR_AGENT] Web search processing failed: {e}", exc_info=True)
             processed_response = AIMessage(content="I apologize, but the web search system encountered an error. Please try again.")
@@ -530,7 +544,8 @@ def create_agent_graph():
 
         # Classify brain MRI: glioma, meningioma, pituitary, no_tumor
         try:
-            result = AgentConfig.image_analyzer.classify_brain_tumor(image_path)
+            with agent_metrics.track("BRAIN_TUMOR_AGENT"):
+                result = AgentConfig.image_analyzer.classify_brain_tumor(image_path)
         except Exception as e:
             logger.error(f"[BRAIN_TUMOR_AGENT] Image analysis failed: {e}", exc_info=True)
             return {
@@ -592,7 +607,8 @@ def create_agent_graph():
 
         # classify chest x-ray into covid or normal
         try:
-            predicted_class = AgentConfig.image_analyzer.classify_chest_xray(image_path)
+            with agent_metrics.track("CHEST_XRAY_AGENT"):
+                predicted_class = AgentConfig.image_analyzer.classify_chest_xray(image_path)
         except Exception as e:
             logger.error(f"[CHEST_XRAY_AGENT] Chest X-ray analysis failed: {e}", exc_info=True)
             return {
@@ -628,7 +644,8 @@ def create_agent_graph():
 
         # Segment skin lesion
         try:
-            predicted_mask = AgentConfig.image_analyzer.segment_skin_lesion(image_path)
+            with agent_metrics.track("SKIN_LESION_AGENT"):
+                predicted_mask = AgentConfig.image_analyzer.segment_skin_lesion(image_path)
         except Exception as e:
             logger.error(f"[SKIN_LESION_AGENT] Skin lesion analysis failed: {e}", exc_info=True)
             return {

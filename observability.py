@@ -7,7 +7,8 @@ for production log aggregation (ELK/Loki/etc).
 import logging
 import json
 import time
-from typing import Dict, Optional
+import threading
+from typing import Dict, Optional, Any
 from collections import defaultdict
 from contextlib import contextmanager
 
@@ -123,3 +124,81 @@ def setup_json_logging(level: int = logging.INFO):
     for handler in logging.root.handlers:
         handler.setFormatter(JSONFormatter())
     logging.root.setLevel(level)
+
+
+# ─── Per-Agent Metrics (Phase 47) ────────────────────────────────────
+# Tracks latency, call count, success/failure rate for each agent node.
+
+class AgentMetrics:
+    """Per-agent latency and throughput tracker.
+
+    Usage:
+        agent_metrics = AgentMetrics()
+        with agent_metrics.track("RAG_AGENT"):
+            result = run_rag_agent(state)
+        print(agent_metrics.get_all_stats())
+    """
+
+    def __init__(self):
+        self._stats: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+            "calls": 0,
+            "failures": 0,
+            "total_latency_ms": 0.0,
+            "max_latency_ms": 0.0,
+            "min_latency_ms": float("inf"),
+            "last_call_ts": 0.0,
+        })
+        self._lock = threading.Lock()
+
+    @contextmanager
+    def track(self, agent_name: str):
+        """Context manager to track agent call latency."""
+        start = time.perf_counter()
+        try:
+            yield
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            self._record(agent_name, elapsed_ms, success=True)
+        except Exception:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            self._record(agent_name, elapsed_ms, success=False)
+            raise
+
+    def _record(self, agent_name: str, latency_ms: float, success: bool):
+        with self._lock:
+            s = self._stats[agent_name]
+            s["calls"] += 1
+            if not success:
+                s["failures"] += 1
+            s["total_latency_ms"] += latency_ms
+            s["max_latency_ms"] = max(s["max_latency_ms"], latency_ms)
+            s["min_latency_ms"] = min(s["min_latency_ms"], latency_ms)
+            s["last_call_ts"] = time.time()
+
+    def get_stats(self, agent_name: str) -> dict:
+        """Get stats for a specific agent."""
+        with self._lock:
+            s = self._stats.get(agent_name)
+            if not s:
+                return {}
+            calls = s["calls"]
+            return {
+                "calls": calls,
+                "failures": s["failures"],
+                "success_rate": round((calls - s["failures"]) / calls, 4) if calls else 0,
+                "avg_latency_ms": round(s["total_latency_ms"] / calls, 2) if calls else 0,
+                "max_latency_ms": round(s["max_latency_ms"], 2),
+                "min_latency_ms": round(s["min_latency_ms"], 2) if s["min_latency_ms"] != float("inf") else 0,
+            }
+
+    def get_all_stats(self) -> dict:
+        """Get stats for all tracked agents."""
+        return {name: self.get_stats(name) for name in self._stats}
+
+    def reset(self):
+        """Reset all stats."""
+        with self._lock:
+            self._stats.clear()
+
+
+# Global singleton instance
+agent_metrics = AgentMetrics()
