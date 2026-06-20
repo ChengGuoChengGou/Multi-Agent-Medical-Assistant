@@ -393,6 +393,62 @@ This project is licensed under the **Apache-2.0 License**. See the [LICENSE](LIC
 
 ---
 
+## 🔧 Fork Enhancements (Phase 1–5)
+
+This fork adds significant security hardening, UI modernization, and new agent capabilities on top of the original project.
+
+### Phase 1: Observability & Memory
+- **Langfuse** integration for LLM tracing and cost tracking
+- **Mem0** long-term memory module for conversation persistence
+- **DeepEval** evaluation framework (RAGAS, hallucination detection)
+- Thread-safe `thread_id` fix in medical graph
+
+### Phase 2: New Agent & Rate Limiting
+- **Brain Tumor Agent** — multi-slice `.nii` medical image analysis
+- **SlowAPI** rate limiting middleware (60 req/min global, 10 req/min per-IP on `/chat`)
+- Secure `Session-ID` header support for per-user state isolation
+
+### Phase 3: Modern UI Overhaul
+- Soft UI design system with glassmorphism cards, gradient accents
+- Animated chat bubbles with slide-in transitions
+- Responsive sidebar with medical icon set
+- Modernized `index.html` + `main.js` interaction logic
+
+### Phase 4: Security Hardening
+- **`middleware/security.py`** (252 lines) — production-grade security layer:
+  - Content Security Policy (CSP) headers with strict `default-src 'self'`
+  - CSRF token protection (HMAC-SHA256, per-session, time-limited)
+  - Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy`
+  - Request logging middleware with sanitized headers
+  - MIME type validation with magic-byte verification for image uploads
+  - Input sanitization (`escape_html`, `sanitize_input`, `sanitize_filename`)
+  - Generic error responses — zero information leakage (8 call sites patched)
+- SlowAPI `Retry-After` header for rate limit responses
+
+### Phase 5: Testing & Quality
+- **`tests/test_security.py`** — 35 unit tests, 100% pass rate:
+  - CSP policy structure and header generation (8 tests)
+  - CSRF token generation, validation, expiry, session binding (5 tests)
+  - Input sanitization: HTML encoding, XSS prevention (4 tests)
+  - Filename sanitization: path traversal, empty input (5 tests)
+  - MIME type validation: magic bytes, medical formats, edge cases (8 tests)
+  - Error response sanitization: info leak prevention (5 tests)
+
+### Running Tests
+```bash
+# Activate venv first
+.venv\Scripts\activate   # Windows
+source .venv/bin/activate  # Linux/Mac
+
+# Run all security tests
+pytest tests/test_security.py -v
+
+# Run with coverage
+pytest tests/test_security.py -v --tb=short
+```
+
+---
+
 ## 📬 Contact  <a name="contact"></a>
 For any questions or collaboration inquiries, reach out to **Souvik Majumder** on:  
 
