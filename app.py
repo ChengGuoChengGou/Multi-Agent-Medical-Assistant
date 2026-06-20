@@ -25,6 +25,8 @@ from agents.agent_decision import process_query
 from agents.mcp_client import get_mcp_client, shutdown_mcp_client
 from agents.memory_module import get_memory_store
 from edge_tts_service import edge_tts_generate, list_chinese_voices, get_voice_id
+from sse_utils import sse_stream_chat
+from exceptions import MedicalAssistantError, AgentError, ValidationError, FileUploadError
 
 # Security middleware
 import secrets as _secrets
@@ -170,6 +172,12 @@ async def index(request: Request):
     """Serve the main HTML page"""
     return templates.TemplateResponse("index.html", {"request": request})
 
+
+@app.exception_handler(MedicalAssistantError)
+async def medical_error_handler(request: Request, exc: MedicalAssistantError):
+    """Global handler for structured application errors."""
+    return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
+
 @app.get("/health")
 async def health_check():
     """Enhanced health check endpoint with dependency status."""
@@ -297,6 +305,20 @@ async def chat(
     except Exception as e:
         logger.error(f"[chat] Internal error: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
+
+
+@app.post("/chat/stream")
+async def chat_stream(request: QueryRequest, req: Request):
+    """SSE streaming endpoint for chat responses.
+
+    Returns Server-Sent Events with incremental response tokens.
+    """
+    return await sse_stream_chat(
+        query=request.query,
+        conversation_history=request.conversation_history,
+        process_fn=process_query,
+    )
+
 
 @app.post("/upload")
 async def upload_image(
