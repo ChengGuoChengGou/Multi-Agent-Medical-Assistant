@@ -197,13 +197,8 @@ def cleanup_old_audio():
 cleanup_thread = threading.Thread(target=cleanup_old_audio, daemon=True)
 cleanup_thread.start()
 
-class QueryRequest(BaseModel):
-    query: str = Field(..., min_length=1, max_length=4096, description="User query text")
-    conversation_history: List = []
-
-class SpeechRequest(BaseModel):
-    text: str
-    voice_id: str = "EXAMPLE_VOICE_ID"  # Default voice ID
+# Models imported from models.py (Phase 20: centralized API contracts)
+from models import QueryRequest, SpeechRequest, ChatResponse, ErrorResponse, HealthResponse, api_success, api_error
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -216,7 +211,7 @@ async def medical_error_handler(request: Request, exc: MedicalAssistantError):
     """Global handler for structured application errors."""
     return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Enhanced health check endpoint with dependency status."""
     import time as _time
@@ -276,7 +271,7 @@ async def readiness():
     )
 
 
-@app.post("/chat")
+@app.post("/chat", response_model=ChatResponse)
 @limiter.limit("10/minute")
 async def chat(
     request: QueryRequest, 
