@@ -10,7 +10,6 @@ from io import BytesIO
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response, Cookie
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, PlainTextResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -223,16 +222,6 @@ else:
         def decorator(func):
             return func
         return decorator
-
-# --- Global Exception Handler (Phase 38) ---
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Catch-all for unhandled exceptions - prevents stack trace leaks."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"error": "An internal error occurred. Please try again later."},
-    )
 
 
 # --- GZip Compression Middleware (Phase 29) ---
