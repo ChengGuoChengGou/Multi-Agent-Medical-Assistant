@@ -86,7 +86,8 @@ SAFE categories (ALLOW these):
 - Health education, prevention, wellness topics
 - Medical image analysis requests
 
-Respond ONLY: "SAFE" or "UNSAFE: <reason>""""
+Respond ONLY: "SAFE" or "UNSAFE: <reason>"
+"""
         )
         
         # Compact output safety prompt
