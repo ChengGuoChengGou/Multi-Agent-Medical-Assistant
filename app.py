@@ -339,6 +339,10 @@ if SLOWAPI_AVAILABLE:
     from slowapi.middleware import SlowAPIMiddleware
     app.add_middleware(SlowAPIMiddleware)
 
+# --- Request Deduplication Middleware (Phase 55) ---
+from middleware.request_dedup import RequestDedupMiddleware, get_dedup_stats
+app.add_middleware(RequestDedupMiddleware)
+
 # --- API Key Authentication (Phase 26) ---
 API_KEY = os.environ.get("API_KEY", "")  # Set via env var; empty = disabled
 API_KEY_HEADER = "X-API-Key"
@@ -507,6 +511,9 @@ async def health_check():
     has_critical_error = any(v in ("error", "missing") for k, v in checks.items() if k != "mcp_client")
     status = "degraded" if (mcp_client is None or has_critical_error or any_breaker_open) else "healthy"
     
+    # Request dedup stats (Phase 55)
+    dedup = get_dedup_stats()
+    
     return {
         "status": status,
         "version": "3.5.0",
@@ -514,6 +521,7 @@ async def health_check():
         "checks": checks,
         "circuit_breakers": cb_stats,
         "agent_metrics": agent_stats,
+        "dedup_stats": dedup,
         "timestamp": int(_time.time()),
     }
 

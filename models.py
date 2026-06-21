@@ -152,3 +152,82 @@ def api_error(
         request_id=request_id,
     )
     return model.model_dump(exclude_none=True)
+
+
+# ─── Structured Output Models (Phase 55) ────────────────────────────
+# Pydantic models for enforcing structured LLM output via JSON mode.
+# Used with agent_decision.py JsonOutputParser for consistent schemas.
+
+class MedicalDiagnosis(BaseModel):
+    """Structured diagnosis output from LLM."""
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "description": "Structured medical diagnosis for agent output",
+            "examples": [{
+                "condition": "Common Cold",
+                "confidence": 0.85,
+                "symptoms": ["runny nose", "sore throat"],
+                "recommendations": ["rest", "hydration"],
+                "urgency": "low",
+                "disclaimer": "This is AI-generated guidance, not a medical diagnosis.",
+            }],
+        },
+    )
+
+    condition: str = Field(..., description="Suspected condition or diagnosis")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0-1")
+    symptoms: List[str] = Field(default_factory=list, description="Identified symptoms")
+    recommendations: List[str] = Field(default_factory=list, description="Recommended actions")
+    urgency: str = Field(default="medium", description="Urgency level: low/medium/high/critical")
+    differential: List[str] = Field(default_factory=list, description="Differential diagnoses to consider")
+    disclaimer: str = Field(
+        default="This is AI-generated guidance, not a medical diagnosis. Please consult a healthcare professional.",
+        description="Medical disclaimer",
+    )
+
+    @field_validator("urgency")
+    @classmethod
+    def validate_urgency(cls, v: str) -> str:
+        allowed = {"low", "medium", "high", "critical"}
+        v = v.lower().strip()
+        if v not in allowed:
+            return "medium"
+        return v
+
+
+class MedicalReport(BaseModel):
+    """Structured report output from LLM."""
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        json_schema_extra={"description": "Structured medical report for report agent"},
+    )
+
+    title: str = Field(..., description="Report title")
+    summary: str = Field(..., description="Executive summary")
+    sections: List[Dict[str, str]] = Field(default_factory=list, description="Report sections [{title, content}]")
+    key_findings: List[str] = Field(default_factory=list, description="Key findings")
+    recommendations: List[str] = Field(default_factory=list, description="Recommendations")
+    disclaimer: str = Field(
+        default="This report is AI-generated and should be reviewed by a medical professional.",
+    )
+
+
+class AgentRouteDecision(BaseModel):
+    """Structured routing decision from the decision agent."""
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    agent: str = Field(..., description="Target agent name")
+    reasoning: str = Field(default="", description="Why this agent was chosen")
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    requires_vision: bool = Field(default=False, description="Whether image analysis is needed")
+    requires_search: bool = Field(default=False, description="Whether web search is needed")
+
+
+def get_structured_output_schema(model_class: type[BaseModel]) -> dict:
+    """Get JSON Schema for a Pydantic model (useful for LLM tool definitions).
+
+    Example usage with OpenAI API:
+        tools = [{"type": "function", "function": {"name": "diagnose", "parameters": get_structured_output_schema(MedicalDiagnosis)}}]
+    """
+    return model_class.model_json_schema()
