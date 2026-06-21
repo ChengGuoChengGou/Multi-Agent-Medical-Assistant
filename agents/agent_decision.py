@@ -7,7 +7,7 @@ It dynamically routes user queries to the appropriate agent based on content and
 
 import json
 import logging
-from typing import Dict, List, Optional, Any, Literal, TypedDict, Union, Annotated
+from typing import Dict, List, Optional, Any, Literal, TypedDict, Union, Annotated, ClassVar
 
 logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field, field_validator
@@ -134,7 +134,7 @@ class AgentDecision(BaseModel):
     reasoning: str = Field(default="", description="Step-by-step reasoning for selecting this agent")
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0")
 
-    VALID_AGENTS = {
+    VALID_AGENTS: ClassVar[set] = {
         "CONVERSATION_AGENT", "RAG_AGENT", "WEB_SEARCH_PROCESSOR_AGENT",
         "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT", "MCP_AGENT"
     }
