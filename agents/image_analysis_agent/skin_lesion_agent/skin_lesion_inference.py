@@ -73,22 +73,19 @@ class SkinLesionSegmentation:
     def __init__(self, model_path):
         self.model_path = model_path
         self.device = DEVICE
-        self.model = self._load_model()
+        self.model = None  # Lazy load: defer download to first predict()
 
-    def _load_model(self):
-        """Load the trained U-Net model."""
+    def _ensure_model_loaded(self):
+        """Load the trained U-Net model on first use (lazy initialization)."""
+        if self.model is not None:
+            return
         try:
-            # with safe_globals([UNet]):
-            #     model = torch.load(self.model_path, weights_only=False, map_location=self.device)
-            # Call this before using the model
             download_model_checkpoint('1rvn4ucOH6UBoNk-GB9bUWuGTLkNIVUf0', self.model_path)
-            model = UNet(n_channels=3, n_classes=1).to(self.device)  # Explicitly initialize UNet
-            # model.load_state_dict(torch.load(self.model_path, weights_only=False, map_location=self.device), strict=False)
+            model = UNet(n_channels=3, n_classes=1).to(self.device)
             model.load_state_dict(torch.load(self.model_path, map_location=torch.device(self.device))['state_dict'])
-            # model = torch.load(self.model_path, map_location=torch.device(DEVICE))
             model.eval()
+            self.model = model
             logger.info(f"Model loaded successfully from {self.model_path}")
-            return model
         except Exception as e:
             logger.error(f"Error loading model: {e}")
             raise e
@@ -113,6 +110,7 @@ class SkinLesionSegmentation:
     def predict(self, image_path, output_path):
         """Segment lesion in an image and return overlaid visualization."""
         try:
+            self._ensure_model_loaded()
             img = cv2.imread(image_path, cv2.IMREAD_COLOR)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) / 255.0  # Normalize to [0,1]
             img_resized = cv2.resize(img, (256, 256))
