@@ -58,13 +58,13 @@
             transition: background-color var(--transition-speed);
         }
         .chat-container {
-            max-width: 1200px;
+            width: 100%;
             margin: 0 auto;
             background-color: var(--bg-card);
             transition: background-color var(--transition-speed);
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            height: 90vh;
+            height: calc(100vh - 2rem);
             display: flex;
             flex-direction: column;
         }
@@ -212,7 +212,7 @@
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            height: 90vh;
+            height: calc(100vh - 2rem);
             overflow-y: auto;
         }
         .sidebar h5 {
