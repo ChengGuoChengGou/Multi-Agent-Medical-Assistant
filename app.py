@@ -34,6 +34,9 @@ from middleware import (
 )
 from utils.logging_config import setup_logging, get_logger
 
+# [Phase 7] API versioning with dependency health checks
+from api.health import router as health_v1_router
+
 # [Phase 6.5] Incremental indexing support
 try:
     from agents.rag_agent import MedicalRAG, RAG_AVAILABLE
@@ -102,6 +105,9 @@ for directory in [UPLOAD_FOLDER, FRONTEND_UPLOAD_FOLDER, SKIN_LESION_OUTPUT, SPE
 # Mount static files directory
 app.mount("/data", StaticFiles(directory="data"), name="data")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# [Phase 7] Register API v1 routers
+app.include_router(health_v1_router)
 
 # Set up templates
 templates = Jinja2Templates(directory="templates")
