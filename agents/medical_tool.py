@@ -112,7 +112,7 @@ class MedicalTool(ABC):
                 elif expected_type == "number" and not isinstance(value, (int, float)):
                     return False, f"Parameter '{field_name}' must be number, got {type(value).__name__}"
         
-        return None, None  # type: ignore[return-value]
+        return True, None
 
     async def query(self, **kwargs) -> MedicalToolResult:
         """
