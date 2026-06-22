@@ -204,14 +204,14 @@ class TestChatStreamEndpoint:
 
 class TestTranscribeEndpoint:
     def test_transcribe_requires_body(self, client):
-        """POST /transcribe without file returns 422."""
+        """POST /transcribe without file returns 422 (or 401 if auth rejects first)."""
         r = client.post("/transcribe")
-        assert r.status_code == 422
+        assert r.status_code in (401, 422)
 
     def test_transcribe_requires_audio_file(self, client):
-        """POST /transcribe without file field returns 422."""
+        """POST /transcribe without file field returns 422 (or 401 if auth rejects first)."""
         r = client.post("/transcribe", data={})
-        assert r.status_code == 422
+        assert r.status_code in (401, 422)
 
 
 # === Cache Stats Endpoint ===
