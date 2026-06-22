@@ -21,7 +21,7 @@ from pydub import AudioSegment
 from elevenlabs.client import ElevenLabs
 
 from config import Config
-from schemas import HealthResponse, ChatResponse, ValidateResponse, TranscribeResponse
+from schemas import HealthResponse, ChatResponse, ValidateResponse, TranscribeResponse, ErrorResponse
 from agents.agent_decision import process_query
 from agents.agent_decision import process_query_streaming  # [Phase 3.1] streaming support
 from sse_utils import sse_stream_chat_streaming  # [Phase 3.1] SSE streaming response
@@ -185,7 +185,7 @@ def metrics():
     ]
     return Response(content="\n".join(lines), media_type="text/plain; version=0.0.4; charset=utf-8")
 
-@app.post("/chat", response_model=ChatResponse, tags=["Chat"])
+@app.post("/chat", response_model=ChatResponse, responses={500: {"model": ErrorResponse}}, tags=["Chat"])
 def chat(
     request: QueryRequest, 
     response: Response, 
@@ -245,7 +245,7 @@ async def chat_stream(
         streaming_fn=process_query_streaming,
     )
 
-@app.post("/upload", response_model=ChatResponse, tags=["Document"])
+@app.post("/upload", response_model=ChatResponse, responses={413: {"model": ErrorResponse}, 500: {"model": ErrorResponse}}, tags=["Document"])
 async def upload_image(
     response: Response,
     image: UploadFile = File(...), 
@@ -329,7 +329,7 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/validate", response_model=ValidateResponse, tags=["Document"])
+@app.post("/validate", response_model=ValidateResponse, responses={500: {"model": ErrorResponse}}, tags=["Document"])
 def validate_medical_output(
     response: Response,
     validation_result: str = Form(...), 
@@ -373,7 +373,7 @@ def validate_medical_output(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/transcribe", response_model=TranscribeResponse, tags=["Voice"])
+@app.post("/transcribe", response_model=TranscribeResponse, responses={500: {"model": ErrorResponse}}, tags=["Voice"])
 async def transcribe_audio(audio: UploadFile = File(...)):
     """Transcribe audio to text using ElevenLabs speech-to-text API.
 
@@ -461,7 +461,7 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             content={"error": str(e)}
         )
 
-@app.post("/generate-speech", tags=["Voice"])
+@app.post("/generate-speech", responses={500: {"model": ErrorResponse}}, tags=["Voice"])
 async def generate_speech(request: SpeechRequest):
     """Endpoint to generate speech using ElevenLabs API"""
     try:
