@@ -70,10 +70,12 @@ def _determine_mcp_tools_llm(query: str, llm) -> List[Dict[str, Any]]:
     Falls back to keyword-based routing if LLM fails.
     """
     try:
-        response = llm.invoke([
-            SystemMessage(content="You are a medical tool router. Output only valid JSON."),
-            HumanMessage(content=MCP_ROUTING_PROMPT.format(query=query))
-        ])
+        response = llm.invoke(
+            [
+                SystemMessage(content="You are a medical tool router. Output only valid JSON."),
+                HumanMessage(content=MCP_ROUTING_PROMPT.format(query=query)),
+            ]
+        )
         # Parse JSON from response
         content = response.content.strip()
         # Handle markdown code blocks
@@ -99,88 +101,107 @@ def _determine_mcp_tools_keyword(query: str) -> List[Dict[str, Any]]:
     calls = []
 
     # ICD coding / diagnosis mapping
-    coding_keywords = ["icd", "编码", "诊断编码", "code", "diagnosis code", "billing code",
-                       "病历编码", "疾病编码", "dsm", "snomed", "loinc"]
+    coding_keywords = [
+        "icd",
+        "编码",
+        "诊断编码",
+        "code",
+        "diagnosis code",
+        "billing code",
+        "病历编码",
+        "疾病编码",
+        "dsm",
+        "snomed",
+        "loinc",
+    ]
     if any(kw in query_lower for kw in coding_keywords):
-        calls.append({
-            "server": "autoicd",
-            "tool": "reference_search",
-            "args": {"query": query, "code_type": "icd-10-cm"}
-        })
+        calls.append(
+            {"server": "autoicd", "tool": "reference_search", "args": {"query": query, "code_type": "icd-10-cm"}}
+        )
 
     # Drug queries
-    drug_keywords = ["drug", "药物", "药品", "medication", "prescription", "副作用",
-                     "side effect", "interaction", "相互作用", "药代动力学", "fda批准"]
+    drug_keywords = [
+        "drug",
+        "药物",
+        "药品",
+        "medication",
+        "prescription",
+        "副作用",
+        "side effect",
+        "interaction",
+        "相互作用",
+        "药代动力学",
+        "fda批准",
+    ]
     if any(kw in query_lower for kw in drug_keywords):
-        calls.append({
-            "server": "healthcare",
-            "tool": "search_drugs",
-            "args": {"query": query}
-        })
+        calls.append({"server": "healthcare", "tool": "search_drugs", "args": {"query": query}})
 
     # Clinical trials
-    trial_keywords = ["trial", "临床试验", "clinical study", "临床研究", "randomized",
-                      "rct", "phase", "入组", "招募"]
+    trial_keywords = ["trial", "临床试验", "clinical study", "临床研究", "randomized", "rct", "phase", "入组", "招募"]
     if any(kw in query_lower for kw in trial_keywords):
-        calls.append({
-            "server": "biomcp",
-            "tool": "trial_search",
-            "args": {"query": query}
-        })
+        calls.append({"server": "biomcp", "tool": "trial_search", "args": {"query": query}})
 
     # Genetic / variant queries
-    gene_keywords = ["gene", "基因", "mutation", "突变", "variant", "变异", "snp",
-                     "genomic", "genetic", "brca", "egfr", "her2", "alk"]
+    gene_keywords = [
+        "gene",
+        "基因",
+        "mutation",
+        "突变",
+        "variant",
+        "变异",
+        "snp",
+        "genomic",
+        "genetic",
+        "brca",
+        "egfr",
+        "her2",
+        "alk",
+    ]
     if any(kw in query_lower for kw in gene_keywords):
-        calls.append({
-            "server": "biomcp",
-            "tool": "variant_search",
-            "args": {"query": query}
-        })
-        calls.append({
-            "server": "biomcp",
-            "tool": "gene_search",
-            "args": {"query": query}
-        })
+        calls.append({"server": "biomcp", "tool": "variant_search", "args": {"query": query}})
+        calls.append({"server": "biomcp", "tool": "gene_search", "args": {"query": query}})
 
     # PubMed / research articles
-    article_keywords = ["研究", "论文", "paper", "study", "research", "pubmed",
-                       "article", "文献", "meta分析", "meta-analysis", "systematic review",
-                       "preprint", "预印本"]
+    article_keywords = [
+        "研究",
+        "论文",
+        "paper",
+        "study",
+        "research",
+        "pubmed",
+        "article",
+        "文献",
+        "meta分析",
+        "meta-analysis",
+        "systematic review",
+        "preprint",
+        "预印本",
+    ]
     if any(kw in query_lower for kw in article_keywords):
-        calls.append({
-            "server": "biomcp",
-            "tool": "article_search",
-            "args": {"query": query}
-        })
-        calls.append({
-            "server": "healthcare",
-            "tool": "search_pubmed",
-            "args": {"query": query}
-        })
+        calls.append({"server": "biomcp", "tool": "article_search", "args": {"query": query}})
+        calls.append({"server": "healthcare", "tool": "search_pubmed", "args": {"query": query}})
 
     # Disease / pathology
-    disease_keywords = ["disease", "疾病", "disorder", "syndrome", "综合征", "pathology",
-                        "病理", "diagnosis", "诊断", "症状", "symptom"]
+    disease_keywords = [
+        "disease",
+        "疾病",
+        "disorder",
+        "syndrome",
+        "综合征",
+        "pathology",
+        "病理",
+        "diagnosis",
+        "诊断",
+        "症状",
+        "symptom",
+    ]
     if any(kw in query_lower for kw in disease_keywords) and not calls:
-        calls.append({
-            "server": "biomcp",
-            "tool": "disease_search",
-            "args": {"query": query}
-        })
+        calls.append({"server": "biomcp", "tool": "disease_search", "args": {"query": query}})
 
     # If no specific match, try general search across multiple servers
     if not calls:
-        calls.append({
-            "server": "healthcare",
-            "tool": "search_health_topics",
-            "args": {"query": query}
-        })
-        calls.append({
-            "server": "biomcp",
-            "tool": "article_search",
-            "args": {"query": query}
-        })
+        calls.append({"server": "healthcare", "tool": "search_health_topics", "args": {"query": query}})
+        calls.append({"server": "biomcp", "tool": "article_search", "args": {"query": query}})
 
     return calls
 
@@ -189,15 +210,16 @@ def _determine_mcp_tools_keyword(query: str) -> List[Dict[str, Any]]:
 # MCP Agent Node Function
 # ============================================================
 
+
 async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
     """
     LangGraph node: MCP Agent.
-    
+
     Handles queries that benefit from external medical databases:
     - Biomedical research (PubMed, ClinVar, ClinicalTrials.gov)
     - Medical coding (ICD-10, ICD-11, SNOMED CT)
     - Drug information (FDA, drug interactions)
-    
+
     Uses MCP protocol to communicate with external tool servers.
     """
     from agents.mcp_client import get_mcp_client
@@ -207,13 +229,13 @@ async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
     user_query = ""
     if isinstance(last_message, HumanMessage):
         user_query = last_message.content
-    elif hasattr(last_message, 'content'):
+    elif hasattr(last_message, "content"):
         user_query = last_message.content
 
     print(f"[MCP_AGENT] Processing: {user_query[:100]}...")
 
     # Get the LLM from config for tool routing
-    llm = config.llm if hasattr(config, 'llm') else None
+    llm = config.llm if hasattr(config, "llm") else None
 
     # Determine which MCP tools to call
     if llm:
@@ -221,8 +243,7 @@ async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
     else:
         tool_calls = _determine_mcp_tools_keyword(user_query)
 
-    print(f"[MCP_AGENT] Planned {len(tool_calls)} tool calls: "
-          f"{[tc['server'] + '.' + tc['tool'] for tc in tool_calls]}")
+    print(f"[MCP_AGENT] Planned {len(tool_calls)} tool calls: {[tc['server'] + '.' + tc['tool'] for tc in tool_calls]}")
 
     # Get MCP client and execute tool calls
     try:
@@ -231,7 +252,7 @@ async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
         logger.error(f"[MCP_AGENT] Failed to get MCP client: {e}")
         error_msg = AIMessage(
             content=f"I encountered an error connecting to external medical databases: {str(e)}. "
-                    f"Falling back to internal knowledge for your query."
+            f"Falling back to internal knowledge for your query."
         )
         state["messages"] = messages + [error_msg]
         return state
@@ -246,35 +267,39 @@ async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
         try:
             result = await mcp_client.call_on_server(server, tool, args)
             if result.success:
-                tool_results.append({
-                    "server": server,
-                    "tool": tool,
-                    "result": result.content[:3000],  # Truncate long results
-                })
+                tool_results.append(
+                    {
+                        "server": server,
+                        "tool": tool,
+                        "result": result.content[:3000],  # Truncate long results
+                    }
+                )
                 print(f"[MCP_AGENT] ✅ {server}.{tool}: {len(result.content)} chars")
             else:
                 print(f"[MCP_AGENT] ❌ {server}.{tool}: {result.error}")
-                tool_results.append({
-                    "server": server,
-                    "tool": tool,
-                    "error": result.error,
-                })
+                tool_results.append(
+                    {
+                        "server": server,
+                        "tool": tool,
+                        "error": result.error,
+                    }
+                )
         except Exception as e:
             logger.error(f"[MCP_AGENT] Tool call error {server}.{tool}: {e}")
-            tool_results.append({
-                "server": server,
-                "tool": tool,
-                "error": str(e),
-            })
+            tool_results.append(
+                {
+                    "server": server,
+                    "tool": tool,
+                    "error": str(e),
+                }
+            )
 
     # Generate response using LLM with tool results
     if llm and tool_results:
         context_parts = []
         for tr in tool_results:
             if "result" in tr:
-                context_parts.append(
-                    f"### {tr['server'].upper()} - {tr['tool']}\n{tr['result']}"
-                )
+                context_parts.append(f"### {tr['server'].upper()} - {tr['tool']}\n{tr['result']}")
 
         if context_parts:
             synthesis_prompt = f"""Based on the following external medical database results, 
@@ -290,10 +315,14 @@ Include source citations where available. If information conflicts, note the dis
 Always remind the user to consult healthcare professionals for clinical decisions."""
 
             try:
-                response = llm.invoke([
-                    SystemMessage(content="You are a medical AI assistant with access to external medical databases. Provide accurate, evidence-based responses."),
-                    HumanMessage(content=synthesis_prompt)
-                ])
+                response = llm.invoke(
+                    [
+                        SystemMessage(
+                            content="You are a medical AI assistant with access to external medical databases. Provide accurate, evidence-based responses."
+                        ),
+                        HumanMessage(content=synthesis_prompt),
+                    ]
+                )
                 answer = response.content
             except Exception as e:
                 logger.error(f"[MCP_AGENT] LLM synthesis failed: {e}")

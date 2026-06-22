@@ -10,6 +10,7 @@ Tests cover:
 
 InMemoryStore is a pure dict-based fallback store with no external deps.
 """
+
 import pytest
 
 from agents.memory_module import InMemoryStore
@@ -17,6 +18,7 @@ from agents.memory_module import InMemoryStore
 # ─────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────
+
 
 @pytest.fixture
 def store():
@@ -37,8 +39,8 @@ def populated_store():
 # Initialization
 # ─────────────────────────────────────────
 
-class TestInMemoryStoreInit:
 
+class TestInMemoryStoreInit:
     def test_new_store_empty(self, store):
         assert len(store._store) == 0
 
@@ -53,8 +55,8 @@ class TestInMemoryStoreInit:
 # remember()
 # ─────────────────────────────────────────
 
-class TestRemember:
 
+class TestRemember:
     def test_returns_bool(self, store):
         result = store.remember("user1", "test content")
         assert isinstance(result, bool)
@@ -97,8 +99,8 @@ class TestRemember:
 # recall()
 # ─────────────────────────────────────────
 
-class TestRecall:
 
+class TestRecall:
     def test_empty_store_returns_empty_string(self, store):
         result = store.recall("u1", "anything")
         assert result == ""
@@ -148,8 +150,8 @@ class TestRecall:
 # get_history()
 # ─────────────────────────────────────────
 
-class TestGetHistory:
 
+class TestGetHistory:
     def test_empty_store_returns_empty_list(self, store):
         result = store.get_history("u1")
         assert result == []
@@ -198,8 +200,8 @@ class TestGetHistory:
 # forget()
 # ─────────────────────────────────────────
 
-class TestForget:
 
+class TestForget:
     def test_returns_bool(self, populated_store):
         result = populated_store.forget("u1")
         assert isinstance(result, bool)
@@ -244,8 +246,8 @@ class TestForget:
 # Integration / Lifecycle
 # ─────────────────────────────────────────
 
-class TestLifecycle:
 
+class TestLifecycle:
     def test_full_lifecycle(self, store):
         # Remember
         store.remember("patient1", "Headache and fever", {"symptom": True})

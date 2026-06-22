@@ -2,6 +2,7 @@
 Unit tests for utils/logging_config.py — JSON/Human formatters, setup_logging, get_logger.
 Run: python -m pytest tests/test_logging_config.py -v
 """
+
 import json
 import logging
 import os
@@ -24,8 +25,13 @@ from utils.logging_config import (
 class TestJSONFormatter:
     def _make_record(self, level=logging.INFO, msg="test message", **extra):
         record = logging.LogRecord(
-            name="test.logger", level=level, pathname="test.py",
-            lineno=1, msg=msg, args=(), exc_info=None,
+            name="test.logger",
+            level=level,
+            pathname="test.py",
+            lineno=1,
+            msg=msg,
+            args=(),
+            exc_info=None,
         )
         for k, v in extra.items():
             setattr(record, k, v)
@@ -56,9 +62,16 @@ class TestJSONFormatter:
 
     def test_extra_fields_included(self):
         fmt = JSONFormatter()
-        data = json.loads(fmt.format(self._make_record(
-            duration_ms=123.4, status_code=200, method="POST", path="/chat",
-        )))
+        data = json.loads(
+            fmt.format(
+                self._make_record(
+                    duration_ms=123.4,
+                    status_code=200,
+                    method="POST",
+                    path="/chat",
+                )
+            )
+        )
         assert data["duration_ms"] == 123.4
         assert data["status_code"] == 200
         assert data["method"] == "POST"
@@ -75,10 +88,16 @@ class TestJSONFormatter:
             raise ValueError("boom")
         except ValueError:
             import sys
+
             exc_info = sys.exc_info()
         record = logging.LogRecord(
-            name="test", level=logging.ERROR, pathname="t.py",
-            lineno=1, msg="err", args=(), exc_info=exc_info,
+            name="test",
+            level=logging.ERROR,
+            pathname="t.py",
+            lineno=1,
+            msg="err",
+            args=(),
+            exc_info=exc_info,
         )
         fmt = JSONFormatter()
         data = json.loads(fmt.format(record))
@@ -96,8 +115,13 @@ class TestHumanFormatter:
     def test_basic_output(self):
         fmt = HumanFormatter()
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="t.py",
-            lineno=1, msg="hello", args=(), exc_info=None,
+            name="test",
+            level=logging.INFO,
+            pathname="t.py",
+            lineno=1,
+            msg="hello",
+            args=(),
+            exc_info=None,
         )
         output = fmt.format(record)
         assert "INFO" in output
@@ -109,8 +133,13 @@ class TestHumanFormatter:
         try:
             fmt = HumanFormatter()
             record = logging.LogRecord(
-                name="test", level=logging.DEBUG, pathname="t.py",
-                lineno=1, msg="debug msg", args=(), exc_info=None,
+                name="test",
+                level=logging.DEBUG,
+                pathname="t.py",
+                lineno=1,
+                msg="debug msg",
+                args=(),
+                exc_info=None,
             )
             output = fmt.format(record)
             assert "req-xyz-" in output  # first 8 chars

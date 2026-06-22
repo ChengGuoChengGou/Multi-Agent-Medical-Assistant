@@ -1,4 +1,5 @@
 """Tests for Phase 9: System monitoring aggregation endpoint."""
+
 import time
 
 import pytest
@@ -11,7 +12,6 @@ client = TestClient(app)
 
 
 class TestMonitoringEndpoint:
-
     def test_admin_stats_returns_200(self):
         set_app_start_time(time.time() - 60)
         resp = client.get("/api/v1/admin/stats")

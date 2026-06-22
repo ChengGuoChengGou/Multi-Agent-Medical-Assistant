@@ -6,6 +6,7 @@ Provides /api/v1/admin/stats that aggregates:
 - Rate limiter state (active IPs)
 - System info (uptime, Python version, memory)
 """
+
 import os
 import sys
 import time
@@ -31,7 +32,7 @@ def set_app_start_time(t: float):
 @router.get("/stats")
 async def get_system_stats():
     """Aggregate system monitoring stats.
-    
+
     Returns circuit breakers, agent metrics, rate limiter state,
     and system resource info in a single JSON response.
     No authentication required (same as /health) for monitoring
@@ -48,6 +49,7 @@ async def get_system_stats():
     # System info
     try:
         import psutil
+
         process = psutil.Process(os.getpid())
         mem = process.memory_info()
         system_info = {
@@ -59,10 +61,12 @@ async def get_system_stats():
     except ImportError:
         system_info = {"note": "psutil not installed, limited system info"}
 
-    system_info.update({
-        "python_version": sys.version.split()[0],
-        "pid": os.getpid(),
-    })
+    system_info.update(
+        {
+            "python_version": sys.version.split()[0],
+            "pid": os.getpid(),
+        }
+    )
 
     return {
         "uptime_seconds": round(uptime, 1),

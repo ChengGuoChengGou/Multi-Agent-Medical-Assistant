@@ -2,6 +2,7 @@
 Unit tests for tools/registry.py — ToolRegistry singleton, tool management.
 Run: python -m pytest tests/test_registry.py -v
 """
+
 import os
 import sys
 
@@ -12,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.registry import ToolRegistry, get_registry
 
 # ── Helpers ──
+
 
 def _reset_singleton():
     """Reset ToolRegistry singleton state for clean tests."""
@@ -24,6 +26,7 @@ def clean_registry():
     """Reset singleton before each test."""
     _reset_singleton()
     import tools.registry as mod
+
     mod._registry_instance = None
     yield
     _reset_singleton()
@@ -57,6 +60,7 @@ class TestInitialize:
     def test_initialize_no_medical_module(self, monkeypatch):
         """When agents.medical_tool is not importable, returns False."""
         import builtins
+
         real_import = builtins.__import__
 
         def fake_import(name, *args, **kwargs):
@@ -72,13 +76,19 @@ class TestInitialize:
     def test_initialize_success(self, monkeypatch):
         """When medical_tool imports OK, returns True."""
         import builtins
+
         real_import = builtins.__import__
 
         def fake_import(name, *args, **kwargs):
             if name == "agents.medical_tool":
+
                 class FakeModule:
-                    def init_tool_registry(self): pass
-                    def get_tool_registry(self): return {}
+                    def init_tool_registry(self):
+                        pass
+
+                    def get_tool_registry(self):
+                        return {}
+
                 return FakeModule()
             return real_import(name, *args, **kwargs)
 

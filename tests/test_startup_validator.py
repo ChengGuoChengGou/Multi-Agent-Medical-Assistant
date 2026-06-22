@@ -1,4 +1,5 @@
 """Tests for Phase 8: Startup Configuration Validator."""
+
 import os
 from unittest.mock import patch
 
@@ -112,10 +113,14 @@ class TestCheckDirectoryStructure:
 class TestValidateStartupConfig:
     """Test the main validation entry point."""
 
-    @patch.dict(os.environ, {
-        "OPENAI_API_KEY": "sk-test123456789012345678901234",
-        "model_name": "gpt-4o-mini",
-    }, clear=False)
+    @patch.dict(
+        os.environ,
+        {
+            "OPENAI_API_KEY": "sk-test123456789012345678901234",
+            "model_name": "gpt-4o-mini",
+        },
+        clear=False,
+    )
     def test_valid_config_returns_result(self):
         result = validate_startup_config()
         assert isinstance(result, ValidationResult)

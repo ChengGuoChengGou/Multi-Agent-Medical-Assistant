@@ -2,6 +2,7 @@
 Rate Limiting Middleware for Medical Assistant Application
 Implements sliding window rate limiting per client IP.
 """
+
 import asyncio
 import logging
 import time
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Sliding window rate limiter per client IP.
-    
+
     Args:
         requests_per_minute: Max requests allowed per minute per IP
         requests_per_hour: Max requests allowed per hour per IP
@@ -59,7 +60,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(
                     status_code=429,
                     content={"status": "error", "error": "Too many requests. Please try again later."},
-                    headers={"Retry-After": "60"}
+                    headers={"Retry-After": "60"},
                 )
 
             # Check per-minute limit
@@ -70,7 +71,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(
                     status_code=429,
                     content={"status": "error", "error": "Too many requests. Please slow down."},
-                    headers={"Retry-After": "10"}
+                    headers={"Retry-After": "10"},
                 )
 
             # Record this request

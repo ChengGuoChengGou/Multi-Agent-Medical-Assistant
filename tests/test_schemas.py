@@ -2,6 +2,7 @@
 Unit tests for schemas.py — API request/response Pydantic schemas.
 Run: python -m pytest tests/test_schemas.py -v
 """
+
 import os
 import sys
 
@@ -212,8 +213,10 @@ class TestModelDump:
 
     def test_health_response_dump(self):
         h = HealthResponse(
-            status="ok", uptime_seconds=10.0,
-            middleware={"a": True}, dedup_stats={"b": 2},
+            status="ok",
+            uptime_seconds=10.0,
+            middleware={"a": True},
+            dedup_stats={"b": 2},
         )
         d = h.model_dump()
         assert d["status"] == "ok"

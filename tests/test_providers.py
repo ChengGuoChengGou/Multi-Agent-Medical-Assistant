@@ -2,6 +2,7 @@
 Unit tests for providers.py — Multi-provider LLM configuration.
 Run: python -m pytest tests/test_providers.py -v
 """
+
 import os
 import sys
 import tempfile
@@ -14,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from providers import PRESETS, list_providers, load_mykey, resolve_provider
 
 # ── PRESETS ──────────────────────────────────────────────────────────────────
+
 
 class TestPresets:
     """Test that all expected presets exist with required keys."""
@@ -52,6 +54,7 @@ class TestPresets:
 
 # ── list_providers ───────────────────────────────────────────────────────────
 
+
 class TestListProviders:
     """Test list_providers() returns display-friendly dict."""
 
@@ -74,15 +77,19 @@ class TestListProviders:
 
 # ── resolve_provider ─────────────────────────────────────────────────────────
 
+
 class TestResolveProvider:
     """Test resolve_provider() with different env var configurations."""
 
     def test_preset_by_env(self):
         """PROVIDER env var should select preset."""
-        with patch.dict(os.environ, {
-            "PROVIDER": "deepseek",
-            "OPENAI_API_KEY": "test-key-123",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "PROVIDER": "deepseek",
+                "OPENAI_API_KEY": "test-key-123",
+            },
+        ):
             result = resolve_provider()
             assert result["base_url"] == "https://api.deepseek.com/v1"
             assert result["model"] == "deepseek-v4-pro"
@@ -90,21 +97,28 @@ class TestResolveProvider:
             assert "DeepSeek" in result["description"]
 
     def test_xiaomi_mimo_preset(self):
-        with patch.dict(os.environ, {
-            "PROVIDER": "xiaomi-mimo",
-            "OPENAI_API_KEY": "sk-test",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "PROVIDER": "xiaomi-mimo",
+                "OPENAI_API_KEY": "sk-test",
+            },
+        ):
             result = resolve_provider()
             assert "xiaomimimo.com" in result["base_url"]
             assert result["model"] == "mimo-v2.5-pro"
 
     def test_custom_env_vars(self):
         """OPENAI_BASE_URL + MODEL_NAME should override presets."""
-        with patch.dict(os.environ, {
-            "OPENAI_BASE_URL": "https://custom.api.com/v1",
-            "MODEL_NAME": "custom-model",
-            "OPENAI_API_KEY": "custom-key",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_BASE_URL": "https://custom.api.com/v1",
+                "MODEL_NAME": "custom-model",
+                "OPENAI_API_KEY": "custom-key",
+            },
+            clear=False,
+        ):
             # Remove PROVIDER to avoid preset lookup
             os.environ.pop("PROVIDER", None)
             result = resolve_provider()
@@ -129,30 +143,40 @@ class TestResolveProvider:
 
     def test_unknown_preset_falls_through(self):
         """Unknown PROVIDER name should fall through to custom or fallback."""
-        with patch.dict(os.environ, {
-            "PROVIDER": "nonexistent-provider",
-            "OPENAI_BASE_URL": "https://fallback.api.com/v1",
-            "OPENAI_API_KEY": "key",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "PROVIDER": "nonexistent-provider",
+                "OPENAI_BASE_URL": "https://fallback.api.com/v1",
+                "OPENAI_API_KEY": "key",
+            },
+            clear=False,
+        ):
             result = resolve_provider()
             # Should use OPENAI_BASE_URL
             assert result["base_url"] == "https://fallback.api.com/v1"
 
     def test_preset_embedding_model(self):
         """Preset embedding_model should be carried through."""
-        with patch.dict(os.environ, {
-            "PROVIDER": "qwen",
-            "OPENAI_API_KEY": "key",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "PROVIDER": "qwen",
+                "OPENAI_API_KEY": "key",
+            },
+        ):
             result = resolve_provider()
             assert result["embedding_model"] == "text-embedding-v3"
 
     def test_preset_none_embedding_fallback(self):
         """If preset embedding_model is None, should fall back to env or default."""
-        with patch.dict(os.environ, {
-            "PROVIDER": "moonshot",
-            "OPENAI_API_KEY": "key",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "PROVIDER": "moonshot",
+                "OPENAI_API_KEY": "key",
+            },
+        ):
             result = resolve_provider()
             # Should fall back to default
             assert result["embedding_model"] == "text-embedding-3-large"
@@ -160,18 +184,19 @@ class TestResolveProvider:
 
 # ── load_mykey ───────────────────────────────────────────────────────────────
 
+
 class TestLoadMykey:
     """Test load_mykey() GA-style config loading."""
 
     def test_load_valid_mykey(self):
         """Should parse native_oai_config_XXX variables."""
-        content = '''native_oai_config_test = {
+        content = """native_oai_config_test = {
     "name": "test-provider",
     "apikey": "sk-test-key",
     "apibase": "https://test.api.com/v1",
     "model": "test-model-v1",
 }
-'''
+"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(content)
             f.flush()
@@ -210,7 +235,7 @@ class TestLoadMykey:
 
     def test_load_mykey_multiple_configs(self):
         """Should parse multiple native_oai_config_XXX variables."""
-        content = '''
+        content = """
 native_oai_config_alpha = {
     "name": "alpha",
     "apikey": "sk-alpha",
@@ -223,7 +248,7 @@ native_oai_config_beta = {
     "apibase": "https://beta.api.com/v1",
     "model": "beta-2",
 }
-'''
+"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(content)
             f.flush()
@@ -239,12 +264,12 @@ native_oai_config_beta = {
 
     def test_load_mykey_uses_attr_name_as_fallback(self):
         """If config dict has no 'name' key, should derive from attr name."""
-        content = '''native_oai_config_mynodef = {
+        content = """native_oai_config_mynodef = {
     "apikey": "sk-xxx",
     "apibase": "https://xxx.api.com/v1",
     "model": "xxx-v1",
 }
-'''
+"""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(content)
             f.flush()

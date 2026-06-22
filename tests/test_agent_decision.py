@@ -2,6 +2,7 @@
 Unit tests for agents/agent_decision.py — AgentDecision model, graph construction, query processing.
 Run: python -m pytest tests/test_agent_decision.py -v
 """
+
 import os
 import sys
 from typing import Any, Dict
@@ -16,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # ═══════════════════════════════════════════
 # AgentDecision Model Tests
 # ═══════════════════════════════════════════
+
 
 class TestAgentDecision:
     """Tests for the AgentDecision Pydantic model."""
@@ -63,8 +65,10 @@ class TestAgentDecision:
 
         # Also mock sub-agents
         for mod in [
-            "agents.brain_tumor_agent", "agents.chest_xray_agent",
-            "agents.skin_lesion_agent", "agents.vector_memory",
+            "agents.brain_tumor_agent",
+            "agents.chest_xray_agent",
+            "agents.skin_lesion_agent",
+            "agents.vector_memory",
         ]:
             saved[mod] = sys.modules.get(mod)
             sys.modules[mod] = MagicMock()
@@ -77,22 +81,33 @@ class TestAgentDecision:
         # without importing the full module with all its side-effects.
         class AgentDecision(BaseModel):
             """Structured decision output from the routing LLM."""
+
             query_type: str = Field(description="Type of query detected")
             confidence: float = Field(description="Confidence score 0-1")
             reasoning: str = Field(description="Brief reasoning for the decision")
             agent: str = Field(description="Which agent should handle this query")
 
             VALID_AGENTS: ClassVar[list] = [
-                "CONVERSATION_AGENT", "RAG_AGENT", "WEB_SEARCH_PROCESSOR_AGENT",
-                "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT", "MCP_AGENT"
+                "CONVERSATION_AGENT",
+                "RAG_AGENT",
+                "WEB_SEARCH_PROCESSOR_AGENT",
+                "BRAIN_TUMOR_AGENT",
+                "CHEST_XRAY_AGENT",
+                "SKIN_LESION_AGENT",
+                "MCP_AGENT",
             ]
 
             @field_validator("agent")
             @classmethod
             def validate_agent_name(cls, v):
                 valid = [
-                    "CONVERSATION_AGENT", "RAG_AGENT", "WEB_SEARCH_PROCESSOR_AGENT",
-                    "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT", "MCP_AGENT"
+                    "CONVERSATION_AGENT",
+                    "RAG_AGENT",
+                    "WEB_SEARCH_PROCESSOR_AGENT",
+                    "BRAIN_TUMOR_AGENT",
+                    "CHEST_XRAY_AGENT",
+                    "SKIN_LESION_AGENT",
+                    "MCP_AGENT",
                 ]
                 # Normalize: uppercase and strip
                 normalized = v.strip().upper()
@@ -124,9 +139,7 @@ class TestAgentDecision:
                 return self.query_type in ["image_analysis", "multimodal"]
 
             def requires_medical_image_analysis(self) -> bool:
-                return self.agent in [
-                    "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT"
-                ]
+                return self.agent in ["BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT"]
 
         self.AgentDecision = AgentDecision
 
@@ -142,9 +155,7 @@ class TestAgentDecision:
     # ── Basic construction ──
 
     def test_valid_construction(self):
-        d = self.AgentDecision(
-            query_type="general", confidence=0.8, reasoning="test", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="general", confidence=0.8, reasoning="test", agent="RAG_AGENT")
         assert d.agent == "RAG_AGENT"
         assert d.confidence == 0.8
 
@@ -156,159 +167,109 @@ class TestAgentDecision:
     # ── Agent name validation ──
 
     def test_agent_normalization_lowercase(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="rag_agent"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="rag_agent")
         assert d.agent == "RAG_AGENT"
 
     def test_agent_normalization_whitespace(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="  MCP_AGENT  "
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="  MCP_AGENT  ")
         assert d.agent == "MCP_AGENT"
 
     def test_agent_short_alias_conversation(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="CONVERSATION"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="CONVERSATION")
         assert d.agent == "CONVERSATION_AGENT"
 
     def test_agent_short_alias_rag(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="RAG"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="RAG")
         assert d.agent == "RAG_AGENT"
 
     def test_agent_short_alias_web(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="WEB"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="WEB")
         assert d.agent == "WEB_SEARCH_PROCESSOR_AGENT"
 
     def test_agent_short_alias_brain_tumor(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="BRAIN_TUMOR"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="BRAIN_TUMOR")
         assert d.agent == "BRAIN_TUMOR_AGENT"
 
     def test_agent_short_alias_chest_xray(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="CHEST_XRAY"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="CHEST_XRAY")
         assert d.agent == "CHEST_XRAY_AGENT"
 
     def test_agent_short_alias_skin_lesion(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="SKIN_LESION"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="SKIN_LESION")
         assert d.agent == "SKIN_LESION_AGENT"
 
     def test_agent_short_alias_mcp(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="MCP"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="MCP")
         assert d.agent == "MCP_AGENT"
 
     def test_agent_invalid_name_raises(self):
         with pytest.raises(Exception, match="Invalid agent"):
-            self.AgentDecision(
-                query_type="q", confidence=0.5, reasoning="r", agent="UNKNOWN_AGENT"
-            )
+            self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="UNKNOWN_AGENT")
 
     # ── Confidence validation ──
 
     def test_confidence_clamped_above_1(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=1.5, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=1.5, reasoning="r", agent="RAG_AGENT")
         assert d.confidence == 1.0
 
     def test_confidence_clamped_below_0(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=-0.5, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=-0.5, reasoning="r", agent="RAG_AGENT")
         assert d.confidence == 0.0
 
     def test_confidence_boundary_0(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.0, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.0, reasoning="r", agent="RAG_AGENT")
         assert d.confidence == 0.0
 
     def test_confidence_boundary_1(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=1.0, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=1.0, reasoning="r", agent="RAG_AGENT")
         assert d.confidence == 1.0
 
     def test_confidence_mid_range(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.65, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.65, reasoning="r", agent="RAG_AGENT")
         assert d.confidence == 0.65
 
     # ── has_multimodal_query ──
 
     def test_has_multimodal_query_true_image(self):
-        d = self.AgentDecision(
-            query_type="image_analysis", confidence=0.5, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="image_analysis", confidence=0.5, reasoning="r", agent="RAG_AGENT")
         assert d.has_multimodal_query() is True
 
     def test_has_multimodal_query_true_multimodal(self):
-        d = self.AgentDecision(
-            query_type="multimodal", confidence=0.5, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="multimodal", confidence=0.5, reasoning="r", agent="RAG_AGENT")
         assert d.has_multimodal_query() is True
 
     def test_has_multimodal_query_false_general(self):
-        d = self.AgentDecision(
-            query_type="general", confidence=0.5, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="general", confidence=0.5, reasoning="r", agent="RAG_AGENT")
         assert d.has_multimodal_query() is False
 
     def test_has_multimodal_query_false_medical(self):
-        d = self.AgentDecision(
-            query_type="medical_question", confidence=0.5, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="medical_question", confidence=0.5, reasoning="r", agent="RAG_AGENT")
         assert d.has_multimodal_query() is False
 
     # ── requires_medical_image_analysis ──
 
     def test_requires_medical_image_brain_tumor(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="BRAIN_TUMOR_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="BRAIN_TUMOR_AGENT")
         assert d.requires_medical_image_analysis() is True
 
     def test_requires_medical_image_chest_xray(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="CHEST_XRAY_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="CHEST_XRAY_AGENT")
         assert d.requires_medical_image_analysis() is True
 
     def test_requires_medical_image_skin_lesion(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="SKIN_LESION_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="SKIN_LESION_AGENT")
         assert d.requires_medical_image_analysis() is True
 
     def test_requires_medical_image_false_rag(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="RAG_AGENT")
         assert d.requires_medical_image_analysis() is False
 
     def test_requires_medical_image_false_conversation(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="CONVERSATION_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="CONVERSATION_AGENT")
         assert d.requires_medical_image_analysis() is False
 
     def test_requires_medical_image_false_mcp(self):
-        d = self.AgentDecision(
-            query_type="q", confidence=0.5, reasoning="r", agent="MCP_AGENT"
-        )
+        d = self.AgentDecision(query_type="q", confidence=0.5, reasoning="r", agent="MCP_AGENT")
         assert d.requires_medical_image_analysis() is False
 
     # ── VALID_AGENTS class var ──
@@ -318,17 +279,20 @@ class TestAgentDecision:
 
     def test_valid_agents_contains_all(self):
         expected = [
-            "CONVERSATION_AGENT", "RAG_AGENT", "WEB_SEARCH_PROCESSOR_AGENT",
-            "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT", "MCP_AGENT"
+            "CONVERSATION_AGENT",
+            "RAG_AGENT",
+            "WEB_SEARCH_PROCESSOR_AGENT",
+            "BRAIN_TUMOR_AGENT",
+            "CHEST_XRAY_AGENT",
+            "SKIN_LESION_AGENT",
+            "MCP_AGENT",
         ]
         assert self.AgentDecision.VALID_AGENTS == expected
 
     # ── Serialization ──
 
     def test_model_dump(self):
-        d = self.AgentDecision(
-            query_type="general", confidence=0.8, reasoning="test reason", agent="RAG_AGENT"
-        )
+        d = self.AgentDecision(query_type="general", confidence=0.8, reasoning="test reason", agent="RAG_AGENT")
         dumped = d.model_dump()
         assert dumped["query_type"] == "general"
         assert dumped["confidence"] == 0.8
@@ -338,9 +302,8 @@ class TestAgentDecision:
 
     def test_model_json_roundtrip(self):
         import json
-        d = self.AgentDecision(
-            query_type="medical", confidence=0.9, reasoning="r", agent="MCP_AGENT"
-        )
+
+        d = self.AgentDecision(query_type="medical", confidence=0.9, reasoning="r", agent="MCP_AGENT")
         j = d.model_dump_json()
         loaded = self.AgentDecision.model_validate_json(j)
         assert loaded.agent == d.agent
@@ -351,12 +314,14 @@ class TestAgentDecision:
 # AgentConfig Tests
 # ═══════════════════════════════════════════
 
+
 class TestAgentConfig:
     """Tests for AgentConfig class attributes."""
 
     @pytest.fixture(autouse=True)
     def _load_config(self):
         """Define AgentConfig locally to test constants."""
+
         class AgentConfig:
             DECISION_MODEL = "gpt-4o"
             VISION_MODEL = "gpt-4o"
@@ -372,6 +337,7 @@ Available agents:
 - CHEST_XRAY_AGENT: Chest X-ray image analysis
 - SKIN_LESION_AGENT: Skin lesion image analysis
 - MCP_AGENT: Tool-based queries requiring MCP server capabilities"""
+
         self.config = AgentConfig
         yield
 
@@ -388,8 +354,13 @@ Available agents:
     def test_decision_system_prompt_mentions_agents(self):
         prompt = self.config.DECISION_SYSTEM_PROMPT
         for agent in [
-            "CONVERSATION_AGENT", "RAG_AGENT", "WEB_SEARCH_PROCESSOR_AGENT",
-            "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT", "MCP_AGENT"
+            "CONVERSATION_AGENT",
+            "RAG_AGENT",
+            "WEB_SEARCH_PROCESSOR_AGENT",
+            "BRAIN_TUMOR_AGENT",
+            "CHEST_XRAY_AGENT",
+            "SKIN_LESION_AGENT",
+            "MCP_AGENT",
         ]:
             assert agent in prompt, f"{agent} not in DECISION_SYSTEM_PROMPT"
 
@@ -403,12 +374,14 @@ Available agents:
 # init_agent_state Tests
 # ═══════════════════════════════════════════
 
+
 class TestInitAgentState:
     """Tests for init_agent_state() function."""
 
     @pytest.fixture(autouse=True)
     def _load_fn(self):
         """Define init_agent_state locally."""
+
         def init_agent_state() -> dict:
             return {
                 "messages": [],
@@ -422,6 +395,7 @@ class TestInitAgentState:
                 "bypass_routing": False,
                 "insufficient_info": False,
             }
+
         self.fn = init_agent_state
         yield
 
@@ -468,9 +442,16 @@ class TestInitAgentState:
     def test_all_expected_keys_present(self):
         state = self.fn()
         expected_keys = {
-            "messages", "agent_name", "current_input", "has_image",
-            "image_type", "output", "needs_human_validation",
-            "retrieval_confidence", "bypass_routing", "insufficient_info",
+            "messages",
+            "agent_name",
+            "current_input",
+            "has_image",
+            "image_type",
+            "output",
+            "needs_human_validation",
+            "retrieval_confidence",
+            "bypass_routing",
+            "insufficient_info",
         }
         assert set(state.keys()) == expected_keys
 
@@ -478,6 +459,7 @@ class TestInitAgentState:
 # ═══════════════════════════════════════════
 # StateGraph Construction Tests
 # ═══════════════════════════════════════════
+
 
 class TestCreateAgentGraph:
     """Tests for create_agent_graph() — verifies graph structure with mocked deps."""
@@ -487,7 +469,9 @@ class TestCreateAgentGraph:
         """Set up all mocks needed for create_agent_graph."""
         # Create mock LLM
         mock_llm = MagicMock()
-        mock_llm.invoke.return_value = MagicMock(content='{"query_type":"general","confidence":0.8,"reasoning":"test","agent":"RAG_AGENT"}')
+        mock_llm.invoke.return_value = MagicMock(
+            content='{"query_type":"general","confidence":0.8,"reasoning":"test","agent":"RAG_AGENT"}'
+        )
 
         # Create mock config
         mock_config = MagicMock()
@@ -511,11 +495,21 @@ class TestCreateAgentGraph:
         # Since the inner functions are closures, we verify the graph was built correctly
         # by checking that the expected node names are registered.
         expected_nodes = [
-            "analyze_input", "plan_diagnosis", "reflect_diagnosis",
-            "route_to_agent", "CONVERSATION_AGENT", "RAG_AGENT",
-            "WEB_SEARCH_PROCESSOR_AGENT", "PARALLEL_RETRIEVAL",
-            "BRAIN_TUMOR_AGENT", "CHEST_XRAY_AGENT", "SKIN_LESION_AGENT",
-            "MCP_AGENT", "check_validation", "human_validation", "apply_guardrails",
+            "analyze_input",
+            "plan_diagnosis",
+            "reflect_diagnosis",
+            "route_to_agent",
+            "CONVERSATION_AGENT",
+            "RAG_AGENT",
+            "WEB_SEARCH_PROCESSOR_AGENT",
+            "PARALLEL_RETRIEVAL",
+            "BRAIN_TUMOR_AGENT",
+            "CHEST_XRAY_AGENT",
+            "SKIN_LESION_AGENT",
+            "MCP_AGENT",
+            "check_validation",
+            "human_validation",
+            "apply_guardrails",
         ]
         # This test verifies the expected node list is correct by counting
         assert len(expected_nodes) == 15
@@ -553,13 +547,15 @@ class TestCreateAgentGraph:
 # Image Detection Logic Tests
 # ═══════════════════════════════════════════
 
+
 class TestImageDetectionLogic:
     """Tests for image detection logic used in analyze_input."""
 
     def test_detect_image_url_pattern(self):
         """Test image URL pattern detection."""
         import re
-        image_url_pattern = r'https?://[^\s]+\.(jpg|jpeg|png|gif|bmp|webp|dicom|nii)'
+
+        image_url_pattern = r"https?://[^\s]+\.(jpg|jpeg|png|gif|bmp|webp|dicom|nii)"
         test_cases = [
             ("http://example.com/brain.jpg", True),
             ("https://hospital.org/xray.png", True),
@@ -589,6 +585,7 @@ class TestImageDetectionLogic:
 
     def test_query_type_classification(self):
         """Test query type classification logic."""
+
         # Simulate the classification logic from analyze_input
         def classify_image_type(query_str: str) -> str:
             query_lower = query_str.lower()
@@ -609,6 +606,7 @@ class TestImageDetectionLogic:
 # ═══════════════════════════════════════════
 # Confidence-based Routing Logic Tests
 # ═══════════════════════════════════════════
+
 
 class TestConfidenceRoutingLogic:
     """Tests for confidence-based routing decision logic."""
@@ -646,6 +644,7 @@ class TestConfidenceRoutingLogic:
 # Bypass Routing Logic Tests
 # ═══════════════════════════════════════════
 
+
 class TestBypassRoutingLogic:
     """Tests for check_if_bypassing logic."""
 
@@ -671,6 +670,7 @@ class TestBypassRoutingLogic:
 # ═══════════════════════════════════════════
 # Medical Category Detection Tests
 # ═══════════════════════════════════════════
+
 
 class TestMedicalCategoryDetection:
     """Tests for medical category detection in memory storage logic."""
@@ -737,6 +737,7 @@ class TestMedicalCategoryDetection:
 # Conversation History Compression Tests
 # ═══════════════════════════════════════════
 
+
 class TestConversationCompression:
     """Tests for conversation history compression logic."""
 
@@ -767,6 +768,7 @@ class TestConversationCompression:
 # ═══════════════════════════════════════════
 # WebSearchProcessorAgent Query Extraction Tests
 # ═══════════════════════════════════════════
+
 
 class TestWebSearchQueryExtraction:
     """Tests for query extraction logic in web search processor."""
@@ -804,6 +806,7 @@ class TestWebSearchQueryExtraction:
 # StopHook Integration Tests
 # ═══════════════════════════════════════════
 
+
 class TestStopHookIntegration:
     """Tests for StopHook error classification in agent nodes."""
 
@@ -839,6 +842,7 @@ class TestStopHookIntegration:
 # process_query / process_query_streaming Tests
 # ═══════════════════════════════════════════
 
+
 class TestProcessQuery:
     """Tests for process_query entry point (mocked graph)."""
 
@@ -862,6 +866,7 @@ class TestProcessQuery:
     def test_conversation_history_list(self):
         """conversation_history should accept list of messages."""
         from unittest.mock import MagicMock
+
         mock_msg = MagicMock()
         mock_msg.content = "test"
         history = [mock_msg]
@@ -895,6 +900,7 @@ class TestProcessQueryStreaming:
 # ═══════════════════════════════════════════
 # ImageAnalysis Agent Type Tests
 # ═══════════════════════════════════════════
+
 
 class TestImageAnalysisAgentType:
     """Tests for agent type to image type mapping."""

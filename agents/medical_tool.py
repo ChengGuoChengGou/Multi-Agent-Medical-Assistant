@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MedicalToolResult:
     """Standardized result from any medical tool execution."""
+
     success: bool
     content: str
     tool_name: str
@@ -44,7 +45,7 @@ class MedicalToolResult:
 class MedicalTool(ABC):
     """
     Abstract base class for all medical tools.
-    
+
     Provides a consistent interface: query, describe, validate, execute.
     All medical tools (MCP-based, built-in, or fallback) should implement this.
     """
@@ -95,12 +96,12 @@ class MedicalTool(ABC):
         schema = self.input_schema
         required = schema.get("required", [])
         properties = schema.get("properties", {})
-        
+
         # Check required fields
         for field_name in required:
             if field_name not in kwargs or kwargs[field_name] is None:
                 return False, f"Missing required parameter: {field_name}"
-        
+
         # Check types for provided fields
         for field_name, value in kwargs.items():
             if field_name in properties and value is not None:
@@ -111,7 +112,7 @@ class MedicalTool(ABC):
                     return False, f"Parameter '{field_name}' must be integer, got {type(value).__name__}"
                 elif expected_type == "number" and not isinstance(value, (int, float)):
                     return False, f"Parameter '{field_name}' must be number, got {type(value).__name__}"
-        
+
         return True, None
 
     async def query(self, **kwargs) -> MedicalToolResult:
@@ -120,18 +121,22 @@ class MedicalTool(ABC):
         Subclasses can override for pre/post processing.
         """
         import time
+
         start = time.monotonic()
-        
+
         # Validate
         is_valid, error = self.validate(**kwargs)
         if not is_valid:
             elapsed = (time.monotonic() - start) * 1000
             return MedicalToolResult(
-                success=False, content="", tool_name=self.name,
-                source="validation", error=error,
+                success=False,
+                content="",
+                tool_name=self.name,
+                source="validation",
+                error=error,
                 execution_time_ms=elapsed,
             )
-        
+
         try:
             result = await self.execute(**kwargs)
             result.execution_time_ms = (time.monotonic() - start) * 1000
@@ -140,8 +145,11 @@ class MedicalTool(ABC):
             elapsed = (time.monotonic() - start) * 1000
             logger.error(f"[MedicalTool:{self.name}] Execution failed: {e}")
             return MedicalToolResult(
-                success=False, content="", tool_name=self.name,
-                source="error", error=str(e),
+                success=False,
+                content="",
+                tool_name=self.name,
+                source="error",
+                error=str(e),
                 execution_time_ms=elapsed,
             )
 
@@ -217,6 +225,7 @@ class MCPMedicalTool(MedicalTool):
 # Tool Registry
 # ============================================================
 
+
 class MedicalToolRegistry:
     """
     Central registry for all medical tools.
@@ -251,13 +260,13 @@ class MedicalToolRegistry:
         by_category: Dict[str, List[MedicalTool]] = {}
         for tool in self._tools.values():
             by_category.setdefault(tool.category, []).append(tool)
-        
+
         for category, tools in sorted(by_category.items()):
             lines.append(f"\n[{category.upper()}]")
             for tool in tools:
                 desc = tool.description[:max_desc_len]
                 lines.append(f"  - {tool.name}: {desc}")
-        
+
         return "\n".join(lines)
 
     def get_tools_for_llm(self) -> List[Dict[str, Any]]:
@@ -292,10 +301,10 @@ async def init_tool_registry() -> MedicalToolRegistry:
     Call once at application startup.
     """
     from agents.mcp_client import get_mcp_client
-    
+
     registry = get_tool_registry()
     client = await get_mcp_client()
-    
+
     # Wrap each MCP tool as a MedicalTool
     for mcp_tool in client.get_all_tools():
         medical_tool = MCPMedicalTool(
@@ -303,6 +312,6 @@ async def init_tool_registry() -> MedicalToolRegistry:
             call_fn=client.call_tool,
         )
         registry.register(medical_tool)
-    
+
     logger.info(f"[ToolRegistry] Initialized with {len(registry)} tools")
     return registry

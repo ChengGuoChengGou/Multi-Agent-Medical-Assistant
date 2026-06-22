@@ -2,6 +2,7 @@
 Unit tests for circuit_breaker.py — CircuitBreaker state machine & protection logic.
 Run: python -m pytest tests/test_circuit_breaker.py -v
 """
+
 import asyncio
 import os
 import sys
@@ -20,6 +21,7 @@ from circuit_breaker import (
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _make_breaker(threshold=3, recovery=1.0):
     return CircuitBreaker(
         name="test_service",
@@ -29,6 +31,7 @@ def _make_breaker(threshold=3, recovery=1.0):
 
 
 # ── CircuitState Enum ───────────────────────────────────────────────────────
+
 
 class TestCircuitState:
     """Test CircuitState enum values."""
@@ -43,6 +46,7 @@ class TestCircuitState:
 
 
 # ── CircuitBreakerOpenError ─────────────────────────────────────────────────
+
 
 class TestCircuitBreakerOpenError:
     """Test the exception raised when circuit is OPEN."""
@@ -60,6 +64,7 @@ class TestCircuitBreakerOpenError:
 
 
 # ── CircuitBreaker: Initial State ───────────────────────────────────────────
+
 
 class TestCircuitBreakerInit:
     """Test initial circuit breaker state."""
@@ -81,6 +86,7 @@ class TestCircuitBreakerInit:
 
 
 # ── CircuitBreaker: CLOSED State ────────────────────────────────────────────
+
 
 class TestCircuitBreakerClosed:
     """Test behavior in CLOSED (normal) state."""
@@ -149,6 +155,7 @@ class TestCircuitBreakerClosed:
 
 # ── CircuitBreaker: OPEN State ──────────────────────────────────────────────
 
+
 class TestCircuitBreakerOpen:
     """Test behavior in OPEN (fast-fail) state."""
 
@@ -177,6 +184,7 @@ class TestCircuitBreakerOpen:
 
 
 # ── CircuitBreaker: HALF_OPEN → Recovery ────────────────────────────────────
+
 
 class TestCircuitBreakerRecovery:
     """Test OPEN → HALF_OPEN → CLOSED transition."""
@@ -220,6 +228,7 @@ class TestCircuitBreakerRecovery:
 
 
 # ── CircuitBreaker: Async ───────────────────────────────────────────────────
+
 
 class TestCircuitBreakerAsync:
     """Test call_async method."""
@@ -272,6 +281,7 @@ class TestCircuitBreakerAsync:
 
 # ── CircuitBreaker: Stats & Reset ───────────────────────────────────────────
 
+
 class TestCircuitBreakerStats:
     """Test get_stats() and reset() methods."""
 
@@ -316,26 +326,31 @@ class TestCircuitBreakerStats:
 
 # ── CircuitBreaker: Global Instances ────────────────────────────────────────
 
+
 class TestGlobalBreakers:
     """Test that global breaker instances exist and are configured."""
 
     def test_llm_breaker_exists(self):
         from circuit_breaker import llm_breaker
+
         assert llm_breaker.name == "llm_service"
         assert llm_breaker.failure_threshold == 5
         assert llm_breaker.recovery_timeout == 30.0
 
     def test_mcp_breaker_exists(self):
         from circuit_breaker import mcp_breaker
+
         assert mcp_breaker.name == "mcp_service"
         assert mcp_breaker.failure_threshold == 3
         assert mcp_breaker.recovery_timeout == 60.0
 
     def test_web_search_breaker_exists(self):
         from circuit_breaker import web_search_breaker
+
         assert web_search_breaker.name == "web_search"
         assert web_search_breaker.failure_threshold == 3
 
     def test_image_breaker_exists(self):
         from circuit_breaker import image_breaker
+
         assert image_breaker.name == "image_analysis"

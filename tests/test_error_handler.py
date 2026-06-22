@@ -47,8 +47,10 @@ from agents.error_handler import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class FakeMessage:
     """Lightweight message object mimicking langchain_core."""
+
     def __init__(self, role: str = "system", content: str = ""):
         self.type = role
         self.content = content
@@ -62,42 +64,55 @@ def _msg(content: str, role: str = "human") -> FakeMessage:
 # classify_error
 # =========================================================================
 
+
 class TestClassifyError:
     """Pattern-based error classification."""
 
     # --- Context length ---
-    @pytest.mark.parametrize("msg", [
-        "maximum context length is 4096 tokens",
-        "context_length_exceeded: request too large",
-        "too many tokens in the request",
-        "request too large for model gpt-4",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "maximum context length is 4096 tokens",
+            "context_length_exceeded: request too large",
+            "too many tokens in the request",
+            "request too large for model gpt-4",
+        ],
+    )
     def test_context_length(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.CONTEXT_LENGTH
 
     # --- Rate limit ---
-    @pytest.mark.parametrize("msg", [
-        "rate_limit_exceeded: too many requests",
-        "429 Too Many Requests",
-        "too many requests, please slow down",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "rate_limit_exceeded: too many requests",
+            "429 Too Many Requests",
+            "too many requests, please slow down",
+        ],
+    )
     def test_rate_limit(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.RATE_LIMIT
 
     # --- Overload ---
-    @pytest.mark.parametrize("msg", [
-        "server is overloaded",
-        "503 Service Unavailable",
-        "service unavailable right now",
-        "server busy, try again later",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "server is overloaded",
+            "503 Service Unavailable",
+            "service unavailable right now",
+            "server busy, try again later",
+        ],
+    )
     def test_overload(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.OVERLOAD
 
     # --- Max tokens ---
-    @pytest.mark.parametrize("msg", [
-        "max_tokens too large for this model",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "max_tokens too large for this model",
+        ],
+    )
     def test_max_tokens(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.MAX_TOKENS
 
@@ -110,12 +125,15 @@ class TestClassifyError:
         assert classify_error(Exception("max_tokens must be less than 16000")) == LLMErrorType.UNKNOWN
 
     # --- Auth ---
-    @pytest.mark.parametrize("msg", [
-        "401 Unauthorized",
-        "unauthorized: invalid credentials",
-        "invalid api key provided",
-        "authentication failed",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "401 Unauthorized",
+            "unauthorized: invalid credentials",
+            "invalid api key provided",
+            "authentication failed",
+        ],
+    )
     def test_auth(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.AUTH
 
@@ -123,18 +141,21 @@ class TestClassifyError:
     def test_rate_limit_by_type_name(self):
         class RateLimitError(Exception):
             pass
+
         exc = RateLimitError("something happened")
         assert classify_error(exc) == LLMErrorType.RATE_LIMIT
 
     def test_auth_by_type_name(self):
         class AuthenticationError(Exception):
             pass
+
         exc = AuthenticationError("bad creds")
         assert classify_error(exc) == LLMErrorType.AUTH
 
     def test_max_tokens_by_type_name_and_msg(self):
         class BadRequestError(Exception):
             pass
+
         exc = BadRequestError("max_tokens value too large")
         assert classify_error(exc) == LLMErrorType.MAX_TOKENS
 
@@ -145,6 +166,7 @@ class TestClassifyError:
     def test_unknown_bad_request_without_max_tokens(self):
         class BadRequestError(Exception):
             pass
+
         exc = BadRequestError("some other bad request")
         assert classify_error(exc) == LLMErrorType.UNKNOWN
 
@@ -152,6 +174,7 @@ class TestClassifyError:
     def test_message_pattern_takes_priority(self):
         class AuthenticationError(Exception):
             pass
+
         # Message says "rate_limit" → RATE_LIMIT, not AUTH
         exc = AuthenticationError("rate_limit exceeded")
         assert classify_error(exc) == LLMErrorType.RATE_LIMIT
@@ -160,6 +183,7 @@ class TestClassifyError:
 # =========================================================================
 # _get_retry_delay
 # =========================================================================
+
 
 class TestGetRetryDelay:
     """Backoff delay calculations per error type."""
@@ -198,6 +222,7 @@ class TestGetRetryDelay:
 # _estimate_token_count
 # =========================================================================
 
+
 class TestEstimateTokenCount:
     """CJK-aware rough token estimation."""
 
@@ -233,6 +258,7 @@ class TestEstimateTokenCount:
 # =========================================================================
 # truncate_messages
 # =========================================================================
+
 
 class TestTruncateMessages:
     """Message history truncation preserving system + last message."""
@@ -290,8 +316,10 @@ class TestTruncateMessages:
 
     def test_no_content_attr_handled(self):
         """Messages without content attribute should not crash."""
+
         class NoContentMsg:
             type = "human"
+
         msgs = [NoContentMsg(), NoContentMsg(), _msg("last")]
         result = truncate_messages(msgs, target_tokens=100)
         assert result[-1].content == "last"
@@ -300,6 +328,7 @@ class TestTruncateMessages:
 # =========================================================================
 # llm_call_with_recovery
 # =========================================================================
+
 
 class TestLLMCallWithRecovery:
     """Retry wrapper with error classification and recovery."""
@@ -311,29 +340,35 @@ class TestLLMCallWithRecovery:
 
     def test_auth_error_no_retry(self):
         call_count = [0]
+
         def mock(msgs):
             call_count[0] += 1
             raise Exception("401 Unauthorized: invalid api key")
+
         with pytest.raises(Exception, match="Unauthorized"):
             llm_call_with_recovery(mock, ["q"], max_retries=3)
         assert call_count[0] == 1  # Not retried
 
     def test_unknown_error_raises_immediately(self):
         call_count = [0]
+
         def mock(msgs):
             call_count[0] += 1
             raise Exception("something weird")
+
         with pytest.raises(Exception, match="weird"):
             llm_call_with_recovery(mock, ["q"], max_retries=3)
         assert call_count[0] == 1  # First unknown → raise immediately
 
     def test_rate_limit_retries_with_backoff(self):
         call_count = [0]
+
         def mock(msgs):
             call_count[0] += 1
             if call_count[0] < 3:
                 raise Exception("429 Too Many Requests")
             return "success"
+
         # Patch time.sleep to avoid actual delay
         original_sleep = time.sleep
         time.sleep = lambda x: None
@@ -347,6 +382,7 @@ class TestLLMCallWithRecovery:
     def test_rate_limit_exhausted(self):
         def mock(msgs):
             raise Exception("rate_limit exceeded")
+
         original_sleep = time.sleep
         time.sleep = lambda x: None
         try:
@@ -360,11 +396,13 @@ class TestLLMCallWithRecovery:
     def test_context_length_auto_truncation(self):
         call_count = [0]
         messages = [_msg(f"msg{i}") for i in range(10)]
+
         def mock(msgs):
             call_count[0] += 1
             if call_count[0] == 1:
                 raise Exception("maximum context length exceeded")
             return "success"
+
         result = llm_call_with_recovery(mock, messages, max_retries=2)
         assert result == "success"
         assert call_count[0] == 2
@@ -372,6 +410,7 @@ class TestLLMCallWithRecovery:
     def test_context_length_custom_callback(self):
         call_count = [0]
         truncated_msgs = [_msg("truncated")]
+
         def mock(msgs):
             call_count[0] += 1
             if call_count[0] == 1:
@@ -379,8 +418,10 @@ class TestLLMCallWithRecovery:
             # Second call should get truncated messages
             assert len(msgs) == 1
             return "ok"
+
         result = llm_call_with_recovery(
-            mock, [_msg("orig")],
+            mock,
+            [_msg("orig")],
             max_retries=2,
             on_context_too_long=lambda: truncated_msgs,
         )
@@ -388,14 +429,17 @@ class TestLLMCallWithRecovery:
 
     def test_max_tokens_override(self):
         call_count = [0]
+
         def mock(msgs, max_tokens=None):
             call_count[0] += 1
             if call_count[0] == 1:
                 raise Exception("max_tokens too large for this model")
             assert max_tokens == 500
             return "ok"
+
         result = llm_call_with_recovery(
-            mock, ["q"],
+            mock,
+            ["q"],
             max_retries=2,
             max_tokens_override=500,
         )
@@ -403,11 +447,13 @@ class TestLLMCallWithRecovery:
 
     def test_overload_retries(self):
         call_count = [0]
+
         def mock(msgs):
             call_count[0] += 1
             if call_count[0] == 1:
                 raise Exception("503 Service Unavailable")
             return "ok"
+
         original_sleep = time.sleep
         time.sleep = lambda x: None
         try:
@@ -419,6 +465,7 @@ class TestLLMCallWithRecovery:
     def test_no_args_calls_func(self):
         def mock():
             return "no-args"
+
         result = llm_call_with_recovery(mock)
         assert result == "no-args"
 
@@ -426,6 +473,7 @@ class TestLLMCallWithRecovery:
 # =========================================================================
 # RetryExhausted
 # =========================================================================
+
 
 class TestRetryExhausted:
     """Exception details when retries are exhausted."""
@@ -450,6 +498,7 @@ class TestRetryExhausted:
 # HookResult
 # =========================================================================
 
+
 class TestHookResult:
     """HookResult dataclass defaults and custom values."""
 
@@ -471,6 +520,7 @@ class TestHookResult:
 # =========================================================================
 # StopHookValidator
 # =========================================================================
+
 
 class TestStopHookValidator:
     """Post-agent validation checks."""

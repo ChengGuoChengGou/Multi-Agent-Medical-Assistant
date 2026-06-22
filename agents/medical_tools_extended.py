@@ -25,10 +25,11 @@ logger = logging.getLogger(__name__)
 # PubMed Tool (NCBI E-utilities)
 # ============================================================
 
+
 class PubMedTool(MedicalTool):
     """
     PubMed search via NCBI E-utilities API.
-    
+
     Free API, no key required (but rate-limited to 3 req/sec without key).
     Provides direct PubMed access as fallback when MCP servers are down.
     """
@@ -147,15 +148,17 @@ class PubMedTool(MedicalTool):
                     article = result_data.get(pmid, {})
                     if not isinstance(article, dict):
                         continue
-                    articles.append({
-                        "pmid": pmid,
-                        "title": article.get("title", "N/A"),
-                        "authors": [a.get("name", "") for a in article.get("authors", [])[:5]],
-                        "journal": article.get("fulljournalname", article.get("source", "N/A")),
-                        "pub_date": article.get("pubdate", "N/A"),
-                        "doi": article.get("elocationid", "N/A"),
-                        "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
-                    })
+                    articles.append(
+                        {
+                            "pmid": pmid,
+                            "title": article.get("title", "N/A"),
+                            "authors": [a.get("name", "") for a in article.get("authors", [])[:5]],
+                            "journal": article.get("fulljournalname", article.get("source", "N/A")),
+                            "pub_date": article.get("pubdate", "N/A"),
+                            "doi": article.get("elocationid", "N/A"),
+                            "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+                        }
+                    )
 
                 # Format output
                 lines = [f"Found {len(articles)} PubMed articles for: {query}\n"]
@@ -174,26 +177,44 @@ class PubMedTool(MedicalTool):
                     success=True,
                     content="\n".join(lines),
                     tool_name=self.name,
-                    metadata={"articles": articles, "total_found": search_data.get("esearchresult", {}).get("count", len(articles))},
-                        source="built_in",
+                    metadata={
+                        "articles": articles,
+                        "total_found": search_data.get("esearchresult", {}).get("count", len(articles)),
+                    },
+                    source="built_in",
                 )
 
         except httpx.TimeoutException:
-            return MedicalToolResult(success=False, content="PubMed API timeout", tool_name=self.name, source="built_in", error="timeout")
+            return MedicalToolResult(
+                success=False, content="PubMed API timeout", tool_name=self.name, source="built_in", error="timeout"
+            )
         except httpx.HTTPStatusError as e:
-            return MedicalToolResult(success=False, content=f"PubMed API error: {e.response.status_code}", tool_name=self.name, source="built_in", error=str(e))
+            return MedicalToolResult(
+                success=False,
+                content=f"PubMed API error: {e.response.status_code}",
+                tool_name=self.name,
+                source="built_in",
+                error=str(e),
+            )
         except Exception as e:
-            return MedicalToolResult(success=False, content=f"PubMed search failed: {e}", tool_name=self.name, source="built_in", error=str(e))
+            return MedicalToolResult(
+                success=False,
+                content=f"PubMed search failed: {e}",
+                tool_name=self.name,
+                source="built_in",
+                error=str(e),
+            )
 
 
 # ============================================================
 # Drug Interaction Tool (OpenFDA)
 # ============================================================
 
+
 class DrugInteractionTool(MedicalTool):
     """
     Drug interaction checker using OpenFDA API.
-    
+
     Free API, no key required. Checks for known drug-drug interactions,
     adverse events, and drug labels.
     """
@@ -287,16 +308,34 @@ class DrugInteractionTool(MedicalTool):
                 elif action == "search_adverse_events":
                     return await self._search_adverse_events(client, drug_name, max_results)
                 else:
-                    return MedicalToolResult(success=False, content=f"Unknown action: {action}", tool_name=self.name, source="built_in", error="invalid_action")
+                    return MedicalToolResult(
+                        success=False,
+                        content=f"Unknown action: {action}",
+                        tool_name=self.name,
+                        source="built_in",
+                        error="invalid_action",
+                    )
 
         except httpx.TimeoutException:
-            return MedicalToolResult(success=False, content="OpenFDA API timeout", tool_name=self.name, source="built_in", error="timeout")
+            return MedicalToolResult(
+                success=False, content="OpenFDA API timeout", tool_name=self.name, source="built_in", error="timeout"
+            )
         except httpx.HTTPStatusError as e:
-            return MedicalToolResult(success=False, content=f"OpenFDA API error: {e.response.status_code}", tool_name=self.name, source="built_in", error=str(e))
+            return MedicalToolResult(
+                success=False,
+                content=f"OpenFDA API error: {e.response.status_code}",
+                tool_name=self.name,
+                source="built_in",
+                error=str(e),
+            )
         except Exception as e:
-            return MedicalToolResult(success=False, content=f"Drug check failed: {e}", tool_name=self.name, source="built_in", error=str(e))
+            return MedicalToolResult(
+                success=False, content=f"Drug check failed: {e}", tool_name=self.name, source="built_in", error=str(e)
+            )
 
-    async def _check_interaction(self, client: httpx.AsyncClient, drug1: str, drug2: str, max_results: int) -> MedicalToolResult:
+    async def _check_interaction(
+        self, client: httpx.AsyncClient, drug1: str, drug2: str, max_results: int
+    ) -> MedicalToolResult:
         """Check drug interactions by searching drug labels for interaction warnings."""
         # Search for drug1's label mentioning drug2
         query = f'openfda.brand_name:"{drug1}" AND _exists_:"drug_interactions"'
@@ -318,7 +357,7 @@ class DrugInteractionTool(MedicalTool):
                 success=True,
                 content=f"No interaction data found for {drug1} in OpenFDA. Try checking with a pharmacist or clinical database.",
                 tool_name=self.name,
-                        source="built_in",
+                source="built_in",
             )
 
         lines = [f"Drug Interaction Information: {drug1} + {drug2}\n"]
@@ -326,7 +365,7 @@ class DrugInteractionTool(MedicalTool):
             interactions = result.get("drug_interactions", ["No interaction data available"])
             # Check if drug2 is mentioned
             interaction_text = " ".join(interactions) if isinstance(interactions, list) else str(interactions)
-            
+
             drug2_lower = drug2.lower()
             if drug2_lower in interaction_text.lower():
                 lines.append(f"[MATCH] Label #{i} mentions {drug2}:")
@@ -339,14 +378,16 @@ class DrugInteractionTool(MedicalTool):
                     if isinstance(line, str):
                         lines.append(f"  • {line[:200]}")
 
-        lines.append(f"\n⚠️ This is reference information only. Always consult a healthcare provider for drug interaction advice.")
+        lines.append(
+            "\n⚠️ This is reference information only. Always consult a healthcare provider for drug interaction advice."
+        )
 
         return MedicalToolResult(
             success=True,
             content="\n".join(lines),
             tool_name=self.name,
             metadata={"drug1": drug1, "drug2": drug2, "labels_found": len(results)},
-                        source="built_in",
+            source="built_in",
         )
 
     async def _get_label(self, client: httpx.AsyncClient, drug_name: str) -> MedicalToolResult:
@@ -358,11 +399,13 @@ class DrugInteractionTool(MedicalTool):
 
         results = data.get("results", [])
         if not results:
-            return MedicalToolResult(success=True, content=f"No label found for: {drug_name}", tool_name=self.name, source="built_in")
+            return MedicalToolResult(
+                success=True, content=f"No label found for: {drug_name}", tool_name=self.name, source="built_in"
+            )
 
         label = results[0]
         openfda = label.get("openfda", {})
-        
+
         lines = [f"Drug Label Information: {drug_name}\n"]
         if openfda.get("brand_name"):
             lines.append(f"Brand: {', '.join(openfda['brand_name'])}")
@@ -370,7 +413,7 @@ class DrugInteractionTool(MedicalTool):
             lines.append(f"Generic: {', '.join(openfda['generic_name'])}")
         if openfda.get("manufacturer_name"):
             lines.append(f"Manufacturer: {', '.join(openfda['manufacturer_name'])}")
-        
+
         for field_name, display_name in [
             ("indications_and_usage", "Indications"),
             ("warnings", "Warnings"),
@@ -389,19 +432,24 @@ class DrugInteractionTool(MedicalTool):
             content="\n".join(lines),
             tool_name=self.name,
             metadata={"openfda": openfda},
-                        source="built_in",
+            source="built_in",
         )
 
-    async def _search_adverse_events(self, client: httpx.AsyncClient, drug_name: str, max_results: int) -> MedicalToolResult:
+    async def _search_adverse_events(
+        self, client: httpx.AsyncClient, drug_name: str, max_results: int
+    ) -> MedicalToolResult:
         """Search for adverse events reported for a drug."""
         query = f'patient.drug.openfda.brand_name:"{drug_name}" OR patient.drug.openfda.generic_name:"{drug_name}"'
-        resp = await client.get(f"{self.OPENFDA_URL}/event.json", params={"search": query, "limit": max_results, "count": "patient.reaction.reactionmeddrapt.exact"})
+        resp = await client.get(
+            f"{self.OPENFDA_URL}/event.json",
+            params={"search": query, "limit": max_results, "count": "patient.reaction.reactionmeddrapt.exact"},
+        )
         resp.raise_for_status()
         data = resp.json()
 
         # Get top reactions count
         top_reactions = data.get("results", [])[:10]
-        
+
         lines = [f"Top Adverse Events reported for: {drug_name}\n"]
         if top_reactions:
             for i, r in enumerate(top_reactions, 1):
@@ -410,21 +458,18 @@ class DrugInteractionTool(MedicalTool):
             lines.append("  No adverse event data found.")
 
         # Also get total count
-        count_resp = await client.get(
-            f"{self.OPENFDA_URL}/event.json",
-            params={"search": query, "limit": 0}
-        )
+        count_resp = await client.get(f"{self.OPENFDA_URL}/event.json", params={"search": query, "limit": 0})
         if count_resp.status_code == 200:
             total = count_resp.json().get("meta", {}).get("results", {}).get("total", 0)
             lines.append(f"\nTotal adverse event reports: {total:,}")
 
-        lines.append(f"\n⚠️ Data from FDA Adverse Event Reporting System (FAERS). Reporting does not imply causation.")
+        lines.append("\n⚠️ Data from FDA Adverse Event Reporting System (FAERS). Reporting does not imply causation.")
 
         return MedicalToolResult(
             success=True,
             content="\n".join(lines),
             tool_name=self.name,
-                        source="built_in",
+            source="built_in",
         )
 
 
@@ -432,8 +477,9 @@ class DrugInteractionTool(MedicalTool):
 # Registration helper
 # ============================================================
 
+
 def register_extended_tools(registry: MedicalToolRegistry) -> None:
     """Register all extended medical tools into the given registry."""
     registry.register(PubMedTool())
     registry.register(DrugInteractionTool())
-    logger.info(f"[ExtendedTools] Registered PubMed + DrugInteraction tools")
+    logger.info("[ExtendedTools] Registered PubMed + DrugInteraction tools")

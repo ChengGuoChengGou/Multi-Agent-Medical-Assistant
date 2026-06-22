@@ -41,20 +41,18 @@ class BM25Index:
         """
         text = text.lower()
         # Split on non-alphanumeric, keep hyphens in compound medical terms
-        tokens = re.findall(r'[a-z0-9]+(?:-[a-z0-9]+)*', text)
+        tokens = re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", text)
         return [t for t in tokens if len(t) > 1]  # Filter single chars
 
     def build_index(self, documents: List[Document]) -> None:
         """
         Build BM25 index from a list of LangChain Documents.
-        
+
         Args:
             documents: List of Document objects with page_content
         """
         self._documents = documents
-        self._tokenized_corpus = [
-            self._tokenize(doc.page_content) for doc in documents
-        ]
+        self._tokenized_corpus = [self._tokenize(doc.page_content) for doc in documents]
         self._bm25 = BM25Okapi(self._tokenized_corpus)
         self._built = True
         self.logger.info(f"[BM25] Index built with {len(documents)} documents")
@@ -62,9 +60,7 @@ class BM25Index:
     def add_documents(self, documents: List[Document]) -> None:
         """Add documents to existing index (rebuilds)."""
         self._documents.extend(documents)
-        self._tokenized_corpus.extend(
-            [self._tokenize(doc.page_content) for doc in documents]
-        )
+        self._tokenized_corpus.extend([self._tokenize(doc.page_content) for doc in documents])
         self._bm25 = BM25Okapi(self._tokenized_corpus)
         self.logger.info(f"[BM25] Added {len(documents)} docs, total: {len(self._documents)}")
 
@@ -72,7 +68,8 @@ class BM25Index:
         """Remove all documents from a given source file. Returns count removed."""
         before = len(self._documents)
         filtered = [
-            (doc, tokens) for doc, tokens in zip(self._documents, self._tokenized_corpus)
+            (doc, tokens)
+            for doc, tokens in zip(self._documents, self._tokenized_corpus)
             if doc.metadata.get("source") != source
         ]
         if filtered:
@@ -90,11 +87,11 @@ class BM25Index:
     def search(self, query: str, top_k: int = 20) -> List[Tuple[Document, float]]:
         """
         Search index with BM25.
-        
+
         Args:
             query: Search query string
             top_k: Number of top results to return
-            
+
         Returns:
             List of (Document, bm25_score) tuples, sorted by score desc
         """
@@ -107,6 +104,7 @@ class BM25Index:
 
         # Get top-k indices
         import numpy as np
+
         top_indices = np.argsort(scores)[::-1][:top_k]
 
         results = []
@@ -130,7 +128,7 @@ class HybridSearch:
     """
     Hybrid search combining BM25 keyword search with Qdrant vector search,
     fused using Reciprocal Rank Fusion (RRF).
-    
+
     Architecture:
     - BM25Index: In-memory keyword index (built from docstore)
     - QdrantVectorStore: Dense+Sparse vector search (existing)
@@ -171,10 +169,12 @@ class HybridSearch:
                 content = self.docstore.mget([key])
                 if content and content[0]:
                     text = content[0].decode("utf-8") if isinstance(content[0], bytes) else str(content[0])
-                    documents.append(Document(
-                        page_content=text,
-                        metadata={"source": key.decode("utf-8") if isinstance(key, bytes) else key}
-                    ))
+                    documents.append(
+                        Document(
+                            page_content=text,
+                            metadata={"source": key.decode("utf-8") if isinstance(key, bytes) else key},
+                        )
+                    )
         except Exception as e:
             self.logger.warning(f"[HYBRID] Failed to load docs from docstore: {e}")
 
@@ -201,15 +201,15 @@ class HybridSearch:
     ) -> List[Tuple[Document, float, Dict[str, Any]]]:
         """
         Fuse vector and BM25 results using Reciprocal Rank Fusion.
-        
+
         RRF score = sum(1 / (k + rank)) for each result list where the doc appears.
-        
+
         Args:
             vector_results: (Document, vector_score) tuples, sorted by score desc
             bm25_results: (Document, bm25_score) tuples, sorted by score desc
             rrf_k: RRF constant
             top_k: Final number of results
-            
+
         Returns:
             List of (Document, rrf_score, debug_info) tuples
         """
@@ -241,11 +241,7 @@ class HybridSearch:
             doc_scores[key]["bm25_score"] = b_score
 
         # Sort by RRF score descending
-        sorted_results = sorted(
-            doc_scores.values(),
-            key=lambda x: x["rrf_score"],
-            reverse=True
-        )[:top_k]
+        sorted_results = sorted(doc_scores.values(), key=lambda x: x["rrf_score"], reverse=True)[:top_k]
 
         results = []
         for item in sorted_results:
@@ -271,7 +267,7 @@ class HybridSearch:
     ) -> List[Dict[str, Any]]:
         """
         Perform hybrid search: BM25 + Vector with RRF fusion.
-        
+
         Args:
             query: Search query
             top_k: Final number of results after fusion
@@ -279,7 +275,7 @@ class HybridSearch:
             bm25_top_k: Number of BM25 results to fetch
             use_reranker: Whether to apply cross-encoder reranking after fusion
             parsed_content_dir: Path to parsed content for reranker
-            
+
         Returns:
             List of result dicts with content, score, source, and debug info
         """
@@ -289,9 +285,7 @@ class HybridSearch:
         # Vector search
         if self.vectorstore is not None:
             try:
-                docs = await self.vectorstore.asimilarity_search_with_relevance_scores(
-                    query, k=vector_top_k
-                )
+                docs = await self.vectorstore.asimilarity_search_with_relevance_scores(query, k=vector_top_k)
                 vector_results = docs
                 self.logger.info(f"[HYBRID] Vector search returned {len(vector_results)} results")
             except Exception as e:
@@ -310,8 +304,12 @@ class HybridSearch:
         if not vector_results:
             self.logger.info("[HYBRID] Vector unavailable, using BM25 only")
             results = [
-                {"content": doc.page_content, "score": score, "source": doc.metadata.get("source", ""),
-                 "fusion": "bm25_only"}
+                {
+                    "content": doc.page_content,
+                    "score": score,
+                    "source": doc.metadata.get("source", ""),
+                    "fusion": "bm25_only",
+                }
                 for doc, score in bm25_results[:top_k]
             ]
             return results
@@ -319,8 +317,12 @@ class HybridSearch:
         if not bm25_results:
             self.logger.info("[HYBRID] BM25 unavailable, using vector only")
             results = [
-                {"content": doc.page_content, "score": score, "source": doc.metadata.get("source", ""),
-                 "fusion": "vector_only"}
+                {
+                    "content": doc.page_content,
+                    "score": score,
+                    "source": doc.metadata.get("source", ""),
+                    "fusion": "vector_only",
+                }
                 for doc, score in vector_results[:top_k]
             ]
             return results
@@ -342,13 +344,15 @@ class HybridSearch:
         # Format results
         results = []
         for doc, rrf_score, debug in fused:
-            results.append({
-                "content": doc.page_content,
-                "score": rrf_score,
-                "source": doc.metadata.get("source", ""),
-                "fusion": "rrf",
-                "debug": debug,
-            })
+            results.append(
+                {
+                    "content": doc.page_content,
+                    "score": rrf_score,
+                    "source": doc.metadata.get("source", ""),
+                    "fusion": "rrf",
+                    "debug": debug,
+                }
+            )
 
         return results
 
@@ -356,7 +360,7 @@ class HybridSearch:
         """
         Incrementally update BM25 index for a specific source file.
         Removes old entries for the source and adds new ones.
-        
+
         Args:
             source: Source file identifier (e.g., filename)
             new_documents: New Document objects to index

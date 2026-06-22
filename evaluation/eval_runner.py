@@ -40,11 +40,11 @@ def load_benchmark(path: str = None) -> list[dict]:
 
 def run_ragas_evaluation(test_cases: list[dict], llm=None) -> dict:
     """Run RAGAS evaluation on test cases.
-    
+
     Args:
         test_cases: List of {question, ground_truth, contexts, ...}
         llm: LLM instance for RAGAS metrics (optional, uses default)
-    
+
     Returns:
         Dict of metric_name -> score
     """
@@ -73,12 +73,14 @@ def run_ragas_evaluation(test_cases: list[dict], llm=None) -> dict:
         contexts_list.append(tc["contexts"])
         ground_truths.append(tc["ground_truth"])
 
-    ds = Dataset.from_dict({
-        "question": questions,
-        "answer": answers,
-        "contexts": contexts_list,
-        "ground_truth": ground_truths,
-    })
+    ds = Dataset.from_dict(
+        {
+            "question": questions,
+            "answer": answers,
+            "contexts": contexts_list,
+            "ground_truth": ground_truths,
+        }
+    )
 
     metrics = [faithfulness, answer_relevancy, context_precision, context_recall]
 
@@ -97,7 +99,7 @@ def run_ragas_evaluation(test_cases: list[dict], llm=None) -> dict:
 
 def run_deepeval_evaluation(test_cases: list[dict]) -> dict:
     """Run DeepEval evaluation on test cases.
-    
+
     Returns:
         Dict of metric_name -> score
     """
@@ -134,8 +136,8 @@ def run_deepeval_evaluation(test_cases: list[dict]) -> dict:
         AnswerRelevancyMetric(threshold=0.5),
         FaithfulnessMetric(threshold=0.5),
         HallucinationMetric(threshold=0.5),
-        BiasMetric(threshold=0.7),     # Higher threshold - medical advice can seem "biased"
-        ToxicityMetric(threshold=0.9), # Very high - medical terms aren't toxic
+        BiasMetric(threshold=0.7),  # Higher threshold - medical advice can seem "biased"
+        ToxicityMetric(threshold=0.9),  # Very high - medical terms aren't toxic
     ]
 
     results_summary = {}
@@ -185,12 +187,9 @@ def generate_report(
 
 def main():
     parser = argparse.ArgumentParser(description="Medical QA Evaluation Runner")
-    parser.add_argument("--metrics", choices=["ragas", "deepeval", "both"], default="both",
-                       help="Which metrics to run")
-    parser.add_argument("--report", type=str, default=None,
-                       help="Output directory for reports")
-    parser.add_argument("--data", type=str, default=None,
-                       help="Path to benchmark dataset JSON")
+    parser.add_argument("--metrics", choices=["ragas", "deepeval", "both"], default="both", help="Which metrics to run")
+    parser.add_argument("--report", type=str, default=None, help="Output directory for reports")
+    parser.add_argument("--data", type=str, default=None, help="Path to benchmark dataset JSON")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)

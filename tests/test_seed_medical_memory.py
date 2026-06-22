@@ -3,6 +3,7 @@ Tests for agents/seed_medical_memory.py
 
 seed_medical_facts() with mocked add_memory/collection_stats.
 """
+
 import os
 import sys
 from unittest.mock import MagicMock, patch
@@ -96,8 +97,7 @@ class TestSeedMedicalFacts:
         mock_add.return_value = True
         mock_stats.return_value = {}
         seed_medical_facts()
-        medical_calls = [c for c in mock_add.call_args_list 
-                         if c.kwargs["metadata"].get("type") == "medical_fact"]
+        medical_calls = [c for c in mock_add.call_args_list if c.kwargs["metadata"].get("type") == "medical_fact"]
         assert len(medical_calls) == 15
 
     @patch("agents.seed_medical_memory.collection_stats")
@@ -127,9 +127,20 @@ class TestSeedMedicalFacts:
             cat = c.kwargs["metadata"].get("category")
             if cat:
                 categories.add(cat)
-        expected = {"cardiovascular", "endocrine", "infectious", "respiratory",
-                    "medication", "emergency", "general", "psychiatric", "nutrition",
-                    "communication", "architecture", "memory_management"}
+        expected = {
+            "cardiovascular",
+            "endocrine",
+            "infectious",
+            "respiratory",
+            "medication",
+            "emergency",
+            "general",
+            "psychiatric",
+            "nutrition",
+            "communication",
+            "architecture",
+            "memory_management",
+        }
         assert expected.issubset(categories)
 
     @patch("agents.seed_medical_memory.collection_stats")

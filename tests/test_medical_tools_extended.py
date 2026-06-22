@@ -6,6 +6,7 @@ Covers:
   - DrugInteractionTool: properties, validate, execute (all 3 actions, fallback, error paths)
   - register_extended_tools: registry integration
 """
+
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -17,6 +18,7 @@ from agents.medical_tools_extended import DrugInteractionTool, PubMedTool, regis
 # ============================================================
 # Fixtures
 # ============================================================
+
 
 @pytest.fixture
 def pubmed():
@@ -36,6 +38,7 @@ def registry():
 # ============================================================
 # PubMedTool — Properties
 # ============================================================
+
 
 class TestPubMedProperties:
     def test_name(self, pubmed):
@@ -65,6 +68,7 @@ class TestPubMedProperties:
 # PubMedTool — Validate
 # ============================================================
 
+
 class TestPubMedValidate:
     def test_missing_query(self, pubmed):
         err = pubmed.validate({})
@@ -90,13 +94,9 @@ class TestPubMedValidate:
 # ============================================================
 
 # PubMed uses JSON API (retmode=json)
-SEARCH_JSON_WITH_RESULTS = {
-    "esearchresult": {"idlist": ["12345"], "count": "1"}
-}
+SEARCH_JSON_WITH_RESULTS = {"esearchresult": {"idlist": ["12345"], "count": "1"}}
 
-SEARCH_JSON_EMPTY = {
-    "esearchresult": {"idlist": [], "count": "0"}
-}
+SEARCH_JSON_EMPTY = {"esearchresult": {"idlist": [], "count": "0"}}
 
 SUMMARY_JSON_FULL = {
     "result": {
@@ -192,7 +192,9 @@ class TestPubMedExecute:
             instance = AsyncMock()
             resp = MagicMock()
             resp.status_code = 429
-            instance.get = AsyncMock(side_effect=httpx.HTTPStatusError("rate limited", request=MagicMock(), response=resp))
+            instance.get = AsyncMock(
+                side_effect=httpx.HTTPStatusError("rate limited", request=MagicMock(), response=resp)
+            )
             instance.__aenter__ = AsyncMock(return_value=instance)
             instance.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = instance
@@ -249,6 +251,7 @@ class TestPubMedExecute:
 # DrugInteractionTool — Properties
 # ============================================================
 
+
 class TestDrugProperties:
     def test_name(self, drug):
         assert drug.name == "drug_interaction_check"
@@ -276,6 +279,7 @@ class TestDrugProperties:
 # ============================================================
 # DrugInteractionTool — Validate
 # ============================================================
+
 
 class TestDrugValidate:
     def test_invalid_action(self, drug):
@@ -324,7 +328,7 @@ LABEL_RESULTS = {
             "openfda": {"brand_name": ["LIPITOR"], "generic_name": ["ATORVASTATIN"], "manufacturer_name": ["Pfizer"]},
             "drug_interactions": [
                 "Warfarin: May increase bleeding risk when combined with atorvastatin.",
-                "Cyclosporine: Significant increase in atorvastatin levels."
+                "Cyclosporine: Significant increase in atorvastatin levels.",
             ],
             "indications_and_usage": ["For lowering cholesterol"],
             "warnings": ["Do not use if pregnant"],
@@ -340,7 +344,7 @@ ADVERSE_EVENTS = {
         {"term": "Headache", "count": 1500},
         {"term": "Nausea", "count": 900},
     ],
-    "meta": {"results": {"total": 50000}}
+    "meta": {"results": {"total": 50000}},
 }
 
 
@@ -360,7 +364,9 @@ class TestDrugExecute:
             instance.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = instance
 
-            result = await drug.execute({"action": "check_interaction", "drug_name": "atorvastatin", "second_drug": "warfarin"})
+            result = await drug.execute(
+                {"action": "check_interaction", "drug_name": "atorvastatin", "second_drug": "warfarin"}
+            )
             assert result.success is True
             assert "[MATCH]" in result.content
             assert result.source == "built_in"
@@ -385,7 +391,9 @@ class TestDrugExecute:
             instance.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = instance
 
-            result = await drug.execute({"action": "check_interaction", "drug_name": "atorvastatin", "second_drug": "aspirin"})
+            result = await drug.execute(
+                {"action": "check_interaction", "drug_name": "atorvastatin", "second_drug": "aspirin"}
+            )
             assert result.success is True
             # aspirin is not in LABEL_RESULTS interactions → no [MATCH]
             assert "[MATCH]" not in result.content
@@ -405,7 +413,9 @@ class TestDrugExecute:
             instance.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = instance
 
-            result = await drug.execute({"action": "check_interaction", "drug_name": "fakemab", "second_drug": "placixil"})
+            result = await drug.execute(
+                {"action": "check_interaction", "drug_name": "fakemab", "second_drug": "placixil"}
+            )
             assert result.success is True
             assert "No interaction data found" in result.content
 
@@ -517,7 +527,9 @@ class TestDrugExecute:
             instance = AsyncMock()
             resp = MagicMock()
             resp.status_code = 500
-            instance.get = AsyncMock(side_effect=httpx.HTTPStatusError("server error", request=MagicMock(), response=resp))
+            instance.get = AsyncMock(
+                side_effect=httpx.HTTPStatusError("server error", request=MagicMock(), response=resp)
+            )
             instance.__aenter__ = AsyncMock(return_value=instance)
             instance.__aexit__ = AsyncMock(return_value=False)
             MockClient.return_value = instance
@@ -549,6 +561,7 @@ class TestDrugExecute:
 # register_extended_tools
 # ============================================================
 
+
 class TestRegisterExtendedTools:
     def test_registers_both_tools(self, registry):
         register_extended_tools(registry)
@@ -566,6 +579,7 @@ class TestRegisterExtendedTools:
 # ============================================================
 # MedicalToolResult — source field present
 # ============================================================
+
 
 class TestMedicalToolResultSource:
     """Verify every MedicalToolResult produced has source='built_in'."""

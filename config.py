@@ -32,6 +32,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 logger = logging.getLogger(__name__)
 
+
 class LLMFallbackChain(BaseChatModel):
     """Chat model wrapper with automatic fallback to secondary models on failure.
 
@@ -39,6 +40,7 @@ class LLMFallbackChain(BaseChatModel):
     The primary model comes from model_name (existing). On repeated failures,
     the chain automatically switches to the next model in the list.
     """
+
     models: list
     active_index: int = 0
     fail_threshold: int = 2  # consecutive failures before switching
@@ -57,7 +59,7 @@ class LLMFallbackChain(BaseChatModel):
                 # Success: reset fail count
                 self._fail_counts[idx] = 0
                 if idx != self.active_index:
-                    logger.info(f"[LLMFallback] Recovered to primary model, switching back")
+                    logger.info("[LLMFallback] Recovered to primary model, switching back")
                     self.active_index = 0
                 return result
             except Exception as e:
@@ -66,7 +68,7 @@ class LLMFallbackChain(BaseChatModel):
                 logger.warning(f"[LLMFallback] model={model.model} failed ({self._fail_counts[idx]}): {e}")
                 if self._fail_counts[idx] >= self.fail_threshold and idx + 1 < len(self.models):
                     self.active_index = idx + 1
-                    logger.warning(f"[LLMFallback] Switching to fallback model: {self.models[idx+1].model}")
+                    logger.warning(f"[LLMFallback] Switching to fallback model: {self.models[idx + 1].model}")
         raise last_err
 
     @property
@@ -81,6 +83,7 @@ class LLMFallbackChain(BaseChatModel):
     def model(self) -> str:
         return self.models[self.active_index].model
 
+
 # Load environment variables from .env file
 load_dotenv(override=True)
 
@@ -88,6 +91,7 @@ load_dotenv(override=True)
 # Phase 10: Provider system - supports domestic models (小米MiMo, DeepSeek, etc.)
 try:
     from providers import list_providers, resolve_provider
+
     _provider = resolve_provider()
     _DEFAULT_MODEL = _provider["model"]
     _DEFAULT_API_KEY = _provider["api_key"]
@@ -101,12 +105,12 @@ except ImportError:
 
 # Per-role model overrides (env vars); falls back to defaults above
 _MODEL_ROLES = {
-    "decision":     os.getenv("DECISION_MODEL",     _DEFAULT_MODEL),
+    "decision": os.getenv("DECISION_MODEL", _DEFAULT_MODEL),
     "conversation": os.getenv("CONVERSATION_MODEL", _DEFAULT_MODEL),
-    "rag":          os.getenv("RAG_MODEL",           _DEFAULT_MODEL),
-    "web_search":   os.getenv("WEB_SEARCH_MODEL",   _DEFAULT_MODEL),
-    "vision":       os.getenv("VISION_MODEL",        _DEFAULT_MODEL),
-    "summarizer":   os.getenv("SUMMARIZER_MODEL",    _DEFAULT_MODEL),
+    "rag": os.getenv("RAG_MODEL", _DEFAULT_MODEL),
+    "web_search": os.getenv("WEB_SEARCH_MODEL", _DEFAULT_MODEL),
+    "vision": os.getenv("VISION_MODEL", _DEFAULT_MODEL),
+    "summarizer": os.getenv("SUMMARIZER_MODEL", _DEFAULT_MODEL),
 }
 
 
@@ -151,26 +155,33 @@ def _make_llm(temperature: float, role: str = "conversation") -> BaseChatModel:
         logger.info(f"[ModelRegistry] role={role}, model={model}")
     return primary
 
+
 def _make_embedding() -> OpenAIEmbeddings:
     """Create OpenAI embeddings using OpenAI-compatible API."""
     return OpenAIEmbeddings(
         model=os.getenv("embedding_model_name", "text-embedding-3-large"),
-        openai_api_key=os.getenv("embedding_openai_api_key") or os.getenv("openai_api_key") or os.getenv("OPENAI_API_KEY"),
+        openai_api_key=os.getenv("embedding_openai_api_key")
+        or os.getenv("openai_api_key")
+        or os.getenv("OPENAI_API_KEY"),
         openai_api_base=os.getenv("OPENAI_BASE_URL") or os.getenv("openai_base_url"),
     )
+
 
 class AgentDecisoinConfig:
     def __init__(self):
         self.llm = _make_llm(0.1, role="decision")
 
+
 class ConversationConfig:
     def __init__(self):
         self.llm = _make_llm(0.7, role="conversation")
 
+
 class WebSearchConfig:
     def __init__(self):
         self.llm = _make_llm(0.3, role="web_search")
-        self.context_limit = 20     # include last 20 messsages (10 Q&A pairs) in history
+        self.context_limit = 20  # include last 20 messsages (10 Q&A pairs) in history
+
 
 class RAGConfig:
     def __init__(self):
@@ -193,7 +204,7 @@ class RAGConfig:
         self.chunker_model = _make_llm(0.0, role="rag")
         self.response_generator_model = _make_llm(0.3, role="rag")
         self.top_k = 5
-        self.vector_search_type = 'similarity'  # or 'mmr'
+        self.vector_search_type = "similarity"  # or 'mmr'
 
         self.huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
 
@@ -202,29 +213,38 @@ class RAGConfig:
 
         self.max_context_length = 8192  # (Change based on your need) # 1024 proved to be too low (retrieved content length > context length = no context added) in formatting context in response_generator code
 
-        self.include_sources = True  # Show links to reference documents and images along with corresponding query response
+        self.include_sources = (
+            True  # Show links to reference documents and images along with corresponding query response
+        )
 
         # ADJUST ACCORDING TO ASSISTANT'S BEHAVIOUR BASED ON THE DATA INGESTED:
-        self.min_retrieval_confidence = 0.40  # The auto routing from RAG agent to WEB_SEARCH agent is dependent on this value
+        self.min_retrieval_confidence = (
+            0.40  # The auto routing from RAG agent to WEB_SEARCH agent is dependent on this value
+        )
 
-        self.context_limit = 20     # include last 20 messsages (10 Q&A pairs) in history
+        self.context_limit = 20  # include last 20 messsages (10 Q&A pairs) in history
+
 
 class MedicalCVConfig:
     def __init__(self):
-        self.brain_tumor_model_path = "./agents/image_analysis_agent/brain_tumor_agent/models/brain_tumor_segmentation.pth"
+        self.brain_tumor_model_path = (
+            "./agents/image_analysis_agent/brain_tumor_agent/models/brain_tumor_segmentation.pth"
+        )
         self.chest_xray_model_path = "./agents/image_analysis_agent/chest_xray_agent/models/covid_chest_xray_model.pth"
         self.skin_lesion_model_path = "./agents/image_analysis_agent/skin_lesion_agent/models/checkpointN25_.pth.tar"
         self.skin_lesion_segmentation_output_path = "./uploads/skin_lesion_output/segmentation_plot.png"
         self.llm = _make_llm(0.1, role="vision")
 
+
 class SpeechConfig:
     def __init__(self):
         self.eleven_labs_api_key = os.getenv("ELEVEN_LABS_API_KEY")  # Fallback TTS
-        self.eleven_labs_voice_id = "21m00Tcm4TlvDq8ikWAM"    # Default voice ID (Rachel)
+        self.eleven_labs_voice_id = "21m00Tcm4TlvDq8ikWAM"  # Default voice ID (Rachel)
         # Edge TTS (free, no API key needed)
         self.edge_tts_voice = os.getenv("EDGE_TTS_VOICE", "zh-CN-XiaoxiaoNeural")
         self.edge_tts_rate = os.getenv("EDGE_TTS_RATE", "+0%")
         self.edge_tts_pitch = os.getenv("EDGE_TTS_PITCH", "+0Hz")
+
 
 class ValidationConfig:
     def __init__(self):
@@ -234,10 +254,11 @@ class ValidationConfig:
             "WEB_SEARCH_AGENT": False,
             "BRAIN_TUMOR_AGENT": True,
             "CHEST_XRAY_AGENT": True,
-            "SKIN_LESION_AGENT": True
+            "SKIN_LESION_AGENT": True,
         }
         self.validation_timeout = 300
         self.default_action = "reject"
+
 
 class APIConfig:
     def __init__(self):
@@ -247,12 +268,14 @@ class APIConfig:
         self.rate_limit = 10
         self.max_image_upload_size = 5  # max upload size in MB
 
+
 class UIConfig:
     def __init__(self):
         self.theme = "light"
         # self.max_chat_history = 50
         self.enable_speech = True
         self.enable_image_upload = True
+
 
 class MCPConfig:
     def __init__(self):
@@ -282,6 +305,7 @@ class MCPConfig:
         self.max_iterations = 5
         self.tool_timeout = 60
 
+
 class Config:
     def __init__(self):
         self.agent_decision = AgentDecisoinConfig()
@@ -299,6 +323,7 @@ class Config:
         self.max_conversation_history = 20  # Include last 20 messsages (10 Q&A pairs) in history
         self.summarize_conversation_history = True  # Phase 51: Summarize old messages before truncating
         self.summary_keep_recent = 8  # Phase 51: Keep last 8 messages (4 Q&A pairs) when summarizing
+
 
 # # Example usage
 # config = Config()

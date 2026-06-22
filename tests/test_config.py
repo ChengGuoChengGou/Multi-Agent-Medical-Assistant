@@ -2,6 +2,7 @@
 Unit tests for config.py — LLMFallbackChain + model registry.
 Run: python -m pytest tests/test_config.py -v
 """
+
 import os
 import sys
 from unittest.mock import MagicMock, patch
@@ -13,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
+
 def _make_mock_model(name: str, fail_count: int = 0):
     """Create a mock ChatOpenAI-like model that fails `fail_count` times then succeeds."""
     model = MagicMock()
@@ -20,9 +22,7 @@ def _make_mock_model(name: str, fail_count: int = 0):
     model._generate = MagicMock()
     if fail_count > 0:
         # First N calls raise, then succeed
-        model._generate.side_effect = [
-            RuntimeError(f"{name} simulated failure")
-        ] * fail_count + [MagicMock()]
+        model._generate.side_effect = [RuntimeError(f"{name} simulated failure")] * fail_count + [MagicMock()]
     else:
         model._generate.return_value = MagicMock()
     return model
@@ -30,12 +30,14 @@ def _make_mock_model(name: str, fail_count: int = 0):
 
 # ── LLMFallbackChain Tests ──────────────────────────────────────────
 
+
 class TestLLMFallbackChain:
     """Test the LLMFallbackChain fallback/recovery logic."""
 
     def _import_chain(self):
         """Import LLMFallbackChain (already loaded by conftest mock chain)."""
         from config import LLMFallbackChain
+
         return LLMFallbackChain
 
     def test_llm_type(self):
@@ -147,6 +149,7 @@ class TestLLMFallbackChain:
 
 # ── _make_llm Tests ─────────────────────────────────────────────────
 
+
 class TestMakeLlm:
     """Test _make_llm function with model registry and fallback."""
 
@@ -154,6 +157,7 @@ class TestMakeLlm:
     def test_make_llm_returns_primary_model(self):
         """Without FALLBACK_MODELS, returns a ChatOpenAI (not chain)."""
         from config import _make_llm
+
         # Ensure no fallback
         os.environ.pop("FALLBACK_MODELS", None)
         llm = _make_llm(0.5, role="conversation")
@@ -164,6 +168,7 @@ class TestMakeLlm:
     def test_make_llm_with_fallback_returns_chain(self):
         """With FALLBACK_MODELS set, returns LLMFallbackChain."""
         from config import LLMFallbackChain, _make_llm
+
         llm = _make_llm(0.5, role="rag")
         assert isinstance(llm, LLMFallbackChain)
         assert len(llm.models) == 3  # primary + 2 fallbacks
@@ -171,6 +176,7 @@ class TestMakeLlm:
     def test_make_llm_uses_role_model(self):
         """_make_llm picks model from _MODEL_ROLES by role."""
         from config import _MODEL_ROLES, _make_llm
+
         # The role 'decision' should use DECISION_MODEL or default
         decision_model = _MODEL_ROLES.get("decision")
         assert decision_model is not None
@@ -178,11 +184,13 @@ class TestMakeLlm:
 
 # ── Config Classes Tests ────────────────────────────────────────────
 
+
 class TestConfigClasses:
     """Test that config dataclasses instantiate without error."""
 
     def test_api_config_defaults(self):
         from config import APIConfig
+
         cfg = APIConfig()
         assert cfg.host == "0.0.0.0"
         assert cfg.port == 8000
@@ -191,6 +199,7 @@ class TestConfigClasses:
 
     def test_ui_config_defaults(self):
         from config import UIConfig
+
         cfg = UIConfig()
         assert cfg.theme == "light"
         assert cfg.enable_speech is True
@@ -198,6 +207,7 @@ class TestConfigClasses:
 
     def test_validation_config_defaults(self):
         from config import ValidationConfig
+
         cfg = ValidationConfig()
         # max_iterations is in MCPConfig, not ValidationConfig
         assert cfg.require_validation["BRAIN_TUMOR_AGENT"] is True
@@ -208,6 +218,7 @@ class TestConfigClasses:
 
     def test_mcp_config_defaults(self):
         from config import MCPConfig
+
         cfg = MCPConfig()
         assert cfg.biomcp["enabled"] is True
         assert cfg.autoicd["enabled"] is True
@@ -216,6 +227,7 @@ class TestConfigClasses:
 
     def test_config_aggregate(self):
         from config import Config
+
         cfg = Config()
         assert hasattr(cfg, "agent_decision")
         assert hasattr(cfg, "conversation")

@@ -19,11 +19,11 @@ async def sse_generator(
     event: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """Generate a single SSE event.
-    
+
     Args:
         data: Dictionary to send as JSON
         event: Optional SSE event name
-    
+
     Yields:
         Formatted SSE string
     """
@@ -39,7 +39,7 @@ async def sse_stream_chat(
     memory_context: str = "",
 ) -> StreamingResponse:
     """Create a streaming SSE response for chat.
-    
+
     Sends events:
     - 'start': {session_id, query}
     - 'agent': {agent_name}: selected agent info
@@ -47,16 +47,17 @@ async def sse_stream_chat(
       since the underlying process_query is synchronous)
     - 'end': {total_length, agent}
     - 'error': {message}: if error occurs
-    
+
     Args:
         query: User query text
         session_id: Session identifier
         process_fn: The process_query function
         memory_context: Optional memory context to prepend
-    
+
     Returns:
         StreamingResponse with SSE content type
     """
+
     async def event_stream():
         try:
             # Start event
@@ -69,10 +70,8 @@ async def sse_stream_chat(
             # Process query in thread pool
             enhanced_query = query + memory_context if memory_context else query
             loop = asyncio.get_event_loop()
-            response_data = await loop.run_in_executor(
-                None, process_fn, enhanced_query, session_id
-            )
-            response_text = response_data['messages'][-1].content
+            response_data = await loop.run_in_executor(None, process_fn, enhanced_query, session_id)
+            response_text = response_data["messages"][-1].content
 
             # Agent info event
             async for chunk in sse_generator(
@@ -85,7 +84,7 @@ async def sse_stream_chat(
             chunk_size = 50  # Characters per chunk
             total = len(response_text)
             for i in range(0, total, chunk_size):
-                text_chunk = response_text[i:i + chunk_size]
+                text_chunk = response_text[i : i + chunk_size]
                 async for chunk in sse_generator(
                     {
                         "text": text_chunk,
@@ -108,6 +107,7 @@ async def sse_stream_chat(
 
             # Check for skin lesion output image
             import os
+
             result_extra = {}
             if response_data.get("agent_name") in ("SKIN_LESION_AGENT", "HUMAN_VALIDATION"):
                 seg_path = os.path.join(".", "uploads", "skin_lesion_output", "segmentation_plot.png")
@@ -151,10 +151,10 @@ async def sse_stream_chat_streaming(
     memory_context: str = "",
 ) -> StreamingResponse:
     """Create a streaming SSE response using process_query_streaming generator.
-    
+
     Unlike sse_stream_chat which runs the full query then fakes streaming,
     this function receives real-time node progress events from graph.stream().
-    
+
     Sends events:
     - 'start': {session_id, query}
     - 'progress': {node, status, output_preview} - real-time node progress
@@ -162,16 +162,17 @@ async def sse_stream_chat_streaming(
     - 'chunk': {text, done, progress}: response text chunks
     - 'end': {total_length, agent}
     - 'error': {message}: if error occurs
-    
+
     Args:
         query: User query text
         session_id: Session identifier
         streaming_fn: The process_query_streaming generator function
         memory_context: Optional memory context to prepend
-    
+
     Returns:
         StreamingResponse with SSE content type
     """
+
     async def event_stream():
         try:
             # Start event
@@ -187,10 +188,10 @@ async def sse_stream_chat_streaming(
             # Run streaming generator in thread pool, yielding progress events
             import queue
             import threading
-            
+
             q = queue.Queue()
             _sentinel = object()
-            
+
             def _run_generator():
                 try:
                     for event in streaming_fn(enhanced_query):
@@ -199,20 +200,20 @@ async def sse_stream_chat_streaming(
                     q.put({"type": "error", "message": str(e)})
                 finally:
                     q.put(_sentinel)
-            
+
             thread = threading.Thread(target=_run_generator, daemon=True)
             thread.start()
-            
+
             final_result = None
-            
+
             # Drain queue in async context
             while True:
                 event = await loop.run_in_executor(None, q.get)
                 if event is _sentinel:
                     break
-                
+
                 event_type = event.get("type", "")
-                
+
                 if event_type == "node_end":
                     # Real-time node progress event
                     async for chunk in sse_generator(
@@ -224,10 +225,10 @@ async def sse_stream_chat_streaming(
                         event="progress",
                     ):
                         yield chunk
-                
+
                 elif event_type == "final":
                     final_result = event.get("result")
-                
+
                 elif event_type == "error":
                     async for chunk in sse_generator(
                         {"message": event.get("message", "Unknown error")},
@@ -235,7 +236,7 @@ async def sse_stream_chat_streaming(
                     ):
                         yield chunk
                     return
-            
+
             if not final_result:
                 async for chunk in sse_generator(
                     {"message": "No result from graph"},
@@ -243,22 +244,22 @@ async def sse_stream_chat_streaming(
                 ):
                     yield chunk
                 return
-            
-            response_text = final_result['messages'][-1].content
+
+            response_text = final_result["messages"][-1].content
             agent_name = final_result.get("agent_name", "unknown")
-            
+
             # Agent info event
             async for chunk in sse_generator(
                 {"agent": agent_name},
                 event="agent",
             ):
                 yield chunk
-            
+
             # Stream response text in chunks
             chunk_size = 50
             total = len(response_text)
             for i in range(0, total, chunk_size):
-                text_chunk = response_text[i:i + chunk_size]
+                text_chunk = response_text[i : i + chunk_size]
                 async for chunk in sse_generator(
                     {
                         "text": text_chunk,
@@ -270,22 +271,23 @@ async def sse_stream_chat_streaming(
                     yield chunk
                 if i + chunk_size < total:
                     await asyncio.sleep(0.02)
-            
+
             # Final chunk marker
             async for chunk in sse_generator(
                 {"text": "", "done": True, "progress": 1.0},
                 event="chunk",
             ):
                 yield chunk
-            
+
             # Skin lesion image check
             import os
+
             result_extra = {}
             if agent_name in ("SKIN_LESION_AGENT", "HUMAN_VALIDATION"):
                 seg_path = os.path.join(".", "uploads", "skin_lesion_output", "segmentation_plot.png")
                 if os.path.exists(seg_path):
                     result_extra["result_image"] = "/uploads/skin_lesion_output/segmentation_plot.png"
-            
+
             # End event
             async for chunk in sse_generator(
                 {
@@ -296,7 +298,7 @@ async def sse_stream_chat_streaming(
                 event="end",
             ):
                 yield chunk
-        
+
         except Exception as e:
             logger.error(f"[sse_stream_chat_streaming] Error: {e}")
             async for chunk in sse_generator(
@@ -304,7 +306,7 @@ async def sse_stream_chat_streaming(
                 event="error",
             ):
                 yield chunk
-    
+
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",

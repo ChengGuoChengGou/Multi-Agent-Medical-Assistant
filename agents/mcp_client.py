@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MCPTool:
     """Represents a tool provided by an MCP server."""
+
     name: str
     description: str
     input_schema: Dict[str, Any]
@@ -33,6 +34,7 @@ class MCPTool:
 @dataclass
 class MCPToolResult:
     """Result from calling an MCP tool."""
+
     success: bool
     content: str
     tool_name: str
@@ -43,8 +45,9 @@ class MCPToolResult:
 class MCPServerConnection:
     """Manages a single MCP server subprocess connection via stdio."""
 
-    def __init__(self, name: str, command: str, args: List[str],
-                 env: Optional[Dict[str, str]] = None, cwd: Optional[str] = None):
+    def __init__(
+        self, name: str, command: str, args: List[str], env: Optional[Dict[str, str]] = None, cwd: Optional[str] = None
+    ):
         self.name = name
         self.command = command
         self.args = args
@@ -74,11 +77,14 @@ class MCPServerConnection:
                 bufsize=1,
             )
             # Send initialize request
-            init_result = await self._send_request("initialize", {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "medical-assistant", "version": "1.0.0"}
-            })
+            init_result = await self._send_request(
+                "initialize",
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "medical-assistant", "version": "1.0.0"},
+                },
+            )
             if init_result is not None:
                 # Send initialized notification
                 await self._send_notification("notifications/initialized", {})
@@ -113,10 +119,7 @@ class MCPServerConnection:
             self.process.stdin.flush()
 
             # Read response (with timeout)
-            response_line = await asyncio.wait_for(
-                asyncio.to_thread(self.process.stdout.readline),
-                timeout=30.0
-            )
+            response_line = await asyncio.wait_for(asyncio.to_thread(self.process.stdout.readline), timeout=30.0)
             if response_line:
                 response = json.loads(response_line.strip())
                 if "result" in response:
@@ -153,30 +156,33 @@ class MCPServerConnection:
         result = await self._send_request("tools/list", {})
         if result and "tools" in result:
             for tool_def in result["tools"]:
-                self.tools.append(MCPTool(
-                    name=tool_def.get("name", ""),
-                    description=tool_def.get("description", ""),
-                    input_schema=tool_def.get("inputSchema", {}),
-                    server_name=self.name,
-                ))
+                self.tools.append(
+                    MCPTool(
+                        name=tool_def.get("name", ""),
+                        description=tool_def.get("description", ""),
+                        input_schema=tool_def.get("inputSchema", {}),
+                        server_name=self.name,
+                    )
+                )
 
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> MCPToolResult:
         """Call a tool on this server."""
         if not self._initialized:
             return MCPToolResult(
-                success=False, content="", tool_name=tool_name,
-                server_name=self.name, error="Server not initialized"
+                success=False, content="", tool_name=tool_name, server_name=self.name, error="Server not initialized"
             )
 
-        result = await self._send_request("tools/call", {
-            "name": tool_name,
-            "arguments": arguments,
-        })
+        result = await self._send_request(
+            "tools/call",
+            {
+                "name": tool_name,
+                "arguments": arguments,
+            },
+        )
 
         if result is None:
             return MCPToolResult(
-                success=False, content="", tool_name=tool_name,
-                server_name=self.name, error="No response from server"
+                success=False, content="", tool_name=tool_name, server_name=self.name, error="No response from server"
             )
 
         # Extract content from MCP result
@@ -216,13 +222,11 @@ class MCPClientManager:
         self._all_tools: List[MCPTool] = []
         self._started = False
 
-    def register_server(self, name: str, command: str, args: List[str],
-                       env: Optional[Dict[str, str]] = None,
-                       cwd: Optional[str] = None) -> None:
+    def register_server(
+        self, name: str, command: str, args: List[str], env: Optional[Dict[str, str]] = None, cwd: Optional[str] = None
+    ) -> None:
         """Register an MCP server configuration."""
-        self.servers[name] = MCPServerConnection(
-            name=name, command=command, args=args, env=env, cwd=cwd
-        )
+        self.servers[name] = MCPServerConnection(name=name, command=command, args=args, env=env, cwd=cwd)
 
     async def start_all(self) -> Dict[str, bool]:
         """Start all registered servers. Returns dict of server_name -> success."""
@@ -267,18 +271,19 @@ class MCPClientManager:
                     return await server.call_tool(tool_name, arguments)
 
         return MCPToolResult(
-            success=False, content="", tool_name=tool_name,
-            server_name="unknown", error=f"Tool '{tool_name}' not found"
+            success=False, content="", tool_name=tool_name, server_name="unknown", error=f"Tool '{tool_name}' not found"
         )
 
-    async def call_on_server(self, server_name: str, tool_name: str,
-                            arguments: Dict[str, Any]) -> MCPToolResult:
+    async def call_on_server(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> MCPToolResult:
         """Call a tool on a specific server."""
         server = self.servers.get(server_name)
         if not server:
             return MCPToolResult(
-                success=False, content="", tool_name=tool_name,
-                server_name=server_name, error=f"Server '{server_name}' not found"
+                success=False,
+                content="",
+                tool_name=tool_name,
+                server_name=server_name,
+                error=f"Server '{server_name}' not found",
             )
         return await server.call_tool(tool_name, arguments)
 
@@ -286,6 +291,7 @@ class MCPClientManager:
 # ============================================================
 # Default MCP Client Configuration
 # ============================================================
+
 
 def get_project_mcp_dir() -> str:
     """Get the path to the mcp_servers directory."""
@@ -308,7 +314,9 @@ def create_default_mcp_client() -> MCPClientManager:
         if venv_relative:
             abs_path = os.path.join(
                 os.path.dirname(os.path.dirname(__file__)),  # project root
-                ".venv", "Scripts", venv_relative,
+                ".venv",
+                "Scripts",
+                venv_relative,
             )
             if os.path.isfile(abs_path):
                 return abs_path
@@ -361,10 +369,10 @@ _global_client: Optional[Union[MCPClientManager, Any]] = None
 async def get_mcp_client() -> Any:
     """
     Get or create the global MCP client instance.
-    
+
     Returns a ResilientMCPClientManager that wraps the original MCPClientManager
     with automatic retry, reconnect, and health checking (Phase 4.4).
-    
+
     The returned object has the same call_tool/call_on_server/get_all_tools
     interface as MCPClientManager, so it's a drop-in replacement.
     """
@@ -373,7 +381,7 @@ async def get_mcp_client() -> Any:
         raw_client = create_default_mcp_client()
         results = await raw_client.start_all()
         logger.info(f"MCP servers started: {results}")
-        
+
         # Wrap with ResilientMCPClientManager for retry/reconnect/health
         try:
             from agents.mcp_connection_manager import (
@@ -381,6 +389,7 @@ async def get_mcp_client() -> Any:
                 RetryConfig,
                 TimeoutConfig,
             )
+
             resilient = ResilientMCPClientManager()
             for name, conn in raw_client._connections.items():
                 resilient.add_server(conn)

@@ -2,6 +2,7 @@
 End-to-end tests for API endpoints.
 Run: python -m pytest tests/test_main.py -v
 """
+
 import os
 import sys
 
@@ -22,30 +23,32 @@ def client():
     os.environ.setdefault("ENABLED_AGENTS", "conversation_agent,report_agent")
     # Ensure dev mode for API key auth (no keys = allow all)
     os.environ.pop("MEDICAL_API_KEYS", None)
-    
+
     from app import app
+
     return TestClient(app)
 
 
 # === Health Endpoints ===
 
+
 class TestHealthEndpoints:
     def test_health_returns_200(self, client):
         r = client.get("/health")
         assert r.status_code == 200
-    
+
     def test_health_has_status(self, client):
         r = client.get("/health")
         data = r.json()
         assert "status" in data
         assert data["status"] in ("healthy", "degraded"), f"Unexpected status: {data['status']}"
-    
+
     def test_health_has_middleware_info(self, client):
         r = client.get("/health")
         data = r.json()
         assert "middleware" in data
         assert data["middleware"]["rate_limiting"] is True
-    
+
     def test_health_has_dedup_stats(self, client):
         r = client.get("/health")
         data = r.json()
@@ -53,6 +56,7 @@ class TestHealthEndpoints:
 
 
 # === Metrics Endpoint ===
+
 
 class TestMetricsEndpoint:
     def test_metrics_returns_200(self, client):
@@ -71,19 +75,20 @@ class TestMetricsEndpoint:
 
 # === Security Headers ===
 
+
 class TestSecurityHeaders:
     def test_csp_header_present(self, client):
         r = client.get("/health")
         assert "content-security-policy" in r.headers
-    
+
     def test_x_content_type_options(self, client):
         r = client.get("/health")
         assert r.headers.get("x-content-type-options") == "nosniff"
-    
+
     def test_x_frame_options(self, client):
         r = client.get("/health")
         assert r.headers.get("x-frame-options") == "DENY"
-    
+
     def test_security_headers_present(self, client):
         """Security headers are set by middleware."""
         r = client.get("/health")
@@ -93,6 +98,7 @@ class TestSecurityHeaders:
 
 
 # === API Versioning ===
+
 
 class TestAPIVersioning:
     def test_api_version_prefix(self, client):
@@ -108,15 +114,16 @@ class TestAPIVersioning:
 
 # === Chat Endpoint ===
 
+
 class TestChatEndpoint:
     def test_chat_requires_body(self, client):
         r = client.post("/chat")
         assert r.status_code in [401, 422]
-    
+
     def test_chat_empty_message_rejected(self, client):
         r = client.post("/chat", json={"message": ""})
         assert r.status_code in [400, 401, 422]
-    
+
     def test_chat_valid_structure(self, client):
         r = client.post("/chat", json={"message": "hello"})
         # May fail due to missing API key, but should return valid structure
@@ -124,7 +131,7 @@ class TestChatEndpoint:
             data = r.json()
             assert "status" in data
             assert "response" in data
-    
+
     def test_chat_xss_in_message_rejected(self, client):
         r = client.post("/chat", json={"message": "<script>alert(1)</script>"})
         assert r.status_code in [400, 401, 422]
@@ -132,17 +139,19 @@ class TestChatEndpoint:
 
 # === Upload Endpoint ===
 
+
 class TestUploadEndpoint:
     def test_upload_requires_file(self, client):
         r = client.post("/upload")
         assert r.status_code == 422
-    
+
     def test_validate_requires_file(self, client):
         r = client.post("/validate")
         assert r.status_code == 422
 
 
 # === Speech Endpoint ===
+
 
 class TestSpeechEndpoint:
     def test_speech_requires_body(self, client):
@@ -152,19 +161,20 @@ class TestSpeechEndpoint:
 
 # === Static Pages ===
 
+
 class TestStaticPages:
     def test_index_returns_200(self, client):
         r = client.get("/")
         assert r.status_code == 200
-    
+
     def test_index_is_html(self, client):
         r = client.get("/")
         assert "text/html" in r.headers.get("content-type", "")
-    
+
     def test_docs_available(self, client):
         r = client.get("/docs")
         assert r.status_code == 200
-    
+
     def test_openapi_available(self, client):
         r = client.get("/openapi.json")
         assert r.status_code == 200
@@ -173,6 +183,7 @@ class TestStaticPages:
 
 
 # === Chat Stream Endpoint ===
+
 
 class TestChatStreamEndpoint:
     def test_chat_stream_requires_body(self, client):
@@ -203,6 +214,7 @@ class TestChatStreamEndpoint:
 
 # === Transcribe Endpoint ===
 
+
 class TestTranscribeEndpoint:
     def test_transcribe_requires_body(self, client):
         """POST /transcribe without file returns 422 (or 401 if auth rejects first)."""
@@ -216,6 +228,7 @@ class TestTranscribeEndpoint:
 
 
 # === Cache Stats Endpoint ===
+
 
 class TestCacheStatsEndpoint:
     def test_cache_stats_returns_200(self, client):
@@ -237,6 +250,7 @@ class TestCacheStatsEndpoint:
 
 
 # === Not Found ===
+
 
 class TestNotFound:
     def test_unknown_route_returns_404(self, client):

@@ -11,6 +11,7 @@ Usage:
     Authorization: Bearer <api-key>
     X-API-Key: <api-key>
 """
+
 import hmac
 import logging
 import os
@@ -128,8 +129,12 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         key = _extract_key(request)
         if not key:
             self._auth_failures += 1
-            logger.warning("[APIKeyAuth] Missing API key for %s %s from %s",
-                           request.method, path, request.client.host if request.client else "unknown")
+            logger.warning(
+                "[APIKeyAuth] Missing API key for %s %s from %s",
+                request.method,
+                path,
+                request.client.host if request.client else "unknown",
+            )
             return JSONResponse(
                 status_code=401,
                 content={
@@ -143,8 +148,12 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         valid = any(hmac.compare_digest(key, allowed) for allowed in self._api_keys)
         if not valid:
             self._auth_failures += 1
-            logger.warning("[APIKeyAuth] Invalid API key for %s %s from %s",
-                           request.method, path, request.client.host if request.client else "unknown")
+            logger.warning(
+                "[APIKeyAuth] Invalid API key for %s %s from %s",
+                request.method,
+                path,
+                request.client.host if request.client else "unknown",
+            )
             return JSONResponse(
                 status_code=403,
                 content={

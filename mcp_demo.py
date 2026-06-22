@@ -1,4 +1,3 @@
-
 import os
 import sys
 
@@ -25,7 +24,9 @@ from agents.mcp_client import MCPClientManager, get_mcp_client
 
 client = MCPClientManager(cfg)
 print(f"  Client class: {type(client).__name__}")
-print(f"  biomcp path exists: {os.path.exists(os.path.join(r'D:\\Code\\Multi-Agent-Medical-Assistant', 'mcp_servers', 'biomcp'))}")
+print(
+    f"  biomcp path exists: {os.path.exists(os.path.join(r'D:\\Code\\Multi-Agent-Medical-Assistant', 'mcp_servers', 'biomcp'))}"
+)
 print("  ✅ MCPClientManager ready")
 
 # 3. Load MCP Agent
@@ -34,7 +35,7 @@ from agents.mcp_agent import MCP_ROUTING_PROMPT, mcp_agent_node
 
 print(f"  Node function: {mcp_agent_node.__name__}")
 print(f"  Routing prompt: {len(MCP_ROUTING_PROMPT)} chars")
-print(f"  Prompt preview:")
+print("  Prompt preview:")
 for line in MCP_ROUTING_PROMPT.split("\\n")[:8]:
     print(f"    {line}")
 print("  ✅ MCP Agent loaded")

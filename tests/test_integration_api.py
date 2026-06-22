@@ -6,6 +6,7 @@ Note: conftest.py mocks heavy deps (agents.rag_agent etc.) but process_query
 return shape must match what /chat endpoint expects:
   {"messages": [obj_with_.content], "agent_name": str}
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -24,6 +25,7 @@ def client():
     from fastapi.testclient import TestClient
 
     from app import app
+
     return TestClient(app)
 
 
@@ -31,9 +33,11 @@ def client():
 def mock_chat():
     """Patch process_query + semantic cache for /chat endpoint."""
     mock_return = _make_process_query_return()
-    with patch("app.process_query", return_value=mock_return) as m, \
-         patch("app.semantic_get", return_value=None), \
-         patch("app.semantic_set"):
+    with (
+        patch("app.process_query", return_value=mock_return) as m,
+        patch("app.semantic_get", return_value=None),
+        patch("app.semantic_set"),
+    ):
         yield m
 
 
@@ -41,13 +45,16 @@ def mock_chat():
 def mock_validate():
     """Patch process_query + semantic cache for /validate endpoint."""
     mock_return = _make_process_query_return(text="validation response")
-    with patch("app.process_query", return_value=mock_return), \
-         patch("app.semantic_get", return_value=None), \
-         patch("app.semantic_set"):
+    with (
+        patch("app.process_query", return_value=mock_return),
+        patch("app.semantic_get", return_value=None),
+        patch("app.semantic_set"),
+    ):
         yield
 
 
 # ── Health & System Endpoints ─────────────────────────────────────────────
+
 
 class TestHealthEndpoint:
     """Vertical slice: GET /health → full response contract."""
@@ -114,6 +121,7 @@ class TestMetricsEndpoint:
 
 # ── Index (HTML) ─────────────────────────────────────────────────────────
 
+
 class TestIndexEndpoint:
     """Vertical slice: GET / → HTML template."""
 
@@ -127,6 +135,7 @@ class TestIndexEndpoint:
 
 
 # ── Chat Endpoint ─────────────────────────────────────────────────────────
+
 
 class TestChatEndpoint:
     """Vertical slice: POST /chat → agent routing + session cookie."""
@@ -154,45 +163,41 @@ class TestChatEndpoint:
         assert resp.status_code == 200
 
     def test_chat_with_conversation_history(self, client, mock_chat):
-        resp = client.post("/chat", json={
-            "query": "Follow up question",
-            "conversation_history": [
-                {"role": "user", "content": "Previous question"},
-                {"role": "assistant", "content": "Previous answer"}
-            ]
-        })
+        resp = client.post(
+            "/chat",
+            json={
+                "query": "Follow up question",
+                "conversation_history": [
+                    {"role": "user", "content": "Previous question"},
+                    {"role": "assistant", "content": "Previous answer"},
+                ],
+            },
+        )
         assert resp.status_code == 200
 
 
 # ── Validate Endpoint ─────────────────────────────────────────────────────
 
+
 class TestValidateEndpoint:
     """Vertical slice: POST /validate → human-in-the-loop validation."""
 
     def test_validate_approved(self, client, mock_validate):
-        resp = client.post("/validate", data={
-            "validation_result": "yes",
-            "comments": "Looks correct"
-        })
+        resp = client.post("/validate", data={"validation_result": "yes", "comments": "Looks correct"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "validated"
         assert "message" in data
 
     def test_validate_rejected(self, client, mock_validate):
-        resp = client.post("/validate", data={
-            "validation_result": "no",
-            "comments": "Needs correction"
-        })
+        resp = client.post("/validate", data={"validation_result": "no", "comments": "Needs correction"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "rejected"
         assert data["comments"] == "Needs correction"
 
     def test_validate_without_comments(self, client, mock_validate):
-        resp = client.post("/validate", data={
-            "validation_result": "yes"
-        })
+        resp = client.post("/validate", data={"validation_result": "yes"})
         assert resp.status_code == 200
 
     def test_validate_sets_session_cookie(self, client, mock_validate):
@@ -202,15 +207,14 @@ class TestValidateEndpoint:
 
 # ── Upload Endpoint ───────────────────────────────────────────────────────
 
+
 class TestUploadEndpoint:
     """Vertical slice: POST /upload → file type + size validation."""
 
     def test_upload_unsupported_extension(self, client):
         """Non-image file should be rejected with 400."""
         resp = client.post(
-            "/upload",
-            files={"image": ("test.txt", b"not an image", "text/plain")},
-            data={"text": "analyze this"}
+            "/upload", files={"image": ("test.txt", b"not an image", "text/plain")}, data={"text": "analyze this"}
         )
         assert resp.status_code == 400
         data = resp.json()
@@ -221,11 +225,7 @@ class TestUploadEndpoint:
     def test_upload_file_too_large(self, client):
         """File exceeding size limit should be rejected with 413."""
         large_content = b"x" * (2 * 1024 * 1024)  # 2 MB
-        resp = client.post(
-            "/upload",
-            files={"image": ("big.png", large_content, "image/png")},
-            data={"text": ""}
-        )
+        resp = client.post("/upload", files={"image": ("big.png", large_content, "image/png")}, data={"text": ""})
         assert resp.status_code == 413
         data = resp.json()
         assert data["status"] == "error"
@@ -234,19 +234,18 @@ class TestUploadEndpoint:
 
 # ── Transcribe Endpoint ───────────────────────────────────────────────────
 
+
 class TestTranscribeEndpoint:
     """Vertical slice: POST /transcribe → empty file rejection."""
 
     def test_transcribe_no_filename(self, client):
         """Empty filename should be rejected (400 by endpoint or 422 by FastAPI validation)."""
-        resp = client.post(
-            "/transcribe",
-            files={"audio": ("", b"", "audio/wav")}
-        )
+        resp = client.post("/transcribe", files={"audio": ("", b"", "audio/wav")})
         assert resp.status_code in (400, 422)
 
 
 # ── Middleware Behavior ────────────────────────────────────────────────────
+
 
 class TestSecurityHeaders:
     """Integration: security headers present on every response."""
@@ -268,15 +267,19 @@ class TestCORS:
     """Integration: CORS headers for allowed origins."""
 
     def test_cors_preflight(self, client):
-        resp = client.options("/chat", headers={
-            "Origin": "http://localhost:3000",
-            "Access-Control-Request-Method": "POST",
-        })
+        resp = client.options(
+            "/chat",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
         assert resp.status_code == 200
         assert "access-control-allow-origin" in {k.lower() for k in resp.headers.keys()}
 
 
 # ── OpenAPI Schema ────────────────────────────────────────────────────────
+
 
 class TestOpenAPI:
     """Integration: OpenAPI schema is accessible and well-formed."""

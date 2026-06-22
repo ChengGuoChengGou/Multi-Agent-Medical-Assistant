@@ -1,4 +1,5 @@
 """Tests for evaluation/eval_runner.py — medical QA evaluation runner."""
+
 import json
 import os
 import tempfile
@@ -17,6 +18,7 @@ from evaluation.eval_runner import (
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_test_cases():
@@ -52,8 +54,8 @@ def benchmark_file(sample_test_cases, tmp_path):
 # Test: load_benchmark
 # ---------------------------------------------------------------------------
 
-class TestLoadBenchmark:
 
+class TestLoadBenchmark:
     def test_loads_from_file(self, benchmark_file, sample_test_cases):
         result = load_benchmark(benchmark_file)
         assert len(result) == 2
@@ -76,8 +78,8 @@ class TestLoadBenchmark:
 # Test: run_ragas_evaluation
 # ---------------------------------------------------------------------------
 
-class TestRagasEvaluation:
 
+class TestRagasEvaluation:
     def test_returns_error_when_ragas_not_installed(self, sample_test_cases):
         """Should return error dict if ragas import fails."""
         with patch.dict("sys.modules", {"ragas": None}):
@@ -101,8 +103,8 @@ class TestRagasEvaluation:
 # Test: run_deepeval_evaluation
 # ---------------------------------------------------------------------------
 
-class TestDeepevalEvaluation:
 
+class TestDeepevalEvaluation:
     def test_returns_error_when_deepeval_not_installed(self, sample_test_cases):
         """Should return error dict if deepeval import fails."""
         with patch.dict("sys.modules", {"deepeval": None}):
@@ -123,8 +125,8 @@ class TestDeepevalEvaluation:
 # Test: generate_report
 # ---------------------------------------------------------------------------
 
-class TestGenerateReport:
 
+class TestGenerateReport:
     def test_report_structure(self, sample_test_cases):
         ragas_scores = {"faithfulness": 0.9, "overall": 0.85}
         deepeval_scores = {"answer_relevancy": 0.8, "overall": 0.8}

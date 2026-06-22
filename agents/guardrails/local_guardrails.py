@@ -13,6 +13,7 @@ def _try_load_nemo_rails(config_dir: str | None = None):
     """Attempt to load NeMo Guardrails RailsApp. Returns (rails_app, error_msg)."""
     try:
         from nemoguardrails import LLMRails, RailsConfig
+
         if config_dir is None:
             config_dir = os.path.join(os.path.dirname(__file__), "config")
         if not os.path.isdir(config_dir):
@@ -28,7 +29,7 @@ def _try_load_nemo_rails(config_dir: str | None = None):
 
 class LocalGuardrails:
     """Medical chatbot guardrails with regex pre-filter + LLM deep check.
-    
+
     Architecture:
         1. Regex pre-filter (fast, no LLM call) - catches obvious violations
         2. LLM deep check (slower) - nuanced safety evaluation
@@ -60,13 +61,13 @@ class LocalGuardrails:
 
     def __init__(self, llm=None):
         """Initialize guardrails.
-        
+
         Args:
             llm: Optional LLM for deep safety check. If None, only regex filtering is used.
         """
         self.llm = llm
         self.nemo_rails, self.nemo_error = _try_load_nemo_rails()
-        
+
         # Compact input safety prompt (replaces 47-item list)
         self.input_check_prompt = PromptTemplate.from_template(
             """You are a safety filter for a medical chatbot. Evaluate if this input is safe.
@@ -90,7 +91,7 @@ SAFE categories (ALLOW these):
 Respond ONLY: "SAFE" or "UNSAFE: <reason>"
 """
         )
-        
+
         # Compact output safety prompt
         self.output_check_prompt = PromptTemplate.from_template(
             """Review this medical chatbot response for safety.
@@ -126,9 +127,9 @@ REVISED RESPONSE:"""
 
     def check_input(self, user_input: str) -> tuple[bool, str | AIMessage]:
         """Check if user input passes safety filters.
-        
+
         Pipeline: regex (fast) → NeMo Colang (declarative rules) → LLM (if available)
-        
+
         Returns:
             (True, original_input) if safe
             (False, AIMessage_with_reason) if unsafe
@@ -136,20 +137,19 @@ REVISED RESPONSE:"""
         # Stage 1: Regex pre-filter (zero cost)
         is_safe, reason = self._regex_check(user_input)
         if not is_safe:
-            return False, AIMessage(
-                content=f"I cannot process this request. Reason: Content safety violation detected."
-            )
+            return False, AIMessage(content="I cannot process this request. Reason: Content safety violation detected.")
 
         # Stage 1.5: NeMo Guardrails Colang check (declarative rules, no LLM cost for keyword matches)
         if self.nemo_rails:
             try:
-                nemo_result = self.nemo_rails.generate(
-                    messages=[{"role": "user", "content": user_input}]
-                )
+                nemo_result = self.nemo_rails.generate(messages=[{"role": "user", "content": user_input}])
                 if nemo_result and nemo_result.get("content"):
                     resp = nemo_result["content"]
                     # If NeMo intercepted with a safety response, block it
-                    if any(kw in resp.lower() for kw in ["cannot", "crisis", "concerned", "decline", "emergency", "988", "911"]):
+                    if any(
+                        kw in resp.lower()
+                        for kw in ["cannot", "crisis", "concerned", "decline", "emergency", "988", "911"]
+                    ):
                         return False, AIMessage(content=resp)
             except Exception as e:
                 logger.debug("[guardrails] NeMo check skipped: %s", e)
@@ -159,15 +159,13 @@ REVISED RESPONSE:"""
             result = self.input_guardrail_chain.invoke({"input": user_input})
             if result.strip().upper().startswith("UNSAFE"):
                 reason = result.split(":", 1)[1].strip() if ":" in result else "Content policy violation"
-                return False, AIMessage(
-                    content=f"I cannot process this request. Reason: {reason}"
-                )
+                return False, AIMessage(content=f"I cannot process this request. Reason: {reason}")
 
         return True, user_input
 
     def check_output(self, output: str, user_input: str = "") -> str:
         """Ensure model output is safe and has medical disclaimers.
-        
+
         Pipeline: extract text → LLM check → inject disclaimer if needed
         """
         if not output:
@@ -177,17 +175,26 @@ REVISED RESPONSE:"""
 
         # Stage 1: LLM output check (if available)
         if self.llm:
-            result = self.output_guardrail_chain.invoke({
-                "output": output_text,
-                "user_input": user_input,
-            })
+            result = self.output_guardrail_chain.invoke(
+                {
+                    "output": output_text,
+                    "user_input": user_input,
+                }
+            )
             output_text = result
 
         # Stage 2: Ensure medical disclaimer is present
         if "disclaimer" not in output_text.lower() and "⚠️" not in output_text:
             # Detect emergency keywords
-            emergency_keywords = ["emergency", "call 911", "call 120", "chest pain", 
-                                  "stroke", "severe bleeding", "unconscious"]
+            emergency_keywords = [
+                "emergency",
+                "call 911",
+                "call 120",
+                "chest pain",
+                "stroke",
+                "severe bleeding",
+                "unconscious",
+            ]
             if any(kw in output_text.lower() for kw in emergency_keywords):
                 output_text += self.DISCLAIMER_URGENT
             else:

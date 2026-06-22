@@ -2,6 +2,7 @@
 Tests for security middleware and utilities.
 Run: python -m pytest tests/test_security.py -v
 """
+
 import json
 import os
 import sys
@@ -135,11 +136,11 @@ class TestValidateMimeType:
     """Test MIME type validation."""
 
     def test_valid_png(self):
-        png_header = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        png_header = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
         assert validate_mime_type(png_header, "image.png") is True
 
     def test_valid_jpeg(self):
-        jpeg_header = b'\xff\xd8\xff\xe0' + b'\x00' * 100
+        jpeg_header = b"\xff\xd8\xff\xe0" + b"\x00" * 100
         assert validate_mime_type(jpeg_header, "photo.jpg") is True
 
     def test_fake_png_rejected(self):

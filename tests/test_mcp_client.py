@@ -73,8 +73,7 @@ class TestDataclasses:
 class TestMCPServerConnection:
     def setup_method(self):
         self.conn = MCPServerConnection(
-            name="test_server", command="python", args=["-m", "test"],
-            env={"KEY": "val"}, cwd="/tmp"
+            name="test_server", command="python", args=["-m", "test"], env={"KEY": "val"}, cwd="/tmp"
         )
 
     def test_init_defaults(self):
@@ -120,13 +119,21 @@ class TestMCPServerConnection:
         mock_process.stdout = MagicMock()
 
         init_resp = json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"protocolVersion": "2024-11-05"}}) + "\n"
-        tools_resp = json.dumps({"jsonrpc": "2.0", "id": 2, "result": {
-            "tools": [
-                {"name": "search", "description": "Search", "inputSchema": {"type": "object"}}
-            ]
-        }}) + "\n"
+        tools_resp = (
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "result": {
+                        "tools": [{"name": "search", "description": "Search", "inputSchema": {"type": "object"}}]
+                    },
+                }
+            )
+            + "\n"
+        )
 
         call_count = 0
+
         def mock_readline():
             nonlocal call_count
             call_count += 1
@@ -174,9 +181,10 @@ class TestMCPServerConnection:
         mock_process = MagicMock()
         mock_process.stdin = MagicMock()
         mock_process.stdout = MagicMock()
-        tool_resp = json.dumps({"jsonrpc": "2.0", "id": 1, "result": {
-            "content": [{"type": "text", "text": "result data"}]
-        }}) + "\n"
+        tool_resp = (
+            json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"content": [{"type": "text", "text": "result data"}]}})
+            + "\n"
+        )
         mock_process.stdout.readline = lambda: tool_resp
         self.conn.process = mock_process
 
@@ -203,13 +211,22 @@ class TestMCPServerConnection:
         mock_process = MagicMock()
         mock_process.stdin = MagicMock()
         mock_process.stdout = MagicMock()
-        tool_resp = json.dumps({"jsonrpc": "2.0", "id": 1, "result": {
-            "content": [
-                {"type": "text", "text": "part1"},
-                {"type": "text", "text": "part2"},
-                {"type": "image", "data": "base64"},
-            ]
-        }}) + "\n"
+        tool_resp = (
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": {
+                        "content": [
+                            {"type": "text", "text": "part1"},
+                            {"type": "text", "text": "part2"},
+                            {"type": "image", "data": "base64"},
+                        ]
+                    },
+                }
+            )
+            + "\n"
+        )
         mock_process.stdout.readline = lambda: tool_resp
         self.conn.process = mock_process
 
@@ -389,9 +406,9 @@ class TestMCPClientManager:
         mgr = MCPClientManager()
         conn = MCPServerConnection(name="s1", command="cmd", args=[])
         conn.tools = [MCPTool(name="search", description="d", input_schema={}, server_name="s1")]
-        conn.call_tool = AsyncMock(return_value=MCPToolResult(
-            success=True, content="ok", tool_name="search", server_name="s1"
-        ))
+        conn.call_tool = AsyncMock(
+            return_value=MCPToolResult(success=True, content="ok", tool_name="search", server_name="s1")
+        )
         mgr.servers = {"s1": conn}
         mgr._all_tools = list(conn.tools)
 
@@ -410,9 +427,9 @@ class TestMCPClientManager:
     async def test_call_on_server_found(self):
         mgr = MCPClientManager()
         conn = MCPServerConnection(name="s1", command="cmd", args=[])
-        conn.call_tool = AsyncMock(return_value=MCPToolResult(
-            success=True, content="data", tool_name="t", server_name="s1"
-        ))
+        conn.call_tool = AsyncMock(
+            return_value=MCPToolResult(success=True, content="data", tool_name="t", server_name="s1")
+        )
         mgr.servers = {"s1": conn}
 
         result = await mgr.call_on_server("s1", "t", {"a": 1})
@@ -473,6 +490,7 @@ class TestSingleton:
     @pytest.fixture(autouse=True)
     def _reset_singleton(self):
         import agents.mcp_client as mc_mod
+
         mc_mod._global_client = None
         yield
         mc_mod._global_client = None
@@ -480,6 +498,7 @@ class TestSingleton:
     @pytest.mark.asyncio
     async def test_shutdown_mcp_client(self):
         import agents.mcp_client as mc_mod
+
         mock_client = MagicMock()
         mock_client.stop_all = AsyncMock()
         mc_mod._global_client = mock_client
@@ -491,6 +510,7 @@ class TestSingleton:
     @pytest.mark.asyncio
     async def test_shutdown_noop_when_none(self):
         import agents.mcp_client as mc_mod
+
         mc_mod._global_client = None
         await mc_mod.shutdown_mcp_client()
 

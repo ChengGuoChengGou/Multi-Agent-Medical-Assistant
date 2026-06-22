@@ -2,6 +2,7 @@
 Structured error response handlers (Phase 27 + Phase 41).
 Content-negotiation: HTML for browsers, JSON for API clients.
 """
+
 import logging
 import time
 import uuid
@@ -65,8 +66,8 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
                 code=exc.status_code,
                 title=title_map.get(exc.status_code, "请求错误"),
                 message=str(exc.detail),
-                extra=f"<p>请求ID: <code>{request_id}</code></p>" if request_id else ""
-            )
+                extra=f"<p>请求ID: <code>{request_id}</code></p>" if request_id else "",
+            ),
         )
     return JSONResponse(status_code=exc.status_code, content=body)
 
@@ -92,10 +93,11 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
         return HTMLResponse(
             status_code=500,
             content=_ERROR_HTML_TEMPLATE.format(
-                code=500, title="服务器内部错误",
+                code=500,
+                title="服务器内部错误",
                 message="服务器遇到了意外错误，请稍后重试。",
-                extra=f"<p>请求ID: <code>{request_id}</code></p>" if request_id else ""
-            )
+                extra=f"<p>请求ID: <code>{request_id}</code></p>" if request_id else "",
+            ),
         )
     return JSONResponse(status_code=500, content=body)
 

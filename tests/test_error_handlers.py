@@ -3,6 +3,7 @@ Tests for error_handlers: content-negotiation, structured error responses.
 
 Run: python -m pytest tests/test_error_handlers.py -v
 """
+
 import os
 import sys
 
@@ -20,9 +21,11 @@ from starlette.testclient import TestClient
 
 # ── Test helpers ──
 
+
 def _make_app():
     """Build minimal FastAPI app with error handlers registered."""
     from error_handlers import register_error_handlers
+
     app = FastAPI()
     register_error_handlers(app)
 
@@ -50,6 +53,7 @@ def _make_app():
 
 
 # ── Tests ──
+
 
 class TestContentNegotiation:
     """Error responses should be HTML for browsers, JSON for API clients."""
@@ -145,8 +149,13 @@ class TestIsBrowserDetection:
         from starlette.requests import Request as StarletteRequest
 
         from error_handlers import _is_browser
-        scope = {"type": "http", "method": "GET", "path": "/",
-                 "headers": [(b"accept", b"text/html,application/xhtml+xml")]}
+
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"accept", b"text/html,application/xhtml+xml")],
+        }
         req = StarletteRequest(scope, receive=lambda: None)
         assert _is_browser(req) is True
 
@@ -154,8 +163,8 @@ class TestIsBrowserDetection:
         from starlette.requests import Request as StarletteRequest
 
         from error_handlers import _is_browser
-        scope = {"type": "http", "method": "GET", "path": "/",
-                 "headers": [(b"accept", b"application/json")]}
+
+        scope = {"type": "http", "method": "GET", "path": "/", "headers": [(b"accept", b"application/json")]}
         req = StarletteRequest(scope, receive=lambda: None)
         assert _is_browser(req) is False
 
@@ -164,7 +173,7 @@ class TestIsBrowserDetection:
         from starlette.requests import Request as StarletteRequest
 
         from error_handlers import _is_browser
-        scope = {"type": "http", "method": "GET", "path": "/",
-                 "headers": [(b"accept", b"text/html, application/json")]}
+
+        scope = {"type": "http", "method": "GET", "path": "/", "headers": [(b"accept", b"text/html, application/json")]}
         req = StarletteRequest(scope, receive=lambda: None)
         assert _is_browser(req) is False

@@ -22,30 +22,33 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RetryConfig:
     """Retry behavior configuration."""
+
     max_retries: int = 3
-    base_delay: float = 1.0       # seconds
-    max_delay: float = 30.0       # seconds
-    backoff_factor: float = 2.0   # exponential multiplier
-    retry_on_none: bool = True    # retry when server returns None
+    base_delay: float = 1.0  # seconds
+    max_delay: float = 30.0  # seconds
+    backoff_factor: float = 2.0  # exponential multiplier
+    retry_on_none: bool = True  # retry when server returns None
 
     def get_delay(self, attempt: int) -> float:
         """Calculate delay for given attempt number (0-indexed)."""
-        delay = self.base_delay * (self.backoff_factor ** attempt)
+        delay = self.base_delay * (self.backoff_factor**attempt)
         return min(delay, self.max_delay)
 
 
 @dataclass
 class TimeoutConfig:
     """Timeout configuration per operation type."""
-    init_timeout: float = 30.0      # server initialization
-    tool_call_timeout: float = 60.0 # tool execution
-    discovery_timeout: float = 15.0 # tool listing
+
+    init_timeout: float = 30.0  # server initialization
+    tool_call_timeout: float = 60.0  # tool execution
+    discovery_timeout: float = 15.0  # tool listing
     health_check_timeout: float = 5.0
 
 
 @dataclass
 class ConnectionHealth:
     """Tracks connection health metrics."""
+
     server_name: str
     is_healthy: bool = False
     last_success: float = 0.0
@@ -81,7 +84,7 @@ class ConnectionHealth:
 class ResilientMCPConnection:
     """
     Wraps MCPServerConnection with retry, reconnect, and health tracking.
-    
+
     Usage:
         conn = ResilientMCPConnection(server_connection)
         result = await conn.call_tool("search", {"query": "aspirin"})
@@ -141,21 +144,21 @@ class ResilientMCPConnection:
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """
         Call tool with retry logic and health tracking.
-        
+
         On failure:
         1. Retries up to max_retries with exponential backoff
         2. If all retries fail, attempts reconnect once
         3. If reconnect succeeds, retries the call
         """
         last_error = None
-        
+
         for attempt in range(self._retry.max_retries + 1):
             try:
                 result = await asyncio.wait_for(
                     self._conn.call_tool(tool_name, arguments),
                     timeout=self._timeouts.tool_call_timeout,
                 )
-                
+
                 # Check for None response (server not responding)
                 if result is None and self._retry.retry_on_none:
                     last_error = "Server returned None"
@@ -163,34 +166,32 @@ class ResilientMCPConnection:
                         delay = self._retry.get_delay(attempt)
                         logger.warning(
                             f"[MCP:{self.name}] {tool_name} returned None, "
-                            f"retry {attempt+1}/{self._retry.max_retries} in {delay:.1f}s"
+                            f"retry {attempt + 1}/{self._retry.max_retries} in {delay:.1f}s"
                         )
                         await asyncio.sleep(delay)
                         continue
-                
+
                 if result is not None:
                     # Check if result indicates failure
-                    if hasattr(result, 'success') and not result.success:
+                    if hasattr(result, "success") and not result.success:
                         self._health.record_failure(result.error or "Tool returned failure")
                     else:
                         self._health.record_success()
                     return result
-                    
+
             except asyncio.TimeoutError:
                 last_error = f"Timeout ({self._timeouts.tool_call_timeout}s)"
                 logger.warning(
-                    f"[MCP:{self.name}] {tool_name} timeout, "
-                    f"attempt {attempt+1}/{self._retry.max_retries+1}"
+                    f"[MCP:{self.name}] {tool_name} timeout, attempt {attempt + 1}/{self._retry.max_retries + 1}"
                 )
             except Exception as e:
                 last_error = str(e)
                 logger.warning(
-                    f"[MCP:{self.name}] {tool_name} error: {e}, "
-                    f"attempt {attempt+1}/{self._retry.max_retries+1}"
+                    f"[MCP:{self.name}] {tool_name} error: {e}, attempt {attempt + 1}/{self._retry.max_retries + 1}"
                 )
-            
+
             self._health.record_failure(last_error)
-            
+
             if attempt < self._retry.max_retries:
                 delay = self._retry.get_delay(attempt)
                 await asyncio.sleep(delay)
@@ -198,7 +199,7 @@ class ResilientMCPConnection:
         # All retries failed - attempt reconnect
         logger.warning(f"[MCP:{self.name}] All retries failed for {tool_name}, attempting reconnect...")
         reconnected = await self._reconnect()
-        
+
         if reconnected:
             try:
                 result = await asyncio.wait_for(
@@ -215,8 +216,11 @@ class ResilientMCPConnection:
         # Final failure
         self._health.record_failure(last_error)
         from agents.mcp_client import MCPToolResult
+
         return MCPToolResult(
-            success=False, content="", tool_name=tool_name,
+            success=False,
+            content="",
+            tool_name=tool_name,
             server_name=self.name,
             error=f"All attempts failed: {last_error}",
         )
@@ -230,11 +234,11 @@ class ResilientMCPConnection:
 
         try:
             logger.info(f"[MCP:{self.name}] Reconnecting...")
-            
+
             # Stop existing connection
             await self._conn.stop()
             await asyncio.sleep(1.0)  # Brief pause before restart
-            
+
             # Restart
             result = await self.start()
             if result:
@@ -284,9 +288,12 @@ class ResilientMCPClientManager:
     def __init__(self):
         self._connections: Dict[str, ResilientMCPConnection] = {}
 
-    def add_server(self, connection: Any, 
-                   retry_config: Optional[RetryConfig] = None,
-                   timeout_config: Optional[TimeoutConfig] = None) -> None:
+    def add_server(
+        self,
+        connection: Any,
+        retry_config: Optional[RetryConfig] = None,
+        timeout_config: Optional[TimeoutConfig] = None,
+    ) -> None:
         """Add a server with resilient wrapping."""
         resilient = ResilientMCPConnection(
             connection=connection,
@@ -297,10 +304,7 @@ class ResilientMCPClientManager:
 
     async def start_all(self) -> Dict[str, bool]:
         """Start all servers concurrently."""
-        tasks = {
-            name: asyncio.create_task(conn.start())
-            for name, conn in self._connections.items()
-        }
+        tasks = {name: asyncio.create_task(conn.start()) for name, conn in self._connections.items()}
         results = {}
         for name, task in tasks.items():
             results[name] = await task
@@ -329,24 +333,31 @@ class ResilientMCPClientManager:
         for conn in self._connections.values():
             if any(t.name == tool_name for t in conn.tools):
                 return await conn.call_tool(tool_name, arguments)
-        
+
         from agents.mcp_client import MCPToolResult
+
         return MCPToolResult(
-            success=False, content="", tool_name=tool_name,
-            server_name="unknown", error=f"Tool '{tool_name}' not found on any server",
+            success=False,
+            content="",
+            tool_name=tool_name,
+            server_name="unknown",
+            error=f"Tool '{tool_name}' not found on any server",
         )
 
-    async def call_on_server(self, server_name: str, tool_name: str, 
-                             arguments: Dict[str, Any]) -> Any:
+    async def call_on_server(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """Call tool on specific server with retry."""
         conn = self._connections.get(server_name)
         if conn:
             return await conn.call_tool(tool_name, arguments)
-        
+
         from agents.mcp_client import MCPToolResult
+
         return MCPToolResult(
-            success=False, content="", tool_name=tool_name,
-            server_name=server_name, error=f"Server '{server_name}' not found",
+            success=False,
+            content="",
+            tool_name=tool_name,
+            server_name=server_name,
+            error=f"Server '{server_name}' not found",
         )
 
     async def health_check_all(self) -> Dict[str, bool]:

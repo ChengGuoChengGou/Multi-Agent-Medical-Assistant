@@ -54,7 +54,7 @@ class IndexingEventHandler(FileSystemEventHandler):
         """
         super().__init__()
         self.callback = callback
-        self.extensions = extensions or {'.pdf'}
+        self.extensions = extensions or {".pdf"}
         self.debounce_seconds = debounce_seconds
         self._pending: Dict[str, float] = {}  # path -> last_event_time
         self._lock = threading.Lock()
@@ -77,10 +77,7 @@ class IndexingEventHandler(FileSystemEventHandler):
         """Process all pending events after debounce period."""
         with self._lock:
             now = time.time()
-            ready = [
-                (path, ts) for path, ts in self._pending.items()
-                if now - ts >= self.debounce_seconds
-            ]
+            ready = [(path, ts) for path, ts in self._pending.items() if now - ts >= self.debounce_seconds]
             for path, _ in ready:
                 del self._pending[path]
 
@@ -126,13 +123,13 @@ class IndexingEventHandler(FileSystemEventHandler):
 class IncrementalIndexer:
     """
     Manages incremental indexing of documents using watchdog file monitoring.
-    
+
     Lifecycle:
         indexer = IncrementalIndexer(...)
         indexer.start()  # Begin watching
         ...
         indexer.stop()   # Stop watching and cleanup
-    
+
     Integrates with ContentProcessor, QdrantVectorStore, and HybridSearch.
     """
 
@@ -163,7 +160,7 @@ class IncrementalIndexer:
         self.content_processor = content_processor
         self.vectorstore_manager = vectorstore_manager
         self.hybrid_search = hybrid_search
-        self.extensions = extensions or {'.pdf'}
+        self.extensions = extensions or {".pdf"}
         self.debounce_seconds = debounce_seconds
         self.recursive = recursive
         self.on_index_complete = on_index_complete
@@ -180,10 +177,10 @@ class IncrementalIndexer:
     def _index_file(self, file_path: str, event_type: str) -> None:
         """
         Index a single file. Called by the event handler.
-        
+
         Steps:
         1. Parse PDF → pages
-        2. Chunk pages → documents  
+        2. Chunk pages → documents
         3. Upsert into Qdrant vectorstore
         4. Update BM25 index
         """

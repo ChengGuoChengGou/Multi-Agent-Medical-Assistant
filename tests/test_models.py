@@ -2,6 +2,7 @@
 Unit tests for models.py — Pydantic request/response models & structured output schemas.
 Run: python -m pytest tests/test_models.py -v
 """
+
 import os
 import sys
 from typing import Dict, List, Optional
@@ -27,6 +28,7 @@ from models import (
 )
 
 # ── QueryRequest ────────────────────────────────────────────────────
+
 
 class TestQueryRequest:
     def test_valid(self):
@@ -65,6 +67,7 @@ class TestQueryRequest:
 
 # ── SpeechRequest ───────────────────────────────────────────────────
 
+
 class TestSpeechRequest:
     def test_valid(self):
         r = SpeechRequest(text="Hello")
@@ -86,6 +89,7 @@ class TestSpeechRequest:
 
 # ── ChatResponse ────────────────────────────────────────────────────
 
+
 class TestChatResponse:
     def test_defaults(self):
         r = ChatResponse()
@@ -105,6 +109,7 @@ class TestChatResponse:
 
 # ── ErrorResponse ───────────────────────────────────────────────────
 
+
 class TestErrorResponse:
     def test_defaults(self):
         r = ErrorResponse(detail="something broke")
@@ -118,6 +123,7 @@ class TestErrorResponse:
 
 
 # ── HealthResponse ──────────────────────────────────────────────────
+
 
 class TestHealthResponse:
     def test_valid_statuses(self):
@@ -148,6 +154,7 @@ class TestHealthResponse:
 
 # ── AgentRouteInfo ──────────────────────────────────────────────────
 
+
 class TestAgentRouteInfo:
     def test_valid(self):
         r = AgentRouteInfo(agent_name="rag_agent")
@@ -169,6 +176,7 @@ class TestAgentRouteInfo:
 
 # ── ConversationMessage ─────────────────────────────────────────────
 
+
 class TestConversationMessage:
     def test_valid_roles(self):
         for role in ("user", "assistant", "system"):
@@ -185,6 +193,7 @@ class TestConversationMessage:
 
 
 # ── MedicalDiagnosis ────────────────────────────────────────────────
+
 
 class TestMedicalDiagnosis:
     def test_valid(self):
@@ -231,6 +240,7 @@ class TestMedicalDiagnosis:
 
 # ── MedicalReport ───────────────────────────────────────────────────
 
+
 class TestMedicalReport:
     def test_valid(self):
         r = MedicalReport(title="Report", summary="All good")
@@ -258,6 +268,7 @@ class TestMedicalReport:
 
 # ── AgentRouteDecision ──────────────────────────────────────────────
 
+
 class TestAgentRouteDecision:
     def test_valid(self):
         d = AgentRouteDecision(agent="rag_agent")
@@ -283,6 +294,7 @@ class TestAgentRouteDecision:
 
 
 # ── api_success / api_error factory functions ───────────────────────
+
 
 class TestApiFactory:
     def test_api_success_basic(self):
@@ -323,6 +335,7 @@ class TestApiFactory:
 
 
 # ── get_structured_output_schema ────────────────────────────────────
+
 
 class TestGetStructuredOutputSchema:
     def test_returns_dict(self):

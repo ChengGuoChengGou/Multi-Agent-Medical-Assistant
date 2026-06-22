@@ -11,15 +11,16 @@ class Reranker:
     """
     Reranks retrieved documents using a cross-encoder model for more accurate results.
     """
+
     def __init__(self, config):
         """
         Initialize the reranker with configuration.
-        
+
         Args:
             config: Configuration object containing reranker settings
         """
         self.logger = logging.getLogger(__name__)
-        
+
         # Load the cross-encoder model for reranking
         # For medical data, specialized models like 'pritamdeka/S-PubMedBert-MS-MARCO'
         # would be ideal, but using a general one here for simplicity
@@ -31,22 +32,24 @@ class Reranker:
         except Exception as e:
             self.logger.error(f"Error loading reranker model: {e}")
             raise
-    
-    def rerank(self, query: str, documents: Union[List[Dict[str, Any]], List[str]], parsed_content_dir: str) -> List[Dict[str, Any]]:
+
+    def rerank(
+        self, query: str, documents: Union[List[Dict[str, Any]], List[str]], parsed_content_dir: str
+    ) -> List[Dict[str, Any]]:
         """
         Rerank documents based on query relevance using cross-encoder.
-        
+
         Args:
             query: User query
             documents: Either a list of documents (dictionaries) or a list of strings
-            
+
         Returns:
             Reranked list of documents with updated scores
         """
         try:
             if not documents:
                 return []
-            
+
             # Handle different document formats and ensure consistent structure
             if documents:
                 # if the retrieved documents is just a list of strings, we add a default score
@@ -54,11 +57,13 @@ class Reranker:
                     # Convert simple strings to dictionaries
                     docs_list = []
                     for i, doc_text in enumerate(documents):
-                        docs_list.append({
-                            "id": i,
-                            "content": doc_text,
-                            "score": 1.0  # Default score
-                        })
+                        docs_list.append(
+                            {
+                                "id": i,
+                                "content": doc_text,
+                                "score": 1.0,  # Default score
+                            }
+                        )
                     documents = docs_list
                 # if the retrieved documents is a list of dictionaries, we use the original score
                 elif isinstance(documents[0], dict):
@@ -76,13 +81,13 @@ class Reranker:
                                 doc["content"] = doc["text"]
                             else:
                                 doc["content"] = f"Document {i}"
-            
+
             # Create query-document pairs for scoring
             pairs = [(query, doc["content"]) for doc in documents]
-            
+
             # Get relevance scores
             scores = self.model.predict(pairs)
-            
+
             # Add scores to documents
             for i, score in enumerate(scores):
                 documents[i]["rerank_score"] = float(score)  # Store the new score from reranking
@@ -91,14 +96,14 @@ class Reranker:
                     documents[i]["score"] = 1.0
                 # Combine (average) the original score and rerank score
                 documents[i]["combined_score"] = (documents[i]["score"] + float(score)) / 2
-            
+
             # Sort by combined score
             reranked_docs = sorted(documents, key=lambda x: x["combined_score"], reverse=True)
-            
+
             # Limit to top_k if needed
             if self.top_k and len(reranked_docs) > self.top_k:
-                reranked_docs = reranked_docs[:self.top_k]
-            
+                reranked_docs = reranked_docs[: self.top_k]
+
             # Extract picture references
             picture_reference_paths = []
             for doc in reranked_docs:
@@ -106,13 +111,13 @@ class Reranker:
                 for match in matches:
                     counter_value = int(match.group(1))
                     # Create picture path based on document source and counter
-                    doc_basename = os.path.splitext(doc['source'])[0]  # Remove file extension
+                    doc_basename = os.path.splitext(doc["source"])[0]  # Remove file extension
                     # Use relative path - FastAPI mounts /data/ as StaticFiles (app.py L44)
                     picture_path = f"/data/parsed_docs/{doc_basename}-picture-{counter_value}.png"
                     picture_reference_paths.append(picture_path)
-            
+
             return reranked_docs, picture_reference_paths
-            
+
         except Exception as e:
             self.logger.error(f"Error during reranking: {e}")
             # Fallback to original ranking if reranking fails

@@ -2,6 +2,7 @@
 Security Middleware for Medical Assistant Application
 Implements CSP, security headers, CSRF protection, and input sanitization.
 """
+
 import hashlib
 import hmac
 import html
@@ -33,6 +34,7 @@ CSP_POLICY = {
     "base-uri": ["'self'"],
     "form-action": ["'self'"],
 }
+
 
 def build_csp_header() -> str:
     """Build CSP header string from policy dict."""
@@ -122,7 +124,7 @@ def sanitize_input(text: str, max_length: int = 10000) -> str:
     text = text[:max_length]
 
     # Remove null bytes
-    text = text.replace('\x00', '')
+    text = text.replace("\x00", "")
 
     # HTML escape
     text = html.escape(text, quote=True)
@@ -137,10 +139,10 @@ def sanitize_filename(filename: str) -> str:
 
     # Remove path separators and null bytes
     filename = os.path.basename(filename)
-    filename = filename.replace('\x00', '')
+    filename = filename.replace("\x00", "")
 
     # Only allow safe characters
-    filename = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
+    filename = re.sub(r"[^a-zA-Z0-9._-]", "_", filename)
 
     # Limit length
     name, ext = os.path.splitext(filename)
@@ -154,14 +156,15 @@ def sanitize_filename(filename: str) -> str:
 # 5. MIME Type Validation
 # ============================================================
 ALLOWED_MIME_TYPES = {
-    'image/png': ['.png'],
-    'image/jpeg': ['.jpg', '.jpeg'],
-    'image/gif': ['.gif'],
-    'image/bmp': ['.bmp'],
-    'image/tiff': ['.tiff', '.tif'],
-    'application/dicom': ['.dcm'],
-    'application/octet-stream': ['.nii', '.nii.gz', '.mha'],
+    "image/png": [".png"],
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/gif": [".gif"],
+    "image/bmp": [".bmp"],
+    "image/tiff": [".tiff", ".tif"],
+    "application/dicom": [".dcm"],
+    "application/octet-stream": [".nii", ".nii.gz", ".mha"],
 }
+
 
 def validate_mime_type(content: bytes, filename: str) -> bool:
     """Validate file MIME type against content and extension."""
@@ -169,25 +172,25 @@ def validate_mime_type(content: bytes, filename: str) -> bool:
         return False
 
     # Check file magic bytes for common image formats
-    if content[:8] == b'\x89PNG\r\n\x1a\n':
-        return filename.lower().endswith('.png')
-    if content[:2] == b'\xff\xd8':
-        return filename.lower().endswith(('.jpg', '.jpeg'))
-    if content[:4] == b'GIF8':
-        return filename.lower().endswith('.gif')
-    if content[:2] == b'BM':
-        return filename.lower().endswith('.bmp')
+    if content[:8] == b"\x89PNG\r\n\x1a\n":
+        return filename.lower().endswith(".png")
+    if content[:2] == b"\xff\xd8":
+        return filename.lower().endswith((".jpg", ".jpeg"))
+    if content[:4] == b"GIF8":
+        return filename.lower().endswith(".gif")
+    if content[:2] == b"BM":
+        return filename.lower().endswith(".bmp")
 
     # For medical formats, allow based on extension (no reliable magic bytes)
     ext = os.path.splitext(filename)[1].lower()
-    if ext in ('.nii', '.gz', '.mha', '.dcm'):
+    if ext in (".nii", ".gz", ".mha", ".dcm"):
         return True
 
     # For other image types (tiff), check extension
     for mime, extensions in ALLOWED_MIME_TYPES.items():
         if ext in extensions:
             # Known image formats without matching magic bytes → reject
-            if ext in ('.png', '.jpg', '.jpeg', '.gif', '.bmp'):
+            if ext in (".png", ".jpg", ".jpeg", ".gif", ".bmp"):
                 return False
             return True
 
@@ -208,6 +211,7 @@ ERROR_MESSAGES = {
     500: "An internal error occurred. Please try again later.",
 }
 
+
 def secure_error_response(status_code: int, detail: str = None, log_error: bool = True) -> JSONResponse:
     """Return a secure error response that doesn't leak internal details."""
     safe_message = ERROR_MESSAGES.get(status_code, ERROR_MESSAGES[500])
@@ -215,13 +219,7 @@ def secure_error_response(status_code: int, detail: str = None, log_error: bool 
     if log_error and detail:
         logger.error(f"Error {status_code}: {detail}")
 
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "status": "error",
-            "error": safe_message
-        }
-    )
+    return JSONResponse(status_code=status_code, content={"status": "error", "error": safe_message})
 
 
 # ============================================================
@@ -249,13 +247,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 # 8. Exported Utilities
 # ============================================================
 __all__ = [
-    'CSP_POLICY',
-    'build_csp_header',
-    'CSRFProtection',
-    'SecurityHeadersMiddleware',
-    'RequestLoggingMiddleware',
-    'sanitize_input',
-    'sanitize_filename',
-    'validate_mime_type',
-    'secure_error_response',
+    "CSP_POLICY",
+    "build_csp_header",
+    "CSRFProtection",
+    "SecurityHeadersMiddleware",
+    "RequestLoggingMiddleware",
+    "sanitize_input",
+    "sanitize_filename",
+    "validate_mime_type",
+    "secure_error_response",
 ]

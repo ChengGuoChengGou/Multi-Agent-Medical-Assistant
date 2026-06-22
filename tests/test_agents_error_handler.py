@@ -2,6 +2,7 @@
 Unit tests for agents/error_handler.py — LLM error classification, retry, truncation, StopHook.
 Run: python -m pytest tests/test_agents_error_handler.py -v
 """
+
 import os
 import sys
 import time
@@ -32,69 +33,88 @@ class TestClassifyError:
     """classify_error() should map exception messages/types to LLMErrorType."""
 
     # ── Context length ──
-    @pytest.mark.parametrize("msg", [
-        "maximum context length is 4096",
-        "context_length_exceeded",
-        "max_tokens exceeded the limit",
-        "too many tokens in the request",
-        "request too large for the model",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "maximum context length is 4096",
+            "context_length_exceeded",
+            "max_tokens exceeded the limit",
+            "too many tokens in the request",
+            "request too large for the model",
+        ],
+    )
     def test_context_length_patterns(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.CONTEXT_LENGTH
 
     # ── Rate limit ──
-    @pytest.mark.parametrize("msg", [
-        "rate limit exceeded",
-        "429 Too Many Requests",
-        "too many requests, please slow down",
-        "RateLimitError occurred",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "rate limit exceeded",
+            "429 Too Many Requests",
+            "too many requests, please slow down",
+            "RateLimitError occurred",
+        ],
+    )
     def test_rate_limit_patterns(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.RATE_LIMIT
 
     # ── Overload ──
-    @pytest.mark.parametrize("msg", [
-        "server overloaded",
-        "503 Service Unavailable",
-        "service unavailable",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "server overloaded",
+            "503 Service Unavailable",
+            "service unavailable",
+        ],
+    )
     def test_overload_patterns(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.OVERLOAD
 
     # ── Max tokens ──
-    @pytest.mark.parametrize("msg", [
-        "max_tokens value is too large",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "max_tokens value is too large",
+        ],
+    )
     def test_max_tokens_patterns(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.MAX_TOKENS
 
     # ── Auth ──
-    @pytest.mark.parametrize("msg", [
-        "401 Unauthorized",
-        "unauthorized access",
-        "invalid api key provided",
-        "authentication failed",
-    ])
+    @pytest.mark.parametrize(
+        "msg",
+        [
+            "401 Unauthorized",
+            "unauthorized access",
+            "invalid api key provided",
+            "authentication failed",
+        ],
+    )
     def test_auth_patterns(self, msg):
         assert classify_error(Exception(msg)) == LLMErrorType.AUTH
 
     # ── Exception type name matching ──
     def test_rate_limit_error_type_name(self):
         """Exception class name containing 'RateLimitError'."""
+
         class RateLimitError(Exception):
             pass
+
         exc = RateLimitError("something went wrong")
         assert classify_error(exc) == LLMErrorType.RATE_LIMIT
 
     def test_authentication_error_type_name(self):
         class AuthenticationError(Exception):
             pass
+
         exc = AuthenticationError("something went wrong")
         assert classify_error(exc) == LLMErrorType.AUTH
 
     def test_bad_request_max_tokens_type_name(self):
         class BadRequestError(Exception):
             pass
+
         exc = BadRequestError("max_tokens is too large for this model")
         assert classify_error(exc) == LLMErrorType.MAX_TOKENS
 
@@ -286,10 +306,12 @@ class TestLlmCallWithRecovery:
 
     @patch("agents.error_handler.time.sleep")
     def test_rate_limit_succeeds_on_retry(self, mock_sleep):
-        func = MagicMock(side_effect=[
-            Exception("429 Too Many Requests"),
-            "success",
-        ])
+        func = MagicMock(
+            side_effect=[
+                Exception("429 Too Many Requests"),
+                "success",
+            ]
+        )
         result = llm_call_with_recovery(func, "msg", max_retries=2)
         assert result == "success"
         assert func.call_count == 2
@@ -308,23 +330,25 @@ class TestLlmCallWithRecovery:
         msg_new.content = "new message"
         messages = [msg_system, msg_old, msg_new]
 
-        func = MagicMock(side_effect=[
-            Exception("maximum context length exceeded"),
-            "truncated_ok",
-        ])
+        func = MagicMock(
+            side_effect=[
+                Exception("maximum context length exceeded"),
+                "truncated_ok",
+            ]
+        )
         result = llm_call_with_recovery(func, messages, max_retries=2)
         assert result == "truncated_ok"
         assert func.call_count == 2
 
     @patch("agents.error_handler.time.sleep")
     def test_max_tokens_reduces_kwargs(self, mock_sleep):
-        func = MagicMock(side_effect=[
-            Exception("max_tokens value is too large"),
-            "ok",
-        ])
-        result = llm_call_with_recovery(
-            func, "msg", max_retries=2, max_tokens_override=500
+        func = MagicMock(
+            side_effect=[
+                Exception("max_tokens value is too large"),
+                "ok",
+            ]
         )
+        result = llm_call_with_recovery(func, "msg", max_retries=2, max_tokens_override=500)
         assert result == "ok"
         # Second call should have max_tokens=500
         _, kwargs = func.call_args
@@ -334,13 +358,17 @@ class TestLlmCallWithRecovery:
     def test_custom_on_context_too_long_callback(self, mock_sleep):
         new_msgs = [MagicMock(content="truncated", type="human")]
         callback = MagicMock(return_value=new_msgs)
-        func = MagicMock(side_effect=[
-            Exception("context_length_exceeded"),
-            "ok",
-        ])
+        func = MagicMock(
+            side_effect=[
+                Exception("context_length_exceeded"),
+                "ok",
+            ]
+        )
         result = llm_call_with_recovery(
-            func, [MagicMock(content="long", type="human")],
-            max_retries=2, on_context_too_long=callback,
+            func,
+            [MagicMock(content="long", type="human")],
+            max_retries=2,
+            on_context_too_long=callback,
         )
         assert result == "ok"
         callback.assert_called_once()

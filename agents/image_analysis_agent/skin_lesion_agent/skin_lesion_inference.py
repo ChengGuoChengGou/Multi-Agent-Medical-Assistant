@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {DEVICE}")
 
+
 class UNet(nn.Module):
     """U-Net model for image segmentation."""
+
     def __init__(self, n_channels, n_classes):
         super(UNet, self).__init__()
         self.n_channels = n_channels
@@ -71,7 +73,7 @@ class UNet(nn.Module):
 
 class SkinLesionSegmentation:
     """Handles skin lesion segmentation using a trained U-Net model."""
-    
+
     def __init__(self, model_path):
         self.model_path = model_path
         self.device = DEVICE
@@ -82,9 +84,9 @@ class SkinLesionSegmentation:
         if self.model is not None:
             return
         try:
-            download_model_checkpoint('1rvn4ucOH6UBoNk-GB9bUWuGTLkNIVUf0', self.model_path)
+            download_model_checkpoint("1rvn4ucOH6UBoNk-GB9bUWuGTLkNIVUf0", self.model_path)
             model = UNet(n_channels=3, n_classes=1).to(self.device)
-            model.load_state_dict(torch.load(self.model_path, map_location=torch.device(self.device))['state_dict'])
+            model.load_state_dict(torch.load(self.model_path, map_location=torch.device(self.device))["state_dict"])
             model.eval()
             self.model = model
             logger.info(f"Model loaded successfully from {self.model_path}")
@@ -108,7 +110,7 @@ class SkinLesionSegmentation:
         except Exception as e:
             logger.error(f"Error generating overlay: {e}")
             raise e
-    
+
     def predict(self, image_path, output_path):
         """Segment lesion in an image and return overlaid visualization."""
         try:

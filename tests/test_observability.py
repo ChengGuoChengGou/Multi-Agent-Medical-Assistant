@@ -2,6 +2,7 @@
 Unit tests for observability.py — MetricsCollector, AgentMetrics, JSONFormatter.
 Run: python -m pytest tests/test_observability.py -v
 """
+
 import json
 import logging
 import os
@@ -193,8 +194,13 @@ class TestJSONFormatter:
     def test_basic_format(self):
         fmt = JSONFormatter()
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="hello", args=(), exc_info=None,
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="hello",
+            args=(),
+            exc_info=None,
         )
         output = fmt.format(record)
         data = json.loads(output)
@@ -208,10 +214,16 @@ class TestJSONFormatter:
             raise ValueError("boom")
         except ValueError:
             import sys
+
             exc_info = sys.exc_info()
         record = logging.LogRecord(
-            name="test", level=logging.ERROR, pathname="test.py",
-            lineno=1, msg="error", args=(), exc_info=exc_info,
+            name="test",
+            level=logging.ERROR,
+            pathname="test.py",
+            lineno=1,
+            msg="error",
+            args=(),
+            exc_info=exc_info,
         )
         output = fmt.format(record)
         data = json.loads(output)
@@ -221,8 +233,13 @@ class TestJSONFormatter:
     def test_with_request_id(self):
         fmt = JSONFormatter()
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="req", args=(), exc_info=None,
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="req",
+            args=(),
+            exc_info=None,
         )
         record.request_id = "abc-123"
         output = fmt.format(record)
@@ -232,8 +249,13 @@ class TestJSONFormatter:
     def test_with_duration_ms(self):
         fmt = JSONFormatter()
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="done", args=(), exc_info=None,
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="done",
+            args=(),
+            exc_info=None,
         )
         record.duration_ms = 42.5
         output = fmt.format(record)
@@ -243,8 +265,13 @@ class TestJSONFormatter:
     def test_unicode(self):
         fmt = JSONFormatter()
         record = logging.LogRecord(
-            name="test", level=logging.INFO, pathname="test.py",
-            lineno=1, msg="中文测试", args=(), exc_info=None,
+            name="test",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="中文测试",
+            args=(),
+            exc_info=None,
         )
         output = fmt.format(record)
         data = json.loads(output)

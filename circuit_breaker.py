@@ -7,6 +7,7 @@ Usage:
     breaker = CircuitBreaker("llm_service", failure_threshold=5, recovery_timeout=30)
     result = breaker.call(lambda: llm.invoke(query))
 """
+
 import logging
 import threading
 import time
@@ -20,20 +21,18 @@ T = TypeVar("T")
 
 
 class CircuitState(str, Enum):
-    CLOSED = "closed"         # Normal operation, requests pass through
-    OPEN = "open"             # Failing, requests are fast-failed
-    HALF_OPEN = "half_open"   # Testing recovery, one request allowed through
+    CLOSED = "closed"  # Normal operation, requests pass through
+    OPEN = "open"  # Failing, requests are fast-failed
+    HALF_OPEN = "half_open"  # Testing recovery, one request allowed through
 
 
 class CircuitBreakerOpenError(Exception):
     """Raised when circuit breaker is in OPEN state."""
+
     def __init__(self, service_name: str, remaining_seconds: float):
         self.service_name = service_name
         self.remaining_seconds = remaining_seconds
-        super().__init__(
-            f"Circuit breaker '{service_name}' is OPEN. "
-            f"Retry in {remaining_seconds:.1f}s."
-        )
+        super().__init__(f"Circuit breaker '{service_name}' is OPEN. Retry in {remaining_seconds:.1f}s.")
 
 
 class CircuitBreaker:
@@ -70,10 +69,7 @@ class CircuitBreaker:
     def state(self) -> CircuitState:
         """Get current state, auto-transitioning OPEN→HALF_OPEN if timeout elapsed."""
         with self._lock:
-            if (
-                self._state == CircuitState.OPEN
-                and time.monotonic() - self._last_failure_time >= self.recovery_timeout
-            ):
+            if self._state == CircuitState.OPEN and time.monotonic() - self._last_failure_time >= self.recovery_timeout:
                 self._state = CircuitState.HALF_OPEN
                 logger.info(f"[CB:{self.name}] OPEN → HALF_OPEN (timeout elapsed)")
             return self._state
@@ -138,14 +134,11 @@ class CircuitBreaker:
             if self._state == CircuitState.HALF_OPEN:
                 # Failure in HALF_OPEN → back to OPEN
                 self._state = CircuitState.OPEN
-                logger.warning(
-                    f"[CB:{self.name}] HALF_OPEN → OPEN (recovery failed)"
-                )
+                logger.warning(f"[CB:{self.name}] HALF_OPEN → OPEN (recovery failed)")
             elif self._failure_count >= self.failure_threshold:
                 self._state = CircuitState.OPEN
                 logger.warning(
-                    f"[CB:{self.name}] CLOSED → OPEN "
-                    f"(failures={self._failure_count}/{self.failure_threshold})"
+                    f"[CB:{self.name}] CLOSED → OPEN (failures={self._failure_count}/{self.failure_threshold})"
                 )
 
     def get_stats(self) -> dict:
@@ -156,11 +149,7 @@ class CircuitBreaker:
             "failure_count": self._failure_count,
             "total_calls": self._total_calls,
             "total_failures": self._total_failures,
-            "failure_rate": (
-                self._total_failures / self._total_calls
-                if self._total_calls > 0
-                else 0.0
-            ),
+            "failure_rate": (self._total_failures / self._total_calls if self._total_calls > 0 else 0.0),
         }
 
     def reset(self):

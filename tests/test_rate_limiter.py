@@ -1,4 +1,5 @@
 """Tests for middleware/rate_limiter.py — sliding window rate limiting."""
+
 import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,6 +16,7 @@ from middleware.rate_limiter import RateLimitMiddleware, get_rate_limit_stats
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def app_with_limiter():
@@ -42,16 +44,20 @@ def client(app_with_limiter):
 # Test: skipped paths
 # ---------------------------------------------------------------------------
 
+
 class TestSkippedPaths:
     """Static/health paths should bypass rate limiting."""
 
-    @pytest.mark.parametrize("path", [
-        "/static/style.css",
-        "/data/file.json",
-        "/uploads/image.png",
-        "/favicon.ico",
-        "/health",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/static/style.css",
+            "/data/file.json",
+            "/uploads/image.png",
+            "/favicon.ico",
+            "/health",
+        ],
+    )
     def test_skipped_path_returns_200(self, client, path):
         resp = client.get(path)
         # These paths aren't defined as routes, so we get 404,
@@ -63,8 +69,8 @@ class TestSkippedPaths:
 # Test: rate limiting logic
 # ---------------------------------------------------------------------------
 
-class TestRateLimitLogic:
 
+class TestRateLimitLogic:
     def test_allows_requests_under_limit(self, client):
         """3 requests with rpm=3 should all succeed."""
         for _ in range(3):
@@ -102,8 +108,8 @@ class TestRateLimitLogic:
 # Test: _get_client_ip
 # ---------------------------------------------------------------------------
 
-class TestGetClientIP:
 
+class TestGetClientIP:
     def test_forwarded_for_header(self, app_with_limiter):
         """X-Forwarded-For should be used when present."""
         with TestClient(app_with_limiter) as c:
@@ -128,8 +134,8 @@ class TestGetClientIP:
 # Test: hourly limit
 # ---------------------------------------------------------------------------
 
-class TestHourlyLimit:
 
+class TestHourlyLimit:
     def test_hourly_limit_exceeded(self, app_with_limiter):
         """When rph is exceeded, should return 429 with hourly message."""
         # We set rph=10, rpm=3. Need to simulate 10 requests across time.
@@ -153,8 +159,8 @@ class TestHourlyLimit:
 # Test: get_rate_limit_stats
 # ---------------------------------------------------------------------------
 
-class TestGetRateLimitStats:
 
+class TestGetRateLimitStats:
     def test_empty_store(self):
         stats = get_rate_limit_stats({})
         assert stats["active_client_ips"] == 0
@@ -169,8 +175,8 @@ class TestGetRateLimitStats:
 # Test: sliding window cleanup
 # ---------------------------------------------------------------------------
 
-class TestSlidingWindow:
 
+class TestSlidingWindow:
     def test_old_entries_cleaned(self, app_with_limiter):
         """After window expires, requests should be allowed again."""
         # Manually inject old timestamps then verify new requests pass

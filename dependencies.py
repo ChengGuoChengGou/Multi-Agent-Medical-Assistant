@@ -1,6 +1,7 @@
 """Dependency Injection container for Multi-Agent Medical Chatbot.
 Phase 30: Centralized service access for testability.
 """
+
 from functools import lru_cache
 from typing import Optional
 
@@ -14,6 +15,7 @@ def get_llm_service():
     """Get LLM service instance (injected at startup)."""
     if _llm_service is None:
         from llm_factory import get_llm
+
         return get_llm()
     return _llm_service
 
@@ -33,5 +35,6 @@ def get_cache_service():
     """Get cache service instance."""
     if _cache_service is None:
         from cache import cache_get, cache_set
+
         return {"get": cache_get, "set": cache_set}
     return _cache_service

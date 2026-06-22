@@ -86,11 +86,7 @@ def _lazy_init():
             logger.info(f"Created qdrant collection: {_collection_name}")
 
         _initialized = True
-        logger.info(
-            f"Medical vector memory initialized: "
-            f"qdrant={_qdrant_store_path}, "
-            f"model={_model_name}"
-        )
+        logger.info(f"Medical vector memory initialized: qdrant={_qdrant_store_path}, model={_model_name}")
         return True
 
     except Exception as e:
@@ -100,6 +96,7 @@ def _lazy_init():
 
 
 # ── Core API ──
+
 
 def add_memory(text: str, user_id: str = "global", metadata: dict = None) -> bool:
     """Add a single memory entry."""
@@ -211,6 +208,7 @@ def search_memory(query: str, user_id: str = None, top_k: int = 5, min_score: fl
         query_filter = None
         if user_id:
             from qdrant_client.models import FieldCondition, Filter, MatchValue
+
             query_filter = Filter(
                 must=[
                     FieldCondition(
@@ -251,6 +249,7 @@ def get_all_memories(limit: int = 200, user_id: str = None) -> list:
         query_filter = None
         if user_id:
             from qdrant_client.models import FieldCondition, Filter, MatchValue
+
             query_filter = Filter(
                 must=[
                     FieldCondition(
@@ -274,9 +273,10 @@ def get_all_memories(limit: int = 200, user_id: str = None) -> list:
 
 # ── Medical-specific seeding ──
 
+
 def seed_from_medical_knowledge(file_paths: list) -> int:
     """Seed vector memory from medical knowledge text files.
-    
+
     Each line in the file is treated as a potential memory entry.
     Filters out headers, short lines, and metadata markers.
     """
@@ -331,11 +331,11 @@ def seed_from_medical_knowledge(file_paths: list) -> int:
 
 def seed_from_rag_results(rag_results: list, user_id: str = "rag_knowledge") -> int:
     """Extract key facts from RAG retrieval results and store in vector memory.
-    
+
     Args:
         rag_results: List of dicts with 'content', 'score', 'source' keys
         user_id: Namespace for the stored memories
-        
+
     Returns:
         Number of memories stored
     """
@@ -356,7 +356,7 @@ def seed_from_rag_results(rag_results: list, user_id: str = "rag_knowledge") -> 
             continue
 
         # Extract key sentences (first 2-3 sentences as summary)
-        sentences = re.split(r'[.。!！?？]', content)
+        sentences = re.split(r"[.。!！?？]", content)
         key_sentences = [s.strip() for s in sentences if len(s.strip()) > 20][:3]
         if key_sentences:
             summary = ". ".join(key_sentences)

@@ -4,10 +4,10 @@ import sys
 import warnings
 from pathlib import Path
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 # Add project root to path if needed
 sys.path.append(str(Path(__file__).parent.parent))
@@ -33,9 +33,9 @@ config = Config()
 
 rag = MedicalRAG(config)
 
+
 # document ingestion
 def data_ingestion():
-
     if args.file:
         # Define path to file
         file_path = args.file
@@ -51,12 +51,12 @@ def data_ingestion():
 
     return result["success"]
 
+
 # Run tests
 if __name__ == "__main__":
-   
     print("\nIngesting document(s)...")
 
     ingestion_success = data_ingestion()
-    
+
     if ingestion_success:
         print("\nSuccessfully ingested the documents.")

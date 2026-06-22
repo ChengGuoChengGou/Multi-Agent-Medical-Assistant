@@ -2,6 +2,7 @@
 Unit tests for exceptions.py — Structured exception hierarchy.
 Run: python -m pytest tests/test_exceptions.py -v
 """
+
 import os
 import sys
 
@@ -20,6 +21,7 @@ from exceptions import (
 )
 
 # ── MedicalAssistantError (base) ────────────────────────────────────
+
 
 class TestMedicalAssistantError:
     def test_defaults(self):
@@ -65,6 +67,7 @@ class TestMedicalAssistantError:
 
 # ── AgentError ──────────────────────────────────────────────────────
 
+
 class TestAgentError:
     def test_defaults(self):
         e = AgentError("agent fail")
@@ -90,6 +93,7 @@ class TestAgentError:
 
 # ── ValidationError ─────────────────────────────────────────────────
 
+
 class TestValidationError:
     def test_defaults(self):
         e = ValidationError("bad input")
@@ -109,6 +113,7 @@ class TestValidationError:
 
 
 # ── RateLimitError ──────────────────────────────────────────────────
+
 
 class TestRateLimitError:
     def test_defaults(self):
@@ -135,6 +140,7 @@ class TestRateLimitError:
 
 # ── FileUploadError ─────────────────────────────────────────────────
 
+
 class TestFileUploadError:
     def test_defaults(self):
         e = FileUploadError("bad file")
@@ -155,6 +161,7 @@ class TestFileUploadError:
 
 # ── TTSError ────────────────────────────────────────────────────────
 
+
 class TestTTSError:
     def test_defaults(self):
         e = TTSError("speech fail")
@@ -174,6 +181,7 @@ class TestTTSError:
 
 
 # ── MCPError ────────────────────────────────────────────────────────
+
 
 class TestMCPError:
     def test_defaults(self):
@@ -199,6 +207,7 @@ class TestMCPError:
 
 
 # ── Inheritance Chain ───────────────────────────────────────────────
+
 
 class TestInheritanceChain:
     def test_all_subclasses_inherit_from_base(self):

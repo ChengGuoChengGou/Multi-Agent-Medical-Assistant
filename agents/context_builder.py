@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # Medical System Prompts (unified, extracted from agent_decision + response_generator)
 # ---------------------------------------------------------------------------
 
+
 class MedicalSystemPrompt:
     """
     Centralized medical system prompts for all agent roles.
@@ -52,7 +53,7 @@ class MedicalSystemPrompt:
         "- Recent developments: WEB_SEARCH.\n"
         "- Specific medical knowledge: RAG.\n"
         "- General conversation: CONVERSATION (but vision agent takes priority if image uploaded).\n\n"
-        "Respond in JSON: {{\"agent\": \"AGENT_NAME\", \"reasoning\": \"...\", \"confidence\": 0.95}}"
+        'Respond in JSON: {{"agent": "AGENT_NAME", "reasoning": "...", "confidence": 0.95}}'
     )
 
     CONVERSATION = (
@@ -87,7 +88,7 @@ class MedicalSystemPrompt:
         "### Response Instructions:\n"
         "1. Answer based ONLY on provided context.\n"
         "2. If context lacks relevant info: \"I don't have enough information to answer this question "
-        "based on the provided context.\"\n"
+        'based on the provided context."\n'
         "3. Do not use prior knowledge outside the context.\n"
         "4. Be concise and accurate.\n"
         "5. Use markdown headings/sub-headings for structure.\n"
@@ -101,6 +102,7 @@ class MedicalSystemPrompt:
 # History Compression
 # ---------------------------------------------------------------------------
 
+
 def compress_history_tags(
     messages: list,
     max_tag_len: int = 200,
@@ -108,13 +110,13 @@ def compress_history_tags(
 ) -> list:
     """
     Compress conversation history for medical context.
-    
+
     - Keeps recent `keep_recent` messages at full fidelity.
     - For older messages:
       - <thinking>...</thinking> → <thinking>[compressed: N chars]</thinking>
       - <tool_result>...</tool_result> → <tool_result>[compressed: N chars]</tool_result>
       - Very long assistant messages → truncated with [...]
-    
+
     Returns a new list (does not mutate input).
     """
     if not messages:
@@ -138,20 +140,24 @@ def compress_history_tags(
 
         # Compress <thinking> blocks
         thinking_pattern = re.compile(r"<thinking>(.*?)</thinking>", re.DOTALL)
+
         def _compress_thinking(m):
             inner = m.group(1).strip()
             if len(inner) > max_tag_len:
                 return f"<thinking>[{len(inner)} chars reasoning omitted]</thinking>"
             return m.group(0)
+
         compressed = thinking_pattern.sub(_compress_thinking, compressed)
 
         # Compress <tool_result> blocks
         tool_pattern = re.compile(r"<tool_result>(.*?)</tool_result>", re.DOTALL)
+
         def _compress_tool(m):
             inner = m.group(1).strip()
             if len(inner) > max_tag_len:
                 return f"<tool_result>[{len(inner)} chars tool output omitted]</tool_result>"
             return m.group(0)
+
         compressed = tool_pattern.sub(_compress_tool, compressed)
 
         # Truncate very long remaining content
@@ -161,6 +167,7 @@ def compress_history_tags(
         # Create a copy of the message with compressed content
         try:
             from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+
             if isinstance(msg, HumanMessage):
                 new_msg = HumanMessage(content=compressed)
             elif isinstance(msg, AIMessage):
@@ -168,9 +175,9 @@ def compress_history_tags(
             elif isinstance(msg, SystemMessage):
                 new_msg = SystemMessage(content=compressed)
             elif isinstance(msg, ToolMessage):
-                new_msg = ToolMessage(content=compressed, tool_call_id=getattr(msg, 'tool_call_id', ''))
+                new_msg = ToolMessage(content=compressed, tool_call_id=getattr(msg, "tool_call_id", ""))
             else:
-                new_msg = msg.__class__(content=compressed) if hasattr(msg, '__class__') else msg
+                new_msg = msg.__class__(content=compressed) if hasattr(msg, "__class__") else msg
         except Exception:
             new_msg = msg
 
@@ -183,9 +190,11 @@ def compress_history_tags(
 # Context Segments (data container)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ContextSegments:
     """Container for assembled context segments."""
+
     system_prompt: str = ""
     vector_memory: str = ""
     medical_kb: str = ""
@@ -212,10 +221,11 @@ class ContextSegments:
 # Context Builder
 # ---------------------------------------------------------------------------
 
+
 class ContextBuilder:
     """
     Builds structured context from multiple sources for medical agents.
-    
+
     Usage:
         builder = ContextBuilder(max_history_chars=3000, compress_old=True)
         segments = builder.build_decision_context(messages, vector_results="...")
@@ -300,7 +310,7 @@ class ContextBuilder:
         # Hard limit on total history length
         if len(history) > self.max_history_chars:
             # Keep the tail (most recent)
-            history = "...\n" + history[-self.max_history_chars:]
+            history = "...\n" + history[-self.max_history_chars :]
 
         return history
 
@@ -312,7 +322,7 @@ class ContextBuilder:
             return ""
 
         lines = []
-        for i, item in enumerate(memory_results[:self.max_vector_results], 1):
+        for i, item in enumerate(memory_results[: self.max_vector_results], 1):
             if isinstance(item, dict):
                 text = item.get("text", str(item))
                 score = item.get("score", 0)

@@ -30,21 +30,31 @@ from agents.context_builder import (
 # Helpers: lightweight message objects (avoid importing langchain_core directly)
 # ---------------------------------------------------------------------------
 
+
 class FakeMessage:
     """Mimics langchain_core message with type + content."""
+
     def __init__(self, role: str = "human", content: str = "", **kwargs):
         self.type = role
         self.content = content
 
 
-def _human(text): return FakeMessage("human", text)
-def _ai(text): return FakeMessage("ai", text)
-def _system(text): return FakeMessage("system", text)
+def _human(text):
+    return FakeMessage("human", text)
+
+
+def _ai(text):
+    return FakeMessage("ai", text)
+
+
+def _system(text):
+    return FakeMessage("system", text)
 
 
 # =========================================================================
 # MedicalSystemPrompt
 # =========================================================================
+
 
 class TestMedicalSystemPrompt:
     def test_decision_prompt_exists(self):
@@ -64,6 +74,7 @@ class TestMedicalSystemPrompt:
 # =========================================================================
 # compress_history_tags
 # =========================================================================
+
 
 class TestCompressHistoryTags:
     def test_empty_messages(self):
@@ -97,7 +108,9 @@ class TestCompressHistoryTags:
     def test_old_messages_compressed(self):
         long_content = "A" * 1500
         old_msg = _human(long_content)
-        result = compress_history_tags([old_msg, _human("recent1"), _human("recent2"), _human("recent3"), _human("recent4")], keep_recent=4)
+        result = compress_history_tags(
+            [old_msg, _human("recent1"), _human("recent2"), _human("recent3"), _human("recent4")], keep_recent=4
+        )
         # Old message should be truncated (>1000 chars -> 950 + [...])
         assert "A" * 950 in result[0].content
         assert "[...]" in result[0].content
@@ -124,6 +137,7 @@ class TestCompressHistoryTags:
 # =========================================================================
 # ContextSegments
 # =========================================================================
+
 
 class TestContextSegments:
     def test_defaults_empty(self):
@@ -171,6 +185,7 @@ class TestContextSegments:
 # ContextBuilder — constructor + defaults
 # =========================================================================
 
+
 class TestContextBuilderInit:
     def test_defaults(self):
         builder = ContextBuilder()
@@ -190,6 +205,7 @@ class TestContextBuilderInit:
 # =========================================================================
 # ContextBuilder — Fluent API
 # =========================================================================
+
 
 class TestContextBuilderFluent:
     def test_set_system_returns_self(self):
@@ -228,6 +244,7 @@ class TestContextBuilderFluent:
 # ContextBuilder — build()
 # =========================================================================
 
+
 class TestContextBuilderBuild:
     def test_build_empty(self):
         builder = ContextBuilder()
@@ -260,6 +277,7 @@ class TestContextBuilderBuild:
 # ContextBuilder — format_chat_history
 # =========================================================================
 
+
 class TestFormatChatHistory:
     def test_human_ai_messages(self):
         builder = ContextBuilder(compress_old=False)
@@ -290,6 +308,7 @@ class TestFormatChatHistory:
 # =========================================================================
 # ContextBuilder — format_vector_memory
 # =========================================================================
+
 
 class TestFormatVectorMemory:
     def test_empty(self):
@@ -325,6 +344,7 @@ class TestFormatVectorMemory:
 # ContextBuilder — build_*_context methods
 # =========================================================================
 
+
 class TestBuildContextMethods:
     def test_build_decision_context(self):
         builder = ContextBuilder(compress_old=False)
@@ -356,6 +376,7 @@ class TestBuildContextMethods:
 # =========================================================================
 # ContextBuilder — summarize_and_truncate + format_conversation_summary
 # =========================================================================
+
 
 class TestSummarizeAndTruncate:
     def test_short_messages_returns_all_as_recent(self):

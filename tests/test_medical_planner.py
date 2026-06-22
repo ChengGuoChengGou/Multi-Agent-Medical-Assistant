@@ -9,6 +9,7 @@ Tests cover pure functions (no LLM/network calls):
   - Public API: create_diagnostic_plan, reflect_on_diagnosis, get_plan_routing_hints
   - Refresh scheduler: RefreshConfig, check_refresh_needed, mark_refreshed
 """
+
 import pytest
 
 from agents.medical_planner import (
@@ -36,6 +37,7 @@ from agents.medical_planner import (
 # ═══════════════════════════════════════════
 # Enum Tests
 # ═══════════════════════════════════════════
+
 
 class TestPlanStage:
     def test_values(self):
@@ -73,6 +75,7 @@ class TestStepPriority:
 # Data Model Tests
 # ═══════════════════════════════════════════
 
+
 class TestPlanStep:
     def test_creation(self):
         step = PlanStep(
@@ -99,6 +102,7 @@ class TestPlanStep:
 
     def test_to_dict(self):
         from dataclasses import asdict
+
         step = PlanStep(
             step_id="s1",
             step_type=StepType.RAG_SEARCH,
@@ -133,29 +137,35 @@ class TestDiagnosticPlan:
         assert plan.completed_at is None
 
     def test_pending_steps(self):
-        plan = DiagnosticPlan(plan_id="t", patient_query="q",
-                              steps=[PlanStep(step_id="s1", step_type=StepType.RAG_SEARCH, description="d")])
+        plan = DiagnosticPlan(
+            plan_id="t",
+            patient_query="q",
+            steps=[PlanStep(step_id="s1", step_type=StepType.RAG_SEARCH, description="d")],
+        )
         pending = plan.pending_steps()
         assert len(pending) == 1
 
     def test_is_complete_true(self):
         from dataclasses import replace
+
         step = PlanStep(step_id="s1", step_type=StepType.RAG_SEARCH, description="d", status="done")
         plan = DiagnosticPlan(plan_id="t", patient_query="q", steps=[step])
         assert plan.is_complete() is True
 
     def test_is_complete_false(self):
         plan = DiagnosticPlan(
-            plan_id="t", patient_query="q",
+            plan_id="t",
+            patient_query="q",
             steps=[
                 PlanStep(step_id="s1", step_type=StepType.RAG_SEARCH, description="d", status="completed"),
                 PlanStep(step_id="s2", step_type=StepType.WEB_SEARCH, description="d2", status="pending"),
-            ]
+            ],
         )
         assert plan.is_complete() is False
 
     def test_to_dict(self):
         from dataclasses import asdict
+
         plan = DiagnosticPlan(plan_id="t", patient_query="q")
         d = asdict(plan)
         assert d["plan_id"] == "t"
@@ -182,6 +192,7 @@ class TestDiagnosisReflection:
 
     def test_to_dict(self):
         from dataclasses import asdict
+
         ref = DiagnosisReflection(plan_id="p1", query="q", diagnosis_response="r")
         d = asdict(ref)
         assert d["plan_id"] == "p1"
@@ -193,8 +204,8 @@ class TestDiagnosisReflection:
 # _needs_planning()
 # ═══════════════════════════════════════════
 
-class TestNeedsPlanning:
 
+class TestNeedsPlanning:
     def test_short_query_returns_false(self):
         assert _needs_planning("hi") is False
 
@@ -236,8 +247,8 @@ class TestNeedsPlanning:
 # _analyze_query_complexity()
 # ═══════════════════════════════════════════
 
-class TestAnalyzeQueryComplexity:
 
+class TestAnalyzeQueryComplexity:
     def test_returns_dict(self):
         result = _analyze_query_complexity("test query")
         assert isinstance(result, dict)
@@ -245,8 +256,14 @@ class TestAnalyzeQueryComplexity:
     def test_has_expected_keys(self):
         result = _analyze_query_complexity("test query")
         expected_keys = [
-            "has_image_ref", "has_symptoms", "has_drug_ref", "has_lab_ref",
-            "has_chronic", "has_urgency", "body_systems", "query_length",
+            "has_image_ref",
+            "has_symptoms",
+            "has_drug_ref",
+            "has_lab_ref",
+            "has_chronic",
+            "has_urgency",
+            "body_systems",
+            "query_length",
             "multi_system",
         ]
         for key in expected_keys:
@@ -290,8 +307,8 @@ class TestAnalyzeQueryComplexity:
 # _agent_to_step_type()
 # ═══════════════════════════════════════════
 
-class TestAgentToStepType:
 
+class TestAgentToStepType:
     def test_rag_agent(self):
         assert _agent_to_step_type("RAG_AGENT") == StepType.RAG_SEARCH
 
@@ -318,8 +335,8 @@ class TestAgentToStepType:
 # _refine_query_for_agent()
 # ═══════════════════════════════════════════
 
-class TestRefineQueryForAgent:
 
+class TestRefineQueryForAgent:
     def test_rag_with_symptoms_and_body_systems(self):
         findings = {"query_features": {"has_symptoms": True, "body_systems": ["cardiovascular", "respiratory"]}}
         result = _refine_query_for_agent("chest pain", "RAG_AGENT", findings)
@@ -364,8 +381,8 @@ class TestRefineQueryForAgent:
 # exploration_stage()
 # ═══════════════════════════════════════════
 
-class TestExplorationStage:
 
+class TestExplorationStage:
     def test_returns_dict(self):
         result = exploration_stage("I have chest pain")
         assert isinstance(result, dict)
@@ -410,8 +427,8 @@ class TestExplorationStage:
 # planning_stage()
 # ═══════════════════════════════════════════
 
-class TestPlanningStage:
 
+class TestPlanningStage:
     def test_returns_diagnostic_plan(self):
         findings = exploration_stage("I need diagnosis for chest pain")
         result = planning_stage("I need diagnosis for chest pain", findings)
@@ -449,8 +466,8 @@ class TestPlanningStage:
 # verification_stage()
 # ═══════════════════════════════════════════
 
-class TestVerificationStage:
 
+class TestVerificationStage:
     def _make_plan(self, query="chest pain symptoms"):
         findings = exploration_stage(query)
         return planning_stage(query, findings)
@@ -472,7 +489,9 @@ class TestVerificationStage:
 
     def test_safety_disclaimers_detected(self):
         plan = self._make_plan()
-        ref = verification_stage(plan, "Please consult a healthcare professional. This is not a substitute for medical advice.")
+        ref = verification_stage(
+            plan, "Please consult a healthcare professional. This is not a substitute for medical advice."
+        )
         assert ref.safety_score >= 0.5
 
     def test_dangerous_advice_penalized(self):
@@ -505,8 +524,8 @@ class TestVerificationStage:
 # create_diagnostic_plan()
 # ═══════════════════════════════════════════
 
-class TestCreateDiagnosticPlan:
 
+class TestCreateDiagnosticPlan:
     def test_simple_query_returns_none(self):
         result = create_diagnostic_plan("hi")
         assert result is None
@@ -538,8 +557,8 @@ class TestCreateDiagnosticPlan:
 # reflect_on_diagnosis()
 # ═══════════════════════════════════════════
 
-class TestReflectOnDiagnosis:
 
+class TestReflectOnDiagnosis:
     def test_returns_reflection(self):
         plan = create_diagnostic_plan("I have severe chest pain symptoms")
         result = reflect_on_diagnosis(plan, "You may have angina. Please consult a doctor.")
@@ -556,8 +575,8 @@ class TestReflectOnDiagnosis:
 # get_plan_routing_hints()
 # ═══════════════════════════════════════════
 
-class TestGetPlanRoutingHints:
 
+class TestGetPlanRoutingHints:
     def test_returns_dict(self):
         plan = create_diagnostic_plan("I have severe chest pain symptoms")
         hints = get_plan_routing_hints(plan)
@@ -605,8 +624,8 @@ class TestGetPlanRoutingHints:
 # RefreshConfig / check_refresh_needed / mark_refreshed
 # ═══════════════════════════════════════════
 
-class TestRefreshConfig:
 
+class TestRefreshConfig:
     def test_defaults(self):
         cfg = RefreshConfig()
         assert cfg.rag_reindex_interval_hours == 24
@@ -622,7 +641,6 @@ class TestRefreshConfig:
 
 
 class TestCheckRefreshNeeded:
-
     def test_returns_dict(self):
         result = check_refresh_needed()
         assert isinstance(result, dict)
@@ -643,7 +661,6 @@ class TestCheckRefreshNeeded:
 
 
 class TestMarkRefreshed:
-
     def test_mark_rag(self):
         mark_refreshed("rag")
         # After marking rag, rag_reindex_needed should be False
@@ -664,10 +681,12 @@ class TestMarkRefreshed:
 # Integration / Full Pipeline
 # ═══════════════════════════════════════════
 
-class TestFullPipeline:
 
+class TestFullPipeline:
     def test_end_to_end_complex_query(self):
-        query = "I have severe chest pain, shortness of breath, and my troponin levels are elevated. What could this be?"
+        query = (
+            "I have severe chest pain, shortness of breath, and my troponin levels are elevated. What could this be?"
+        )
 
         # Stage 1: create plan
         plan = create_diagnostic_plan(query)

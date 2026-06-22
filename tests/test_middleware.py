@@ -4,6 +4,7 @@ SecurityHeadersMiddleware, RequestLoggingMiddleware.
 
 Run: python -m pytest tests/test_middleware.py -v
 """
+
 import os
 import sys
 
@@ -19,6 +20,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 # ─── Test helper ───
+
 
 def _make_app(middleware_class, **kwargs):
     async def echo(request: Request):
@@ -39,10 +41,11 @@ def _make_app(middleware_class, **kwargs):
 
 # ═══════ RateLimitMiddleware ═══════
 
-class TestRateLimitMiddleware:
 
+class TestRateLimitMiddleware:
     def test_normal_request_passes(self):
         from middleware.rate_limiter import RateLimitMiddleware
+
         app = _make_app(RateLimitMiddleware, requests_per_minute=10, requests_per_hour=100)
         client = TestClient(app)
         resp = client.post("/chat/query", json={"q": "hello"})
@@ -50,6 +53,7 @@ class TestRateLimitMiddleware:
 
     def test_exceed_per_minute_returns_429(self):
         from middleware.rate_limiter import RateLimitMiddleware
+
         app = _make_app(RateLimitMiddleware, requests_per_minute=3, requests_per_hour=100)
         client = TestClient(app)
         for i in range(3):
@@ -60,6 +64,7 @@ class TestRateLimitMiddleware:
 
     def test_health_skips_rate_limit(self):
         from middleware.rate_limiter import RateLimitMiddleware
+
         app = _make_app(RateLimitMiddleware, requests_per_minute=0, requests_per_hour=0)
         client = TestClient(app)
         resp = client.get("/health")
@@ -67,6 +72,7 @@ class TestRateLimitMiddleware:
 
     def test_static_path_skips_rate_limit(self):
         from middleware.rate_limiter import RateLimitMiddleware
+
         app = _make_app(RateLimitMiddleware, requests_per_minute=0, requests_per_hour=0)
         client = TestClient(app)
         resp = client.get("/data/test")
@@ -74,12 +80,18 @@ class TestRateLimitMiddleware:
 
     def test_get_client_ip_forwarded_for(self):
         from middleware.rate_limiter import RateLimitMiddleware
+
         mw = RateLimitMiddleware(app=None, requests_per_minute=10, requests_per_hour=100)
-        request = type("Req", (), {"headers": {"X-Forwarded-For": "10.0.0.1, 192.168.1.1"}, "client": type("C", (), {"host": "127.0.0.1"})()})()
+        request = type(
+            "Req",
+            (),
+            {"headers": {"X-Forwarded-For": "10.0.0.1, 192.168.1.1"}, "client": type("C", (), {"host": "127.0.0.1"})()},
+        )()
         assert mw._get_client_ip(request) == "10.0.0.1"
 
     def test_get_client_ip_no_forwarded(self):
         from middleware.rate_limiter import RateLimitMiddleware
+
         mw = RateLimitMiddleware(app=None, requests_per_minute=10, requests_per_hour=100)
         request = type("Req", (), {"headers": {}, "client": type("C", (), {"host": "192.168.1.100"})()})()
         assert mw._get_client_ip(request) == "192.168.1.100"
@@ -87,10 +99,11 @@ class TestRateLimitMiddleware:
 
 # ═══════ SecurityHeadersMiddleware ═══════
 
-class TestSecurityHeadersMiddleware:
 
+class TestSecurityHeadersMiddleware:
     def test_security_headers_present(self):
         from middleware.security import SecurityHeadersMiddleware
+
         app = _make_app(SecurityHeadersMiddleware)
         client = TestClient(app)
         resp = client.post("/chat/query", json={"q": "test"})
@@ -101,6 +114,7 @@ class TestSecurityHeadersMiddleware:
 
     def test_csp_contains_self(self):
         from middleware.security import SecurityHeadersMiddleware
+
         app = _make_app(SecurityHeadersMiddleware)
         client = TestClient(app)
         resp = client.post("/chat/query", json={"q": "test"})
@@ -110,10 +124,11 @@ class TestSecurityHeadersMiddleware:
 
 # ═══════ RequestLoggingMiddleware ═══════
 
-class TestRequestLoggingMiddleware:
 
+class TestRequestLoggingMiddleware:
     def test_logging_does_not_break_response(self):
         from middleware.security import RequestLoggingMiddleware
+
         app = _make_app(RequestLoggingMiddleware)
         client = TestClient(app)
         resp = client.post("/chat/query", json={"q": "test"})
@@ -122,10 +137,11 @@ class TestRequestLoggingMiddleware:
 
 # ═══════ RequestDedupMiddleware ═══════
 
-class TestRequestDedupMiddleware:
 
+class TestRequestDedupMiddleware:
     def test_non_dedup_path_passes_through(self):
         from middleware.request_dedup import RequestDedupMiddleware
+
         app = _make_app(RequestDedupMiddleware)
         client = TestClient(app)
         resp = client.get("/health")
@@ -134,6 +150,7 @@ class TestRequestDedupMiddleware:
 
     def test_dedup_eligible_path_returns_x_dedup_header(self):
         from middleware.request_dedup import RequestDedupMiddleware
+
         app = _make_app(RequestDedupMiddleware)
         client = TestClient(app)
         resp = client.post("/chat/query", json={"q": "test"})
@@ -142,6 +159,7 @@ class TestRequestDedupMiddleware:
 
     def test_get_dedup_stats(self):
         from middleware.request_dedup import get_dedup_stats
+
         stats = get_dedup_stats()
         assert isinstance(stats, dict)
         assert "inflight_requests" in stats
@@ -151,24 +169,27 @@ class TestRequestDedupMiddleware:
 
 # ═══════ CSP Policy Config ═══════
 
-class TestCSPConfig:
 
+class TestCSPConfig:
     def test_csp_frame_ancestors_none(self):
         from middleware.security import CSP_POLICY
+
         assert "'none'" in CSP_POLICY.get("frame-ancestors", "")
 
     def test_csp_connect_src_allows_self(self):
         from middleware.security import CSP_POLICY
+
         assert "'self'" in CSP_POLICY.get("connect-src", "")
 
 
 # ═══════ /health Endpoint ═══════
 
-class TestHealthEndpoint:
 
+class TestHealthEndpoint:
     def test_health_returns_middleware_status(self):
         try:
             from app import app as real_app
+
             client = TestClient(real_app)
             resp = client.get("/health")
             assert resp.status_code == 200

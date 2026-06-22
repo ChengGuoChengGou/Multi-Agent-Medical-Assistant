@@ -3,6 +3,7 @@
 Phase 20: Centralized models for consistent API responses.
 Phase 54: Pydantic V2 modernization (model_config, field_validator, model_dump).
 """
+
 from __future__ import annotations
 
 import time
@@ -11,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # ─── Request Models ─────────────────────────────────────────────────
+
 
 class QueryRequest(BaseModel):
     """Chat query request with optional conversation history."""
@@ -40,6 +42,7 @@ class SpeechRequest(BaseModel):
 
 # ─── Response Models ────────────────────────────────────────────────
 
+
 class ChatResponse(BaseModel):
     """Standard chat response envelope."""
 
@@ -67,7 +70,9 @@ class ErrorResponse(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response with dependency status."""
 
-    model_config = {"json_schema_extra": {"examples": [{"status": "healthy", "version": "3.3.0", "checks": {"llm": "ok"}}]}}
+    model_config = {
+        "json_schema_extra": {"examples": [{"status": "healthy", "version": "3.3.0", "checks": {"llm": "ok"}}]}
+    }
 
     status: str  # "healthy" | "degraded"
     version: str = "3.3.0"
@@ -84,10 +89,12 @@ class HealthResponse(BaseModel):
 
 class MetricsResponse(BaseModel):
     """Prometheus-compatible metrics (rendered as text/plain)."""
+
     pass  # Rendered by observability module directly
 
 
 # ─── Agent Routing Models ───────────────────────────────────────────
+
 
 class AgentRouteInfo(BaseModel):
     """Internal model for agent routing decisions."""
@@ -113,6 +120,7 @@ class ConversationMessage(BaseModel):
 
 
 # ─── Response Factory ───────────────────────────────────────────────
+
 
 def api_success(
     response: str,
@@ -157,20 +165,24 @@ def api_error(
 # Pydantic models for enforcing structured LLM output via JSON mode.
 # Used with agent_decision.py JsonOutputParser for consistent schemas.
 
+
 class MedicalDiagnosis(BaseModel):
     """Structured diagnosis output from LLM."""
+
     model_config = ConfigDict(
         str_strip_whitespace=True,
         json_schema_extra={
             "description": "Structured medical diagnosis for agent output",
-            "examples": [{
-                "condition": "Common Cold",
-                "confidence": 0.85,
-                "symptoms": ["runny nose", "sore throat"],
-                "recommendations": ["rest", "hydration"],
-                "urgency": "low",
-                "disclaimer": "This is AI-generated guidance, not a medical diagnosis.",
-            }],
+            "examples": [
+                {
+                    "condition": "Common Cold",
+                    "confidence": 0.85,
+                    "symptoms": ["runny nose", "sore throat"],
+                    "recommendations": ["rest", "hydration"],
+                    "urgency": "low",
+                    "disclaimer": "This is AI-generated guidance, not a medical diagnosis.",
+                }
+            ],
         },
     )
 
@@ -197,6 +209,7 @@ class MedicalDiagnosis(BaseModel):
 
 class MedicalReport(BaseModel):
     """Structured report output from LLM."""
+
     model_config = ConfigDict(
         str_strip_whitespace=True,
         json_schema_extra={"description": "Structured medical report for report agent"},
@@ -214,6 +227,7 @@ class MedicalReport(BaseModel):
 
 class AgentRouteDecision(BaseModel):
     """Structured routing decision from the decision agent."""
+
     model_config = ConfigDict(str_strip_whitespace=True)
 
     agent: str = Field(..., description="Target agent name")

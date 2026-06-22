@@ -1,4 +1,5 @@
 """Tests for middleware/request_dedup.py — request deduplication middleware."""
+
 import asyncio
 import hashlib
 import time
@@ -20,6 +21,7 @@ from middleware.request_dedup import (
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def app_with_dedup():
@@ -57,8 +59,8 @@ def client(app_with_dedup):
 # Test: _make_dedup_key
 # ---------------------------------------------------------------------------
 
-class TestMakeDedupKey:
 
+class TestMakeDedupKey:
     def test_same_request_same_key(self):
         """Identical method+path+body should produce same key."""
         req1 = MagicMock(spec=Request)
@@ -97,8 +99,8 @@ class TestMakeDedupKey:
         req2.url.path = "/other"
         req2.query_params = {}
 
-        k1 = _make_dedup_key(req1, b'{}')
-        k2 = _make_dedup_key(req2, b'{}')
+        k1 = _make_dedup_key(req1, b"{}")
+        k2 = _make_dedup_key(req2, b"{}")
         assert k1 != k2
 
     def test_empty_body(self):
@@ -114,8 +116,8 @@ class TestMakeDedupKey:
 # Test: _InFlightEntry
 # ---------------------------------------------------------------------------
 
-class TestInFlightEntry:
 
+class TestInFlightEntry:
     def test_initial_state(self):
         entry = _InFlightEntry()
         assert entry.event is not None
@@ -131,8 +133,8 @@ class TestInFlightEntry:
 # Test: non-eligible routes pass through
 # ---------------------------------------------------------------------------
 
-class TestNonEligibleRoutes:
 
+class TestNonEligibleRoutes:
     def test_get_passes_through(self, client):
         """GET /health should not be deduped."""
         resp = client.get("/health")
@@ -150,8 +152,8 @@ class TestNonEligibleRoutes:
 # Test: dedup eligible routes
 # ---------------------------------------------------------------------------
 
-class TestDedupEligibleRoutes:
 
+class TestDedupEligibleRoutes:
     def test_first_request_has_miss_header(self, client):
         """First request to /chat/query should have X-Dedup: miss."""
         resp = client.post("/chat/query", json={"query": "test"})
@@ -163,8 +165,8 @@ class TestDedupEligibleRoutes:
 # Test: get_dedup_stats
 # ---------------------------------------------------------------------------
 
-class TestGetDedupStats:
 
+class TestGetDedupStats:
     def test_stats_structure(self):
         stats = get_dedup_stats()
         assert "inflight_requests" in stats
@@ -179,8 +181,8 @@ class TestGetDedupStats:
 # Test: middleware config
 # ---------------------------------------------------------------------------
 
-class TestMiddlewareConfig:
 
+class TestMiddlewareConfig:
     def test_dedup_paths_frozen(self):
         assert "/chat/query" in RequestDedupMiddleware.DEDUP_PATHS
         assert isinstance(RequestDedupMiddleware.DEDUP_PATHS, frozenset)

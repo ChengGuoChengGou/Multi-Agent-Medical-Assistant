@@ -1,4 +1,5 @@
 """Tests for agents/medical_vector_memory.py - Medical Vector Memory module."""
+
 import os
 import sys
 from unittest.mock import MagicMock, mock_open, patch
@@ -8,10 +9,12 @@ import pytest
 
 # ── Fixtures ──
 
+
 @pytest.fixture(autouse=True)
 def reset_module_state():
     """Reset module-level globals before each test."""
     import agents.medical_vector_memory as mvm
+
     mvm._initialized = False
     mvm._qdrant_client = None
     mvm._model = None
@@ -30,10 +33,12 @@ def mock_deps():
 
     mock_client = MagicMock()
     mock_model = MagicMock()
+
     # encode returns np.array based on input length
     def _encode_side_effect(texts, **kwargs):
-        n = len(texts) if hasattr(texts, '__len__') else 1
+        n = len(texts) if hasattr(texts, "__len__") else 1
         return np.array([np.array([0.1] * 384) for _ in range(n)])
+
     mock_model.encode.side_effect = _encode_side_effect
 
     # Build mock qdrant_client package with .models sub-module
@@ -47,6 +52,7 @@ def mock_deps():
             self.id = id
             self.vector = vector
             self.payload = payload
+
     mock_models.PointStruct = FakePointStruct
 
     saved_modules = {}
@@ -73,15 +79,18 @@ def mock_deps():
 
 # ── _lazy_init tests ──
 
+
 class TestLazyInit:
     def test_returns_true_when_already_initialized(self):
         import agents.medical_vector_memory as mvm
+
         mvm._initialized = True
         assert mvm._lazy_init() is True
 
     def test_initializes_on_first_call(self):
         """Test _lazy_init by pre-setting module globals (skip real imports)."""
         import agents.medical_vector_memory as mvm
+
         mvm._initialized = False
 
         # Simulate successful init by setting globals directly
@@ -100,6 +109,7 @@ class TestLazyInit:
     def test_returns_false_on_failure(self):
         """Test that _init_error prevents re-initialization."""
         import agents.medical_vector_memory as mvm
+
         mvm._initialized = False
         mvm._init_error = "previous failure"
         result = mvm._lazy_init()
@@ -108,9 +118,11 @@ class TestLazyInit:
 
 # ── add_memory tests ──
 
+
 class TestAddMemory:
     def test_success(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
 
         result = mvm.add_memory("Patient shows symptoms of hypertension", user_id="user1")
@@ -119,18 +131,22 @@ class TestAddMemory:
 
     def test_empty_text_returns_false(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.add_memory("") is False
 
     def test_none_text_returns_false(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.add_memory(None) is False
 
     def test_whitespace_only_returns_false(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.add_memory("   ") is False
 
     def test_truncates_long_text(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         model.encode.return_value = [[0.1] * 384]
 
@@ -142,6 +158,7 @@ class TestAddMemory:
 
     def test_metadata_in_payload(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
 
         mvm.add_memory("test entry", metadata={"type": "diagnosis"})
@@ -150,47 +167,56 @@ class TestAddMemory:
 
     def test_upsert_failure_returns_false(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         client.upsert.side_effect = RuntimeError("connection lost")
         assert mvm.add_memory("test") is False
 
     def test_init_failure_returns_false(self):
         import agents.medical_vector_memory as mvm
+
         with patch.object(mvm, "_lazy_init", return_value=False):
             assert mvm.add_memory("test") is False
 
 
 # ── add_memories_batch tests ──
 
+
 class TestAddMemoriesBatch:
     def test_batch_success(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         model.encode.return_value = [[0.1] * 384, [0.2] * 384, [0.3] * 384]
         assert mvm.add_memories_batch(["t1", "t2", "t3"]) == 3
 
     def test_filters_empty(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         model.encode.return_value = [[0.1] * 384]
         assert mvm.add_memories_batch(["valid", "", None, "  "]) == 1
 
     def test_all_empty_returns_zero(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.add_memories_batch(["", None]) == 0
 
     def test_empty_list(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.add_memories_batch([]) == 0
 
     def test_failure_returns_zero(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         client.upsert.side_effect = RuntimeError("fail")
         assert mvm.add_memories_batch(["text"]) == 0
 
 
 # ── search_memory tests ──
+
 
 class TestSearchMemory:
     def _make_hit(self, text, score):
@@ -201,6 +227,7 @@ class TestSearchMemory:
 
     def test_returns_texts(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         hits = MagicMock()
         hits.points = [self._make_hit("r1", 0.8), self._make_hit("r2", 0.6)]
@@ -212,6 +239,7 @@ class TestSearchMemory:
 
     def test_filters_low_score(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         hits = MagicMock()
         hits.points = [self._make_hit("good", 0.7), self._make_hit("bad", 0.1)]
@@ -223,6 +251,7 @@ class TestSearchMemory:
 
     def test_custom_min_score_filters_all(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         hits = MagicMock()
         hits.points = [self._make_hit("ok", 0.5)]
@@ -233,14 +262,17 @@ class TestSearchMemory:
 
     def test_empty_query(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.search_memory("") == []
 
     def test_none_query(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.search_memory(None) == []
 
     def test_user_id_filter(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         hits = MagicMock()
         hits.points = [self._make_hit("r", 0.8)]
@@ -252,6 +284,7 @@ class TestSearchMemory:
 
     def test_no_user_id_no_filter(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         hits = MagicMock()
         hits.points = [self._make_hit("r", 0.8)]
@@ -263,12 +296,14 @@ class TestSearchMemory:
 
     def test_failure_returns_empty(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         client.query_points.side_effect = RuntimeError("fail")
         assert mvm.search_memory("q") == []
 
 
 # ── get_all_memories tests ──
+
 
 class TestGetAllMemories:
     def _make_point(self, text):
@@ -278,12 +313,14 @@ class TestGetAllMemories:
 
     def test_returns_texts(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         client.scroll.return_value = ([self._make_point("m1"), self._make_point("m2")], None)
         assert mvm.get_all_memories() == ["m1", "m2"]
 
     def test_empty_payload(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         p = MagicMock()
         p.payload = {}
@@ -292,6 +329,7 @@ class TestGetAllMemories:
 
     def test_with_user_id(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         client.scroll.return_value = ([self._make_point("um")], None)
         mvm.get_all_memories(user_id="u1")
@@ -300,6 +338,7 @@ class TestGetAllMemories:
 
     def test_custom_limit(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         client.scroll.return_value = ([], None)
         mvm.get_all_memories(limit=50)
@@ -307,6 +346,7 @@ class TestGetAllMemories:
 
     def test_failure(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         client.scroll.side_effect = RuntimeError("fail")
         assert mvm.get_all_memories() == []
@@ -314,13 +354,16 @@ class TestGetAllMemories:
 
 # ── seed_from_medical_knowledge tests ──
 
+
 class TestSeedFromMedicalKnowledge:
     def test_empty_paths(self):
         import agents.medical_vector_memory as mvm
+
         assert mvm.seed_from_medical_knowledge([]) == 0
 
     def test_parses_kv_lines(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         model.encode.return_value = [[0.1] * 384, [0.2] * 384]
 
@@ -332,6 +375,7 @@ class TestSeedFromMedicalKnowledge:
 
     def test_skips_headers_and_short(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         model.encode.return_value = []
 
@@ -343,11 +387,13 @@ class TestSeedFromMedicalKnowledge:
 
     def test_nonexistent_file(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         with patch("os.path.exists", return_value=False):
             assert mvm.seed_from_medical_knowledge(["/bad.txt"]) == 0
 
     def test_deduplicates(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         model.encode.return_value = [[0.1] * 384]
 
@@ -363,13 +409,16 @@ class TestSeedFromMedicalKnowledge:
 
 # ── seed_from_rag_results tests ──
 
+
 class TestSeedFromRagResults:
     def test_empty(self):
         import agents.medical_vector_memory as mvm
+
         assert mvm.seed_from_rag_results([]) == 0
 
     def test_filters_low_score(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         model.encode.return_value = [[0.1] * 384]
 
@@ -381,22 +430,27 @@ class TestSeedFromRagResults:
 
     def test_filters_short_content(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.seed_from_rag_results([{"content": "short", "score": 0.9, "source": "t"}]) == 0
 
 
 # ── store_conversation_summary tests ──
 
+
 class TestStoreConversationSummary:
     def test_short_returns_false(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.store_conversation_summary("hi") is False
 
     def test_empty_returns_false(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         assert mvm.store_conversation_summary("") is False
 
     def test_valid(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         summary = "Patient discussed chronic back pain with Dr. Smith and was prescribed physical therapy."
         assert mvm.store_conversation_summary(summary, user_id="p1") is True
@@ -404,9 +458,11 @@ class TestStoreConversationSummary:
 
 # ── format_memory_for_prompt tests ──
 
+
 class TestFormatMemoryForPrompt:
     def test_with_query(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, model = mock_deps
         hits = MagicMock()
         h1 = MagicMock()
@@ -424,6 +480,7 @@ class TestFormatMemoryForPrompt:
 
     def test_no_query_fallback(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         p = MagicMock()
         p.payload = {"text": "stored memory"}
@@ -434,6 +491,7 @@ class TestFormatMemoryForPrompt:
 
     def test_empty_search(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         hits = MagicMock()
         hits.points = []
@@ -442,6 +500,7 @@ class TestFormatMemoryForPrompt:
 
     def test_no_memories(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         client.scroll.return_value = ([], None)
         assert mvm.format_memory_for_prompt("") == ""
@@ -449,9 +508,11 @@ class TestFormatMemoryForPrompt:
 
 # ── collection_stats tests ──
 
+
 class TestCollectionStats:
     def test_returns_stats(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         info = MagicMock()
         info.points_count = 42
@@ -465,6 +526,7 @@ class TestCollectionStats:
 
     def test_failure(self, mock_deps):
         import agents.medical_vector_memory as mvm
+
         client, _ = mock_deps
         client.get_collection.side_effect = RuntimeError("not found")
         stats = mvm.collection_stats()
@@ -472,6 +534,7 @@ class TestCollectionStats:
 
     def test_init_failure(self):
         import agents.medical_vector_memory as mvm
+
         with patch.object(mvm, "_lazy_init", return_value=False):
             mvm._init_error = "init failed"
             stats = mvm.collection_stats()

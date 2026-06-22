@@ -5,6 +5,7 @@ Falls back to in-memory LRU cache when Redis is unavailable.
 Phase 50: Added SemanticCache — TF-IDF cosine similarity cache
 for finding similar (not identical) queries. Zero extra dependencies.
 """
+
 import hashlib
 import json
 import logging
@@ -21,11 +22,13 @@ logger = logging.getLogger("medical_chatbot.cache")
 _redis_client = None
 REDIS_AVAILABLE = False
 
+
 def init_redis(redis_url: str = "redis://localhost:6379/0") -> bool:
     """Initialize Redis connection. Returns True if successful."""
     global _redis_client, REDIS_AVAILABLE
     try:
         import redis.asyncio as aioredis
+
         _redis_client = aioredis.from_url(redis_url, decode_responses=True)
         REDIS_AVAILABLE = True
         logger.info("[Cache] Redis connected: %s", redis_url)
@@ -35,10 +38,12 @@ def init_redis(redis_url: str = "redis://localhost:6379/0") -> bool:
         REDIS_AVAILABLE = False
         return False
 
+
 # --- In-memory fallback cache ---
-_memory_cache: dict = {}        # key -> {"value": dict, "ts": float, "ttl": int}
+_memory_cache: dict = {}  # key -> {"value": dict, "ts": float, "ttl": int}
 _memory_cache_max = 500
 _memory_cache_default_ttl = 3600  # 1 hour
+
 
 def _make_key(prefix: str, data: Any) -> str:
     """Generate deterministic cache key from input data."""
@@ -50,8 +55,7 @@ def _memory_cache_cleanup() -> int:
     """Remove expired entries from memory cache. Returns count removed."""
     global _memory_cache
     now = time.time()
-    expired = [k for k, v in _memory_cache.items()
-               if now - v["ts"] > v.get("ttl", _memory_cache_default_ttl)]
+    expired = [k for k, v in _memory_cache.items() if now - v["ts"] > v.get("ttl", _memory_cache_default_ttl)]
     for k in expired:
         _memory_cache.pop(k, None)
     return len(expired)
@@ -156,11 +160,11 @@ def _tokenize(text: str) -> list[str]:
     # Keep CJK characters as individual tokens, split words on non-alpha
     text = text.lower().strip()
     tokens = []
-    for char_group in re.split(r'[^a-z0-9\u4e00-\u9fff]+', text):
+    for char_group in re.split(r"[^a-z0-9\u4e00-\u9fff]+", text):
         if not char_group:
             continue
         # For Chinese: split each character
-        if any('\u4e00' <= c <= '\u9fff' for c in char_group):
+        if any("\u4e00" <= c <= "\u9fff" for c in char_group):
             for c in char_group:
                 if c not in _STOP_WORDS and len(c.strip()) > 0:
                     tokens.append(c)
@@ -211,10 +215,7 @@ def _semantic_cleanup_expired() -> int:
     global _semantic_cache
     now = time.time()
     before = len(_semantic_cache)
-    _semantic_cache = [
-        e for e in _semantic_cache
-        if now - e["ts"] <= e.get("ttl", 3600)
-    ]
+    _semantic_cache = [e for e in _semantic_cache if now - e["ts"] <= e.get("ttl", 3600)]
     return before - len(_semantic_cache)
 
 
@@ -270,14 +271,16 @@ def semantic_set(query: str, response: dict, ttl: int = 3600) -> None:
     idf = _build_idf()
     tfidf = _compute_tfidf(tokens, idf)
 
-    _semantic_cache.append({
-        "query": query,
-        "tokens": tokens,
-        "tfidf": tfidf,
-        "response": response,
-        "ts": time.time(),
-        "ttl": ttl,
-    })
+    _semantic_cache.append(
+        {
+            "query": query,
+            "tokens": tokens,
+            "tfidf": tfidf,
+            "response": response,
+            "ts": time.time(),
+            "ttl": ttl,
+        }
+    )
 
     # Rebuild TF-IDF for existing entries (IDF changed)
     idf_new = _build_idf()

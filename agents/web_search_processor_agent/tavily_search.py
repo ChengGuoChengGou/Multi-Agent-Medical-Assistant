@@ -3,6 +3,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
+
 class TavilySearchAgent:
     """
     Web search agent with Tavily (paid) + DuckDuckGo (free fallback).
@@ -17,6 +18,7 @@ class TavilySearchAgent:
         if tavily_key and not tavily_key.startswith("#"):
             try:
                 from langchain_community.tools.tavily_search import TavilySearchResults
+
                 self._tavily_tool = TavilySearchResults(max_results=5)
                 logger.info("[WebSearch] Tavily search initialized")
             except Exception as e:
@@ -25,11 +27,13 @@ class TavilySearchAgent:
         # Check DuckDuckGo availability as fallback (prefer new 'ddgs' package)
         try:
             from ddgs import DDGS
+
             self._ddgs_available = True
             logger.info("[WebSearch] DuckDuckGo (ddgs) fallback available")
         except ImportError:
             try:
                 from duckduckgo_search import DDGS
+
                 self._ddgs_available = True
                 logger.info("[WebSearch] DuckDuckGo (legacy) fallback available")
             except ImportError:
@@ -38,20 +42,22 @@ class TavilySearchAgent:
 
     def search_tavily(self, query: str) -> str:
         """Perform a web search. Tries Tavily first, falls back to DuckDuckGo."""
-        query = query.strip('"\'').strip()
+        query = query.strip("\"'").strip()
 
         # Try Tavily first
         if self._tavily_tool:
             try:
                 search_docs = self._tavily_tool.invoke(query)
                 if search_docs:
-                    return "\n".join([
-                        f"title: {res.get('title','')} - "
-                        f"url: {res.get('url','')} - "
-                        f"content: {res.get('content','')} - "
-                        f"score: {res.get('score','')}"
-                        for res in search_docs
-                    ])
+                    return "\n".join(
+                        [
+                            f"title: {res.get('title', '')} - "
+                            f"url: {res.get('url', '')} - "
+                            f"content: {res.get('content', '')} - "
+                            f"score: {res.get('score', '')}"
+                            for res in search_docs
+                        ]
+                    )
                 return "No relevant results found."
             except Exception as e:
                 logger.warning(f"[WebSearch] Tavily search failed, trying fallback: {e}")
@@ -66,12 +72,12 @@ class TavilySearchAgent:
                 with DDGS() as ddgs:
                     results = list(ddgs.text(query, max_results=3, timeout=10))
                 if results:
-                    return "\n".join([
-                        f"title: {r.get('title','')} - "
-                        f"url: {r.get('href','')} - "
-                        f"content: {r.get('body','')}"
-                        for r in results
-                    ])
+                    return "\n".join(
+                        [
+                            f"title: {r.get('title', '')} - url: {r.get('href', '')} - content: {r.get('body', '')}"
+                            for r in results
+                        ]
+                    )
                 return "No relevant results found."
             except Exception as e:
                 logger.error(f"[WebSearch] DuckDuckGo search failed: {e}")

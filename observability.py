@@ -14,9 +14,10 @@ from typing import Any, Dict, Optional
 
 # ─── Prometheus-style Metrics ───────────────────────────────────────
 
+
 class MetricsCollector:
     """In-process metrics collector (no prometheus_client dependency).
-    
+
     Tracks counters, gauges, and histograms for key endpoints.
     Exposes /metrics in a Prometheus-compatible text format.
     """
@@ -86,7 +87,7 @@ class MetricsCollector:
                 sorted_v = sorted(values)
                 for q, label in [(0.5, "0.5"), (0.9, "0.9"), (0.99, "0.99")]:
                     idx = min(int(len(sorted_v) * q), len(sorted_v) - 1)
-                    lines.append(f"medical_{name}_bucket{{le=\"{label}\"}} {sorted_v[idx]:.4f}")
+                    lines.append(f'medical_{name}_bucket{{le="{label}"}} {sorted_v[idx]:.4f}')
                 lines.append(f"medical_{name}_sum {sum(values):.4f}")
                 lines.append(f"medical_{name}_count {len(values)}")
 
@@ -98,6 +99,7 @@ metrics = MetricsCollector()
 
 
 # ─── Structured JSON Logging ───────────────────────────────────────
+
 
 class JSONFormatter(logging.Formatter):
     """Emit logs as single-line JSON for log aggregation systems."""
@@ -128,6 +130,7 @@ def setup_json_logging(level: int = logging.INFO):
 # ─── Per-Agent Metrics (Phase 47) ────────────────────────────────────
 # Tracks latency, call count, success/failure rate for each agent node.
 
+
 class AgentMetrics:
     """Per-agent latency and throughput tracker.
 
@@ -139,14 +142,16 @@ class AgentMetrics:
     """
 
     def __init__(self):
-        self._stats: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
-            "calls": 0,
-            "failures": 0,
-            "total_latency_ms": 0.0,
-            "max_latency_ms": 0.0,
-            "min_latency_ms": float("inf"),
-            "last_call_ts": 0.0,
-        })
+        self._stats: Dict[str, Dict[str, Any]] = defaultdict(
+            lambda: {
+                "calls": 0,
+                "failures": 0,
+                "total_latency_ms": 0.0,
+                "max_latency_ms": 0.0,
+                "min_latency_ms": float("inf"),
+                "last_call_ts": 0.0,
+            }
+        )
         self._lock = threading.Lock()
 
     @contextmanager

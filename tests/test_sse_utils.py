@@ -8,6 +8,7 @@ Covers:
 
 Run: python -m pytest tests/test_sse_utils.py -v
 """
+
 import asyncio
 import json
 import os
@@ -20,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sse_utils import sse_generator, sse_stream_chat, sse_stream_chat_streaming
 
 # ── sse_generator ──────────────────────────────────────────────────────────
+
 
 class TestSSEGenerator:
     """Tests for the basic sse_generator function."""
@@ -77,15 +79,18 @@ class TestSSEGenerator:
 
 # ── sse_stream_chat ────────────────────────────────────────────────────────
 
+
 class TestSSEStreamChat:
     """Tests for sse_stream_chat (non-streaming)."""
 
     @pytest.mark.asyncio
     async def test_full_sse_flow(self):
         """Sends start → agent → chunk(s) → done → end events in order."""
+
         def mock_process_fn(query, session_id):
             class FakeMsg:
                 content = "This is a test response from the medical agent."
+
             return {"messages": [FakeMsg()], "agent_name": "CONVERSATION_AGENT"}
 
         response = await sse_stream_chat(
@@ -128,8 +133,10 @@ class TestSSEStreamChat:
 
         def mock_process_fn(query, session_id):
             captured["query"] = query
+
             class FakeMsg:
                 content = "answer"
+
             return {"messages": [FakeMsg()], "agent_name": "test"}
 
         response = await sse_stream_chat(
@@ -151,8 +158,10 @@ class TestSSEStreamChat:
 
         def mock_process_fn(query, session_id):
             captured["query"] = query
+
             class FakeMsg:
                 content = "ok"
+
             return {"messages": [FakeMsg()], "agent_name": "test"}
 
         resp = await sse_stream_chat(
@@ -170,6 +179,7 @@ class TestSSEStreamChat:
     @pytest.mark.asyncio
     async def test_error_handling(self):
         """Errors yield an error SSE event instead of crashing."""
+
         def failing_fn(query, session_id):
             raise RuntimeError("LLM unavailable")
 
@@ -190,9 +200,11 @@ class TestSSEStreamChat:
     @pytest.mark.asyncio
     async def test_response_headers(self):
         """Response includes SSE-required headers."""
+
         def mock_fn(q, s):
             class M:
                 content = "r"
+
             return {"messages": [M()], "agent_name": "t"}
 
         response = await sse_stream_chat("q", "s", mock_fn)
@@ -207,6 +219,7 @@ class TestSSEStreamChat:
         def mock_fn(q, s):
             class M:
                 content = long_text
+
             return {"messages": [M()], "agent_name": "t"}
 
         response = await sse_stream_chat("q", "s", mock_fn)
@@ -223,19 +236,23 @@ class TestSSEStreamChat:
 
 # ── sse_stream_chat_streaming ──────────────────────────────────────────────
 
+
 class TestSSEStreamChatStreaming:
     """Tests for sse_stream_chat_streaming (real streaming)."""
 
     @pytest.mark.asyncio
     async def test_streaming_flow(self):
         """Receives progress events from graph nodes then final result."""
+
         def mock_streaming_fn(query):
             # Simulate node progress events
             yield {"type": "node_end", "node": "retriever", "output_preview": "docs found"}
             yield {"type": "node_end", "node": "generator", "output_preview": "generating"}
+
             # Final result
             class FakeMsg:
                 content = "Final streaming answer"
+
             yield {
                 "type": "final",
                 "result": {"messages": [FakeMsg()], "agent_name": "RAG_AGENT"},
@@ -270,6 +287,7 @@ class TestSSEStreamChatStreaming:
     @pytest.mark.asyncio
     async def test_streaming_error_in_fn(self):
         """Errors from streaming_fn yield error SSE event."""
+
         def failing_streaming_fn(query):
             raise RuntimeError("Graph crashed")
             yield  # make it a generator
@@ -290,6 +308,7 @@ class TestSSEStreamChatStreaming:
     @pytest.mark.asyncio
     async def test_streaming_no_final(self):
         """If streaming_fn yields no final event, error is emitted."""
+
         def incomplete_fn(query):
             yield {"type": "node_end", "node": "step1", "output_preview": "partial"}
 
@@ -314,8 +333,10 @@ class TestSSEStreamChatStreaming:
 
         def mock_streaming_fn(query):
             captured["query"] = query
+
             class FakeMsg:
                 content = "ok"
+
             yield {"type": "final", "result": {"messages": [FakeMsg()], "agent_name": "x"}}
 
         resp = await sse_stream_chat_streaming(
@@ -333,9 +354,11 @@ class TestSSEStreamChatStreaming:
     @pytest.mark.asyncio
     async def test_streaming_headers(self):
         """Streaming response has correct SSE headers."""
+
         def mock_fn(q):
             class M:
                 content = "r"
+
             yield {"type": "final", "result": {"messages": [M()], "agent_name": "x"}}
 
         response = await sse_stream_chat_streaming("q", "s", mock_fn)

@@ -25,6 +25,7 @@ T = TypeVar("T")
 
 class LLMErrorType(enum.Enum):
     """Classified LLM error types."""
+
     CONTEXT_LENGTH = "context_length_exceeded"
     RATE_LIMIT = "rate_limit"
     OVERLOAD = "overload"
@@ -104,16 +105,15 @@ def classify_error(exc: Exception) -> LLMErrorType:
 
 # ── Recovery strategies ───────────────────────────────────────────────
 
+
 class RetryExhausted(Exception):
     """Raised when all retry attempts are exhausted."""
+
     def __init__(self, last_error: Exception, error_type: LLMErrorType, attempts: int):
         self.last_error = last_error
         self.error_type = error_type
         self.attempts = attempts
-        super().__init__(
-            f"Retry exhausted after {attempts} attempts "
-            f"(error_type={error_type.value}): {last_error}"
-        )
+        super().__init__(f"Retry exhausted after {attempts} attempts (error_type={error_type.value}): {last_error}")
 
 
 def _get_retry_delay(error_type: LLMErrorType, attempt: int) -> float:
@@ -123,7 +123,7 @@ def _get_retry_delay(error_type: LLMErrorType, attempt: int) -> float:
         return min(2 ** (attempt + 1), 30.0)
     elif error_type == LLMErrorType.OVERLOAD:
         # Overload: moderate backoff (1s, 2s, 4s)
-        return min(2 ** attempt, 15.0)
+        return min(2**attempt, 15.0)
     elif error_type == LLMErrorType.CONTEXT_LENGTH:
         # Context length: no delay, just retry after truncation
         return 0.0
@@ -134,7 +134,7 @@ def _get_retry_delay(error_type: LLMErrorType, attempt: int) -> float:
 def _estimate_token_count(text: str) -> int:
     """Rough token estimate (1 token ≈ 4 chars for English, ~2 for Chinese)."""
     # Simple heuristic: count CJK chars as 2 tokens, others as 0.25 tokens per char
-    cjk_count = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+    cjk_count = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
     other_count = len(text) - cjk_count
     return cjk_count * 2 + int(other_count * 0.25)
 
@@ -153,7 +153,7 @@ def truncate_messages(messages: list, target_tokens: int = 8000) -> list:
     conversation_msgs = []
 
     for i, msg in enumerate(messages):
-        if i == 0 and hasattr(msg, 'type') and msg.type == 'system':
+        if i == 0 and hasattr(msg, "type") and msg.type == "system":
             system_msgs.append(msg)
         else:
             conversation_msgs.append(msg)
@@ -162,15 +162,15 @@ def truncate_messages(messages: list, target_tokens: int = 8000) -> list:
         return messages  # Can't truncate further
 
     # Binary: keep last N messages that fit
-    system_tokens = sum(_estimate_token_count(getattr(m, 'content', '') or '') for m in system_msgs)
-    last_msg_tokens = _estimate_token_count(getattr(conversation_msgs[-1], 'content', '') or '')
+    system_tokens = sum(_estimate_token_count(getattr(m, "content", "") or "") for m in system_msgs)
+    last_msg_tokens = _estimate_token_count(getattr(conversation_msgs[-1], "content", "") or "")
     remaining_budget = target_tokens - system_tokens - last_msg_tokens
 
     kept = []
     current_tokens = 0
     # Keep messages from newest to oldest
     for msg in reversed(conversation_msgs[:-1]):
-        msg_tokens = _estimate_token_count(getattr(msg, 'content', '') or '')
+        msg_tokens = _estimate_token_count(getattr(msg, "content", "") or "")
         if current_tokens + msg_tokens > remaining_budget:
             break
         kept.append(msg)
@@ -189,6 +189,7 @@ def truncate_messages(messages: list, target_tokens: int = 8000) -> list:
 
 
 # ── Main retry wrapper ────────────────────────────────────────────────
+
 
 def llm_call_with_recovery(
     func: Callable[..., T],
@@ -248,8 +249,7 @@ def llm_call_with_recovery(
                         if args:
                             args = (new_messages,) + args[1:]
                         logger.info(
-                            f"[ERROR_HANDLER] Context overflow, retruncated messages, "
-                            f"retry {attempt + 1}/{max_retries}"
+                            f"[ERROR_HANDLER] Context overflow, retruncated messages, retry {attempt + 1}/{max_retries}"
                         )
                     elif messages and isinstance(messages, list):
                         truncated = truncate_messages(messages)
@@ -260,12 +260,12 @@ def llm_call_with_recovery(
                             f"retry {attempt + 1}/{max_retries}"
                         )
                     else:
-                        logger.warning(f"[ERROR_HANDLER] Context overflow but no truncation strategy")
+                        logger.warning("[ERROR_HANDLER] Context overflow but no truncation strategy")
                         raise
 
                 elif error_type == LLMErrorType.MAX_TOKENS and max_tokens_override:
                     # Reduce max_tokens
-                    kwargs['max_tokens'] = max_tokens_override
+                    kwargs["max_tokens"] = max_tokens_override
                     logger.info(
                         f"[ERROR_HANDLER] max_tokens reduced to {max_tokens_override}, "
                         f"retry {attempt + 1}/{max_retries}"
@@ -281,18 +281,12 @@ def llm_call_with_recovery(
                         time.sleep(delay)
 
                 else:
-                    logger.warning(
-                        f"[ERROR_HANDLER] {error_type.value}, "
-                        f"retry {attempt + 1}/{max_retries}: {e}"
-                    )
+                    logger.warning(f"[ERROR_HANDLER] {error_type.value}, retry {attempt + 1}/{max_retries}: {e}")
                     if delay > 0:
                         time.sleep(delay)
 
             else:
-                logger.error(
-                    f"[ERROR_HANDLER] All {max_retries + 1} attempts failed "
-                    f"for {error_type.value}: {e}"
-                )
+                logger.error(f"[ERROR_HANDLER] All {max_retries + 1} attempts failed for {error_type.value}: {e}")
 
     raise RetryExhausted(last_error, error_type, max_retries + 1)
 
@@ -305,25 +299,29 @@ import dataclasses
 @dataclasses.dataclass
 class HookResult:
     """Result of stopHook validation."""
+
     passed: bool
     reason: str = ""
-    action: str = "pass"           # pass | retry | escalate | fallback
+    action: str = "pass"  # pass | retry | escalate | fallback
     confidence: float = 1.0
 
 
 # Per-agent confidence thresholds (0-1).  Below threshold → escalate.
 _AGENT_CONFIDENCE_THRESHOLDS: dict[str, float] = {
-    "CONVERSATION_AGENT": 0.0,          # no confidence expected
-    "RAG_AGENT": 0.3,                   # retrieval quality gate
+    "CONVERSATION_AGENT": 0.0,  # no confidence expected
+    "RAG_AGENT": 0.3,  # retrieval quality gate
     "WEB_SEARCH_PROCESSOR_AGENT": 0.2,  # search results quality
-    "BRAIN_TUMOR_AGENT": 0.7,           # medical image diagnosis
+    "BRAIN_TUMOR_AGENT": 0.7,  # medical image diagnosis
     "CHEST_XRAY_AGENT": 0.7,
     "SKIN_LESION_AGENT": 0.7,
 }
 
 # Dangerous medical advice patterns that MUST have a disclaimer
 _MEDICAL_DANGER_PATTERNS: list[re.Pattern] = [
-    re.compile(r"(你应该|you should|you must|你必须)\s*(停止|停用|stop|discontinue)\s*(吃|服用|taking|using)?\s*(药|medication|drug)", re.I),
+    re.compile(
+        r"(你应该|you should|you must|你必须)\s*(停止|停用|stop|discontinue)\s*(吃|服用|taking|using)?\s*(药|medication|drug)",
+        re.I,
+    ),
     re.compile(r"(不需要|don'?t need|没必要)\s*(看|visit|consult|去)?\s*(医生|doctor|hospital|医院)", re.I),
     re.compile(r"(确诊|diagnosis|诊断).*?(就是|is|为)\s*(癌|cancer|恶性|malignant)", re.I),
 ]
@@ -345,8 +343,8 @@ class StopHookValidator:
       3. Confidence threshold (per agent)
     """
 
-    MIN_OUTPUT_LENGTH = 20          # characters
-    MIN_CONFIDENCE_DEFAULT = 0.3    # fallback threshold
+    MIN_OUTPUT_LENGTH = 20  # characters
+    MIN_CONFIDENCE_DEFAULT = 0.3  # fallback threshold
 
     def validate(
         self,
@@ -378,9 +376,7 @@ class StopHookValidator:
 
         # ── 3. Confidence threshold ───────────────────────────────
         if confidence is not None:
-            threshold = _AGENT_CONFIDENCE_THRESHOLDS.get(
-                agent_name, self.MIN_CONFIDENCE_DEFAULT
-            )
+            threshold = _AGENT_CONFIDENCE_THRESHOLDS.get(agent_name, self.MIN_CONFIDENCE_DEFAULT)
             if confidence < threshold:
                 return HookResult(
                     passed=False,

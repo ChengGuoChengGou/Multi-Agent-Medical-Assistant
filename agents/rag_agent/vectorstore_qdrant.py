@@ -12,11 +12,12 @@ try:
     import shutil
 
     # Verify LocalFileStore can actually be instantiated with a path
-    # (some langchain versions: LocalFileStore.__init__ calls super().__init__() 
+    # (some langchain versions: LocalFileStore.__init__ calls super().__init__()
     #  which is InMemoryBaseStore that rejects positional args)
     import tempfile
 
     from langchain_community.storage import LocalFileStore
+
     _tmp_dir = tempfile.mkdtemp(prefix="_lc_test_")
     try:
         _test = LocalFileStore(_tmp_dir)
@@ -34,6 +35,7 @@ from qdrant_client.http.models import Distance, OptimizersConfigDiff, SparseVect
 
 class _QdrantClientSingleton:
     """Singleton to avoid file-lock conflicts when multiple VectorStore instances use the same path."""
+
     _instance = None
     _path = None
 
@@ -55,6 +57,7 @@ class VectorStore:
     """
     Create vector store, ingest documents, retrieve relevant documents
     """
+
     def __init__(self, config):
         self.logger = logging.getLogger(__name__)
         self.collection_name = config.rag.collection_name
@@ -85,19 +88,17 @@ class VectorStore:
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config={"dense": VectorParams(size=self.embedding_dim, distance=Distance.COSINE)},
-                sparse_vectors_config={
-                    "sparse": SparseVectorParams(index=models.SparseIndexParams(on_disk=False))
-                },
+                sparse_vectors_config={"sparse": SparseVectorParams(index=models.SparseIndexParams(on_disk=False))},
             )
             self.logger.info(f"Created new collection: {self.collection_name}")
         except Exception as e:
             self.logger.error(f"Error creating collection: {e}")
             raise e
-            
+
     def load_vectorstore(self) -> Tuple[QdrantVectorStore, LocalFileStore]:
         """
         Load existing vectorstore and docstore for retrieval operations without ingesting new documents.
-        
+
         Returns:
             Tuple containing (vectorstore, docstore)
         """
@@ -105,10 +106,10 @@ class VectorStore:
         if not self._does_collection_exist():
             self.logger.error(f"Collection {self.collection_name} does not exist. Please ingest documents first.")
             raise ValueError(f"Collection {self.collection_name} does not exist")
-            
+
         # Setup sparse embeddings
         sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
-        
+
         # Initialize vector store
         qdrant_vectorstore = QdrantVectorStore(
             client=self.client,
@@ -119,32 +120,32 @@ class VectorStore:
             vector_name="dense",
             sparse_vector_name="sparse",
         )
-        
+
         # Document storage - use LocalFileStore if available, else InMemoryStore
         docstore = LocalFileStore(self.docstore_local_path) if LocalFileStore else InMemoryStore()
-        
-        self.logger.info(f"Successfully loaded existing vectorstore and docstore")
+
+        self.logger.info("Successfully loaded existing vectorstore and docstore")
         return qdrant_vectorstore, docstore
 
     def create_vectorstore(
-            self,
-            document_chunks: List[str],
-            document_path: str,
-        ) -> Tuple[QdrantVectorStore, LocalFileStore, List[str]]:
+        self,
+        document_chunks: List[str],
+        document_path: str,
+    ) -> Tuple[QdrantVectorStore, LocalFileStore, List[str]]:
         """
         Create a vector store from document chunks or upsert documents to existing store.
-        
+
         Args:
             document_chunks: List of document chunks
             document_path: Path to the original document
-            
+
         Returns:
             Tuple containing (vectorstore, docstore, doc_ids)
         """
-        
+
         # Generate unique IDs for each chunk
         doc_ids = [str(uuid4()) for _ in range(len(document_chunks))]
-        
+
         # Create langchain documents
         langchain_documents = []
         for id_idx, chunk in enumerate(document_chunks):
@@ -155,14 +156,14 @@ class VectorStore:
                         "source": os.path.basename(document_path),
                         "doc_id": doc_ids[id_idx],
                         # "source_path": Path(os.path.abspath(document_path)).as_uri()
-                        "source_path": os.path.join("http://localhost:8000/", document_path)
-                    }
+                        "source_path": os.path.join("http://localhost:8000/", document_path),
+                    },
                 )
             )
-        
+
         # Setup sparse embeddings
         sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
-        
+
         # Check if collection exists, create if it doesn't
         collection_exists = self._does_collection_exist()
         if not collection_exists:
@@ -170,7 +171,7 @@ class VectorStore:
             self.logger.info(f"Created new collection: {self.collection_name}")
         else:
             self.logger.info(f"Collection {self.collection_name} already exists, will upsert documents")
-        
+
         # Initialize vector store
         qdrant_vectorstore = QdrantVectorStore(
             client=self.client,
@@ -181,63 +182,60 @@ class VectorStore:
             vector_name="dense",
             sparse_vector_name="sparse",
         )
-        
+
         # Document storage for parent documents
         docstore = LocalFileStore(self.docstore_local_path) if LocalFileStore else InMemoryStore()
-        
+
         # Ingest documents into vector and doc stores
         qdrant_vectorstore.add_documents(documents=langchain_documents, ids=doc_ids)
-        
+
         # Encode string chunks to bytes before storing
-        encoded_chunks = [chunk.encode('utf-8') for chunk in document_chunks]
+        encoded_chunks = [chunk.encode("utf-8") for chunk in document_chunks]
         docstore.mset(list(zip(doc_ids, encoded_chunks)))
 
     def retrieve_relevant_chunks(
-            self,
-            query: str,
-            vectorstore: QdrantVectorStore,
-            docstore: LocalFileStore,
-        ) -> Tuple[List[Dict[str, Any]], List[str]]:
+        self,
+        query: str,
+        vectorstore: QdrantVectorStore,
+        docstore: LocalFileStore,
+    ) -> Tuple[List[Dict[str, Any]], List[str]]:
         """
         Retrieve relevant chunks based on a query.
-        
+
         Args:
             query: User query
             vectorstore: Vector store containing embeddings
             docstore: Document store containing actual content
-            
+
         Returns:
             Tuple containing (retrieved_docs, picture_reference_paths)
             where retrieved_docs is a list of dictionaries with content and score
         """
         # Use similarity_search_with_score to get documents and scores
-        results = vectorstore.similarity_search_with_score(
-            query=query,
-            k=self.retrieval_top_k
-        )
-        
+        results = vectorstore.similarity_search_with_score(query=query, k=self.retrieval_top_k)
+
         retrieved_docs = []
         # picture_reference_paths = []
-        
+
         for chunk, score in results:
             # Get full document from doc store as bytes and decode to string
-            doc_content_bytes = docstore.mget([chunk.metadata['doc_id']])[0]
-            doc_content = doc_content_bytes.decode('utf-8')
-            
+            doc_content_bytes = docstore.mget([chunk.metadata["doc_id"]])[0]
+            doc_content = doc_content_bytes.decode("utf-8")
+
             # Add metadata to the document
             # formatted_doc = f"{doc_content}\nFollowing are the 'filename' and 'path as uri' of the source document for the current chunk: {chunk.metadata['source']}, {chunk.metadata['source_path']}"
             formatted_doc = doc_content
-            
+
             # Create document dict in the format expected by reranker
             doc_dict = {
-                "id": chunk.metadata['doc_id'],
+                "id": chunk.metadata["doc_id"],
                 "content": formatted_doc,
                 "score": score,  # Use the actual similarity score
-                "source": chunk.metadata['source'],
-                "source_path": chunk.metadata['source_path'],
+                "source": chunk.metadata["source"],
+                "source_path": chunk.metadata["source_path"],
             }
             retrieved_docs.append(doc_dict)
-            
+
             # # Extract picture references
             # matches = re.finditer(r"picture_counter_(\d+)", doc_content)
             # for match in matches:
@@ -246,6 +244,6 @@ class VectorStore:
             #     doc_basename = os.path.splitext(chunk.metadata['source'])[0]  # Remove file extension
             #     picture_path = Path(os.path.abspath(parsed_content_dir + "/" + f"{doc_basename}-picture-{counter_value}.png")).as_uri()
             #     picture_reference_paths.append(picture_path)
-        
+
         # return retrieved_docs, picture_reference_paths
         return retrieved_docs

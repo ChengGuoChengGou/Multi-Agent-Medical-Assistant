@@ -13,6 +13,7 @@ Usage:
     logger = get_logger(__name__)
     logger.info("query_processed", extra={"query": "headache", "duration_ms": 1234})
 """
+
 import json
 import logging
 import os
@@ -36,8 +37,7 @@ class JSONFormatter(logging.Formatter):
             "request_id": request_id_var.get("-"),
         }
         # Attach any extra fields passed via logger.info(..., extra={...})
-        for key in ("duration_ms", "status_code", "method", "path", "client_ip",
-                     "query", "session_id", "error_type"):
+        for key in ("duration_ms", "status_code", "method", "path", "client_ip", "query", "session_id", "error_type"):
             val = getattr(record, key, None)
             if val is not None:
                 log_entry[key] = val
@@ -85,9 +85,7 @@ def setup_logging(level: str | None = None, json_format: bool | None = None):
     for noisy in ("httpx", "httpcore", "urllib3", "langchain", "openai", "chromadb"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
-    logging.getLogger(__name__).info(
-        "Logging initialized", extra={"level": level, "json": json_format}
-    )
+    logging.getLogger(__name__).info("Logging initialized", extra={"level": level, "json": json_format})
 
 
 def get_logger(name: str) -> logging.Logger:

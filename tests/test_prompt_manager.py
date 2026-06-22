@@ -1,4 +1,5 @@
 """Tests for prompts/manager.py — prompt template management."""
+
 import os
 import tempfile
 from pathlib import Path
@@ -11,6 +12,7 @@ from prompts.manager import PromptManager, get_prompt_manager
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def tmp_prompts_dir(tmp_path):
@@ -32,8 +34,8 @@ def manager(tmp_prompts_dir):
 # TestInit
 # ---------------------------------------------------------------------------
 
-class TestInit:
 
+class TestInit:
     def test_loads_templates_from_dir(self, tmp_prompts_dir):
         m = PromptManager(prompts_dir=tmp_prompts_dir)
         names = m.list_templates()
@@ -66,8 +68,8 @@ class TestInit:
 # TestGet
 # ---------------------------------------------------------------------------
 
-class TestGet:
 
+class TestGet:
     def test_basic_substitution(self, manager):
         result = manager.get("greeting", name="Alice", app="MedAssist")
         assert "Alice" in result
@@ -135,8 +137,8 @@ class TestGet:
 # TestListTemplates
 # ---------------------------------------------------------------------------
 
-class TestListTemplates:
 
+class TestListTemplates:
     def test_returns_list(self, manager):
         result = manager.list_templates()
         assert isinstance(result, list)
@@ -152,8 +154,8 @@ class TestListTemplates:
 # TestReload
 # ---------------------------------------------------------------------------
 
-class TestReload:
 
+class TestReload:
     def test_reload_picks_up_new_file(self, manager, tmp_prompts_dir):
         initial_count = len(manager.list_templates())
         # Add a new template
@@ -185,6 +187,7 @@ class TestReload:
 
     def test_reload_logs_count(self, manager, caplog):
         import logging
+
         with caplog.at_level(logging.INFO):
             manager.reload()
         assert "Reloaded" in caplog.text
@@ -194,10 +197,11 @@ class TestReload:
 # TestGetPromptManager (singleton)
 # ---------------------------------------------------------------------------
 
-class TestGetPromptManager:
 
+class TestGetPromptManager:
     def test_returns_prompt_manager(self):
         import prompts.manager as pm
+
         old = pm._manager_instance
         pm._manager_instance = None
         try:
@@ -208,6 +212,7 @@ class TestGetPromptManager:
 
     def test_returns_same_instance(self):
         import prompts.manager as pm
+
         old = pm._manager_instance
         pm._manager_instance = None
         try:
@@ -222,8 +227,8 @@ class TestGetPromptManager:
 # Edge cases
 # ---------------------------------------------------------------------------
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_non_md_files_ignored(self, tmp_path):
         """Only .md files should be loaded."""
         (tmp_path / "template.md").write_text("MD content", encoding="utf-8")

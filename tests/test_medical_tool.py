@@ -4,6 +4,7 @@ Tests for agents/medical_tool.py
 MedicalToolResult, MedicalTool.validate, MedicalTool.query,
 MCPMedicalTool.category inference, MedicalToolRegistry.
 """
+
 import asyncio
 import os
 
@@ -25,6 +26,7 @@ from agents.medical_tool import (
 )
 
 # ── Fixtures ──────────────────────────────────────────────
+
 
 class DummyTool(MedicalTool):
     """Minimal concrete MedicalTool for testing."""
@@ -62,9 +64,7 @@ class DummyTool(MedicalTool):
     async def execute(self, **kwargs) -> MedicalToolResult:
         if self._execute_fn:
             return await self._execute_fn(**kwargs)
-        return MedicalToolResult(
-            success=True, content="ok", tool_name=self.name, source="built_in"
-        )
+        return MedicalToolResult(success=True, content="ok", tool_name=self.name, source="built_in")
 
 
 def make_mcp_tool(name, description="desc", server_name="biomcp", input_schema=None):
@@ -79,12 +79,17 @@ def make_mcp_tool(name, description="desc", server_name="biomcp", input_schema=N
 
 # ── MedicalToolResult ─────────────────────────────────────
 
-class TestMedicalToolResult:
 
+class TestMedicalToolResult:
     def test_to_dict(self):
         r = MedicalToolResult(
-            success=True, content="data", tool_name="t1", source="mcp",
-            error=None, metadata={"k": "v"}, execution_time_ms=42.5,
+            success=True,
+            content="data",
+            tool_name="t1",
+            source="mcp",
+            error=None,
+            metadata={"k": "v"},
+            execution_time_ms=42.5,
         )
         d = r.to_dict()
         assert d["success"] is True
@@ -102,9 +107,7 @@ class TestMedicalToolResult:
         assert r.execution_time_ms == 0.0
 
     def test_to_dict_error(self):
-        r = MedicalToolResult(
-            success=False, content="", tool_name="t", source="error", error="boom"
-        )
+        r = MedicalToolResult(success=False, content="", tool_name="t", source="error", error="boom")
         d = r.to_dict()
         assert d["error"] == "boom"
         assert d["success"] is False
@@ -112,8 +115,8 @@ class TestMedicalToolResult:
 
 # ── MedicalTool.validate ──────────────────────────────────
 
-class TestMedicalToolValidate:
 
+class TestMedicalToolValidate:
     def test_valid_no_required(self):
         tool = DummyTool()
         ok, err = tool.validate()
@@ -216,8 +219,8 @@ class TestMedicalToolValidate:
 
 # ── MedicalTool.query ─────────────────────────────────────
 
-class TestMedicalToolQuery:
 
+class TestMedicalToolQuery:
     @pytest.mark.asyncio
     async def test_query_success(self):
         tool = DummyTool()
@@ -255,9 +258,7 @@ class TestMedicalToolQuery:
 
         async def slow(**kwargs):
             await asyncio.sleep(0.05)
-            return MedicalToolResult(
-                success=True, content="done", tool_name="t", source="built_in"
-            )
+            return MedicalToolResult(success=True, content="done", tool_name="t", source="built_in")
 
         tool = DummyTool(execute_fn=slow)
         result = await tool.query()
@@ -267,8 +268,8 @@ class TestMedicalToolQuery:
 
 # ── MedicalTool.describe ──────────────────────────────────
 
-class TestMedicalToolDescribe:
 
+class TestMedicalToolDescribe:
     def test_describe(self):
         schema = {
             "type": "object",
@@ -285,8 +286,8 @@ class TestMedicalToolDescribe:
 
 # ── MCPMedicalTool ────────────────────────────────────────
 
-class TestMCPMedicalToolCategory:
 
+class TestMCPMedicalToolCategory:
     def test_drug_in_tool_name(self):
         mcp = make_mcp_tool(name="drug_interaction_check")
         t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
@@ -351,12 +352,9 @@ class TestMCPMedicalToolCategory:
 
 
 class TestMCPMedicalToolExecute:
-
     @pytest.mark.asyncio
     async def test_execute_delegates_to_call_fn(self):
-        mcp_result = MedicalToolResult(
-            success=True, content="result_data", tool_name="t", source="mcp"
-        )
+        mcp_result = MedicalToolResult(success=True, content="result_data", tool_name="t", source="mcp")
         call_fn = AsyncMock(return_value=mcp_result)
         mcp = make_mcp_tool(name="test_tool", server_name="biomcp")
         t = MCPMedicalTool(mcp_tool=mcp, call_fn=call_fn)
@@ -384,8 +382,8 @@ class TestMCPMedicalToolExecute:
 
 # ── MedicalToolRegistry ───────────────────────────────────
 
-class TestMedicalToolRegistry:
 
+class TestMedicalToolRegistry:
     def test_register_and_get(self):
         reg = MedicalToolRegistry()
         tool = DummyTool(name="t1")
@@ -461,10 +459,11 @@ class TestMedicalToolRegistry:
 
 # ── get_tool_registry (singleton) ─────────────────────────
 
-class TestGetToolRegistry:
 
+class TestGetToolRegistry:
     def test_singleton_returns_same_instance(self):
         import agents.medical_tool as mt
+
         old = mt._global_registry
         mt._global_registry = None  # reset
         try:

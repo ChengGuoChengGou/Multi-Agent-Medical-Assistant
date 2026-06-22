@@ -13,23 +13,27 @@ try:
     from .reranker import Reranker
     from .response_generator import ResponseGenerator
     from .vectorstore_qdrant import VectorStore
+
     try:
         from langchain_community.storage import LocalFileStore
     except ImportError:
         from langchain_core.stores import InMemoryStore
+
         LocalFileStore = InMemoryStore  # fallback if langchain-community sunset
     RAG_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"[RAG] Some RAG dependencies missing: {e}. RAG features disabled.")
 
+
 class MedicalRAG:
     """
     Medical Retrieval-Augmented Generation system that integrates all components.
     """
+
     def __init__(self, config):
         """
         Initialize the RAG Agent.
-        
+
         Args:
             config: Configuration object with RAG settings
         """
@@ -48,59 +52,60 @@ class MedicalRAG:
             _docstore = LocalFileStore(self.vector_store.docstore_local_path)
         except (TypeError, Exception):
             _docstore = InMemoryStore()
-        self.hybrid_search = HybridSearch(
-            vectorstore=self.vector_store,
-            docstore=_docstore,
-            rrf_k=60
-        )
+        self.hybrid_search = HybridSearch(vectorstore=self.vector_store, docstore=_docstore, rrf_k=60)
         self.incremental_indexer = IncrementalIndexer(
             watch_paths=[self.config.rag.raw_content_dir],
             content_processor=self.content_processor,
             vectorstore_manager=self.vector_store,
             hybrid_search=self.hybrid_search,
         )
-    
+
     def ingest_directory(self, directory_path: str) -> Dict[str, Any]:
         """
         Ingest all files in a directory into the RAG system.
-        
+
         Args:
             directory_path: Path to the directory containing files to ingest
-            
+
         Returns:
             Dictionary with ingestion results
         """
         start_time = time.time()
         self.logger.info(f"Ingesting files from directory: {directory_path}")
-        
+
         try:
             # Check if directory exists
             if not os.path.isdir(directory_path):
                 raise ValueError(f"Directory not found: {directory_path}")
-            
+
             # Get all files in the directory
-            files = [os.path.join(directory_path + '/', f) for f in os.listdir(directory_path) 
-                     if os.path.isfile(os.path.join(directory_path, f))]
-            
+            files = [
+                os.path.join(directory_path + "/", f)
+                for f in os.listdir(directory_path)
+                if os.path.isfile(os.path.join(directory_path, f))
+            ]
+
             if not files:
                 self.logger.warning(f"No files found in directory: {directory_path}")
                 return {
                     "success": True,
                     "documents_ingested": 0,
                     "chunks_processed": 0,
-                    "processing_time": time.time() - start_time
+                    "processing_time": time.time() - start_time,
                 }
-            
+
             # Track statistics
             total_chunks_processed = 0
             successful_ingestions = 0
             failed_ingestions = 0
             failed_files = []
-            
+
             # Process each file
             for file_path in files:
-                self.logger.info(f"Processing file {successful_ingestions + failed_ingestions + 1}/{len(files)}: {file_path}")
-                
+                self.logger.info(
+                    f"Processing file {successful_ingestions + failed_ingestions + 1}/{len(files)}: {file_path}"
+                )
+
                 try:
                     result = self.ingest_file(file_path)
                     if result["success"]:
@@ -113,31 +118,27 @@ class MedicalRAG:
                     self.logger.error(f"Error processing file {file_path}: {e}")
                     failed_ingestions += 1
                     failed_files.append({"file": file_path, "error": str(e)})
-            
+
             return {
                 "success": True,
                 "documents_ingested": successful_ingestions,
                 "failed_documents": failed_ingestions,
                 "failed_files": failed_files,
                 "chunks_processed": total_chunks_processed,
-                "processing_time": time.time() - start_time
+                "processing_time": time.time() - start_time,
             }
-            
+
         except Exception as e:
             self.logger.error(f"Error ingesting directory: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "processing_time": time.time() - start_time
-            }
-    
+            return {"success": False, "error": str(e), "processing_time": time.time() - start_time}
+
     def ingest_file(self, document_path: str) -> Dict[str, Any]:
         """
         Ingest a single file into the RAG system.
-        
+
         Args:
             document_path: Path to the file to ingest
-            
+
         Returns:
             Dictionary with ingestion results
         """
@@ -166,40 +167,33 @@ class MedicalRAG:
 
             # Step 5: Create vector store and document store
             self.logger.info("5. Creating vector store knowledge base...")
-            self.vector_store.create_vectorstore(
-                document_chunks=document_chunks, 
-                document_path=document_path
-                )
-            
+            self.vector_store.create_vectorstore(document_chunks=document_chunks, document_path=document_path)
+
             return {
                 "success": True,
                 "documents_ingested": 1,
                 "chunks_processed": len(document_chunks),
-                "processing_time": time.time() - start_time
+                "processing_time": time.time() - start_time,
             }
-        
+
         except Exception as e:
             self.logger.error(f"Error ingesting file: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "processing_time": time.time() - start_time
-            }
-        
+            return {"success": False, "error": str(e), "processing_time": time.time() - start_time}
+
     def process_query(self, query: str, chat_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
         """
         Process a query with the RAG system.
-        
+
         Args:
             query: The query string
             chat_history: Optional chat history for context
-            
+
         Returns:
             Response dictionary
         """
         start_time = time.time()
         self.logger.info(f"RAG Agent processing query: {query}")
-        
+
         # Process query and return result, passing chat_history
         try:
             # Step 1: Expand query
@@ -214,16 +208,20 @@ class MedicalRAG:
             self.logger.info(f"2. Retrieving relevant documents for the query: '{query}'")
             hybrid_result = self.hybrid_retrieve(query=query, top_k=self.config.rag.top_k)
             retrieved_documents = hybrid_result["documents"]
-            self.logger.info(f"   Retrieved {len(retrieved_documents)} relevant document chunks via {hybrid_result['method']}")
+            self.logger.info(
+                f"   Retrieved {len(retrieved_documents)} relevant document chunks via {hybrid_result['method']}"
+            )
 
             # Step 3: Rerank the retrieved documents if we have a reranker and enough documents
-            self.logger.info(f"3. Reranking the retrieved documents")
+            self.logger.info("3. Reranking the retrieved documents")
             if self.reranker and len(retrieved_documents) > 1:
-                reranked_documents, reranked_top_k_picture_paths = self.reranker.rerank(query, retrieved_documents, self.parsed_content_dir)
+                reranked_documents, reranked_top_k_picture_paths = self.reranker.rerank(
+                    query, retrieved_documents, self.parsed_content_dir
+                )
                 self.logger.info(f"   Reranked retrieved documents and chose top {len(reranked_documents)}")
                 self.logger.info(f"   Found {len(reranked_top_k_picture_paths)} referenced images")
             else:
-                self.logger.info(f"   Could not rerank the retrieved documents, falling back to original scores")
+                self.logger.info("   Could not rerank the retrieved documents, falling back to original scores")
                 reranked_documents = retrieved_documents
                 reranked_top_k_picture_paths = []
 
@@ -233,48 +231,51 @@ class MedicalRAG:
                 query=query,
                 retrieved_docs=reranked_documents,
                 picture_paths=reranked_top_k_picture_paths,
-                chat_history=chat_history
-                )
-            
+                chat_history=chat_history,
+            )
+
             # Add timing information
             processing_time = time.time() - start_time
             response["processing_time"] = processing_time
-            
+
             return response
-        
+
         except Exception as e:
             self.logger.error(f"Error processing query: {e}")
             import traceback
+
             self.logger.error(traceback.format_exc())
             # Return error response
             return {
                 "response": f"I encountered an error while processing your query: {str(e)}",
                 "sources": [],
                 "confidence": 0.0,
-                "processing_time": time.time() - start_time
+                "processing_time": time.time() - start_time,
             }
 
-    def hybrid_retrieve(self, query: str, top_k: int = 5, use_bm25: bool = True, use_vector: bool = True) -> Dict[str, Any]:
+    def hybrid_retrieve(
+        self, query: str, top_k: int = 5, use_bm25: bool = True, use_vector: bool = True
+    ) -> Dict[str, Any]:
         """
         Hybrid retrieval combining BM25 keyword search and Qdrant vector search
         with Reciprocal Rank Fusion (RRF).
-        
+
         Args:
             query: Search query
             top_k: Number of final results to return
             use_bm25: Whether to include BM25 results
             use_vector: Whether to include vector search results
-            
+
         Returns:
             Dict with 'documents' (list of LangChain Documents) and 'method' (str)
         """
         self.logger.info(f"[HYBRID] Starting hybrid retrieval for: '{query}' (bm25={use_bm25}, vector={use_vector})")
-        
+
         # Build BM25 index from docstore if needed
         if use_bm25 and not self.hybrid_search.bm25_index.is_built:
             self.logger.info("[HYBRID] Building BM25 index from docstore...")
             self.hybrid_search.build_bm25_from_docstore()
-        
+
         # Direct sync search bypass (avoids async HybridSearch.search() issues)
         bm25_results = []
         vector_results = []

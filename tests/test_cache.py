@@ -1,6 +1,7 @@
 """
 Tests for cache.py — Phase 52: TTL, cleanup, semantic cache.
 """
+
 import asyncio
 import importlib.util
 import os
@@ -18,6 +19,7 @@ spec.loader.exec_module(cache)
 
 
 # ── Memory cache TTL tests ──
+
 
 class TestMemoryCacheTTL:
     def setup_method(self):
@@ -62,6 +64,7 @@ class TestMemoryCacheTTL:
 
 # ── Memory cache cleanup tests ──
 
+
 class TestMemoryCacheCleanup:
     def setup_method(self):
         cache._memory_cache.clear()
@@ -82,6 +85,7 @@ class TestMemoryCacheCleanup:
 
 
 # ── Semantic cache tests ──
+
 
 class TestSemanticCache:
     def setup_method(self):
@@ -105,33 +109,48 @@ class TestSemanticCache:
 
     def test_semantic_expired_not_returned(self):
         """Expired entry should not be returned."""
-        cache._semantic_cache.append({
-            "query": "old question",
-            "answer": {"stale": True},
-            "ts": time.time() - 7200,
-            "ttl": 60,
-            "tokens": ["old", "question"],
-            "tfidf": {"old": 1.0, "question": 1.0},
-        })
+        cache._semantic_cache.append(
+            {
+                "query": "old question",
+                "answer": {"stale": True},
+                "ts": time.time() - 7200,
+                "ttl": 60,
+                "tokens": ["old", "question"],
+                "tfidf": {"old": 1.0, "question": 1.0},
+            }
+        )
         result = cache.semantic_get("old question")
         assert result is None
 
     def test_semantic_cleanup_expired_removes_old(self):
         """_semantic_cleanup_expired should remove stale entries."""
-        cache._semantic_cache.append({
-            "query": "expired", "answer": {}, "ts": time.time() - 7200, "ttl": 60,
-            "tokens": ["expired"], "tfidf": {"expired": 1.0},
-        })
-        cache._semantic_cache.append({
-            "query": "fresh", "answer": {}, "ts": time.time(), "ttl": 3600,
-            "tokens": ["fresh"], "tfidf": {"fresh": 1.0},
-        })
+        cache._semantic_cache.append(
+            {
+                "query": "expired",
+                "answer": {},
+                "ts": time.time() - 7200,
+                "ttl": 60,
+                "tokens": ["expired"],
+                "tfidf": {"expired": 1.0},
+            }
+        )
+        cache._semantic_cache.append(
+            {
+                "query": "fresh",
+                "answer": {},
+                "ts": time.time(),
+                "ttl": 3600,
+                "tokens": ["fresh"],
+                "tfidf": {"fresh": 1.0},
+            }
+        )
         removed = cache._semantic_cleanup_expired()
         assert removed == 1
         assert len(cache._semantic_cache) == 1
 
 
 # ── Semantic stats test ──
+
 
 class TestSemanticStats:
     def test_semantic_stats_returns_all_fields(self):
@@ -148,6 +167,7 @@ class TestSemanticStats:
 
 
 # ── Make key deterministic test ──
+
 
 class TestMakeKey:
     def test_deterministic(self):

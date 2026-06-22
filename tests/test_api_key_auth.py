@@ -1,6 +1,7 @@
 """
 Tests for middleware/api_key_auth.py — Phase 53: API Key authentication.
 """
+
 import asyncio
 import importlib.util
 import os
@@ -25,6 +26,7 @@ _is_protected = auth_mod._is_protected
 
 # ── Fixtures ──
 
+
 def _make_app(api_keys: str = ""):
     """Create a minimal Starlette app with the auth middleware."""
     os.environ["MEDICAL_API_KEYS"] = api_keys
@@ -41,17 +43,20 @@ def _make_app(api_keys: str = ""):
     async def stream_endpoint(request):
         return JSONResponse({"ok": True, "path": "/chat/stream"})
 
-    app = Starlette(routes=[
-        Route("/chat", chat_endpoint),
-        Route("/chat/stream", stream_endpoint),
-        Route("/health", health_endpoint),
-        Route("/docs", docs_endpoint),
-    ])
+    app = Starlette(
+        routes=[
+            Route("/chat", chat_endpoint),
+            Route("/chat/stream", stream_endpoint),
+            Route("/health", health_endpoint),
+            Route("/docs", docs_endpoint),
+        ]
+    )
     app.add_middleware(APIKeyAuthMiddleware)
     return app
 
 
 # ── Tests: Dev mode (no keys configured) ──
+
 
 class TestDevMode:
     """When MEDICAL_API_KEYS is empty, all requests should be allowed."""
@@ -71,6 +76,7 @@ class TestDevMode:
 
 
 # ── Tests: Key mode (keys configured) ──
+
 
 class TestKeyMode:
     """When MEDICAL_API_KEYS is set, protected endpoints require valid key."""
@@ -106,10 +112,7 @@ class TestKeyMode:
         app = _make_app(api_keys=self.KEYS)
         client = TestClient(app)
         # Both headers present; bearer is checked first
-        resp = client.get("/chat", headers={
-            "Authorization": "Bearer test-key-abc",
-            "X-API-Key": "wrong-key"
-        })
+        resp = client.get("/chat", headers={"Authorization": "Bearer test-key-abc", "X-API-Key": "wrong-key"})
         assert resp.status_code == 200
 
     def test_public_endpoints_no_key_needed(self):
@@ -131,6 +134,7 @@ class TestKeyMode:
 
 # ── Tests: Stats ──
 
+
 class TestStats:
     def test_get_stats_returns_config(self):
         middleware = APIKeyAuthMiddleware.__new__(APIKeyAuthMiddleware)
@@ -147,27 +151,27 @@ class TestStats:
 
 # ── Tests: Key extraction edge cases ──
 
+
 class TestKeyExtraction:
     """Test the module-level _extract_key function."""
 
     def test_extract_from_bearer(self):
         from starlette.requests import Request as StarletteRequest
-        scope = {"type": "http", "method": "GET", "path": "/", "headers": [
-            (b"authorization", b"Bearer my-secret-key")
-        ]}
+
+        scope = {"type": "http", "method": "GET", "path": "/", "headers": [(b"authorization", b"Bearer my-secret-key")]}
         req = StarletteRequest(scope)
         assert _extract_key(req) == "my-secret-key"
 
     def test_extract_from_x_api_key(self):
         from starlette.requests import Request as StarletteRequest
-        scope = {"type": "http", "method": "GET", "path": "/", "headers": [
-            (b"x-api-key", b"my-secret-key")
-        ]}
+
+        scope = {"type": "http", "method": "GET", "path": "/", "headers": [(b"x-api-key", b"my-secret-key")]}
         req = StarletteRequest(scope)
         assert _extract_key(req) == "my-secret-key"
 
     def test_extract_empty_when_no_headers(self):
         from starlette.requests import Request as StarletteRequest
+
         scope = {"type": "http", "method": "GET", "path": "/", "headers": []}
         req = StarletteRequest(scope)
         assert _extract_key(req) is None
@@ -175,8 +179,7 @@ class TestKeyExtraction:
     def test_extract_rejects_basic_auth(self):
         """Basic auth scheme should not be accepted as API key."""
         from starlette.requests import Request as StarletteRequest
-        scope = {"type": "http", "method": "GET", "path": "/", "headers": [
-            (b"authorization", b"Basic dXNlcjpwYXNz")
-        ]}
+
+        scope = {"type": "http", "method": "GET", "path": "/", "headers": [(b"authorization", b"Basic dXNlcjpwYXNz")]}
         req = StarletteRequest(scope)
         assert _extract_key(req) is None

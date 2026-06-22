@@ -9,6 +9,7 @@ systems (Netflix Hystrix, Spring Cloud Gateway).
 
 Zero external dependencies — stdlib asyncio only.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -28,12 +29,13 @@ _inflight: dict[str, "_InFlightEntry"] = {}
 _inflight_lock = asyncio.Lock()
 
 # Stats
-_dedup_hits: int = 0    # requests that waited for an existing in-flight
+_dedup_hits: int = 0  # requests that waited for an existing in-flight
 _dedup_misses: int = 0  # requests that proceeded normally
 
 
 class _InFlightEntry:
     """Tracks an in-flight request."""
+
     __slots__ = ("event", "result", "result_headers", "result_status", "error", "started_at", "waiters")
 
     def __init__(self):
@@ -125,6 +127,7 @@ class RequestDedupMiddleware(BaseHTTPMiddleware):
             # Re-construct request with body for downstream
             async def receive():
                 return {"type": "http.request", "body": body}
+
             request._receive = receive
 
             response = await call_next(request)
@@ -140,8 +143,7 @@ class RequestDedupMiddleware(BaseHTTPMiddleware):
             entry.result = resp_body
             entry.result_status = response.status_code
             entry.result_headers = {
-                k: v for k, v in response.headers.items()
-                if k.lower() not in ("content-length", "transfer-encoding")
+                k: v for k, v in response.headers.items() if k.lower() not in ("content-length", "transfer-encoding")
             }
             entry.event.set()
 
@@ -172,4 +174,3 @@ def get_dedup_stats() -> dict:
         "total_coalesced": _dedup_hits,
         "total_leader": _dedup_misses,
     }
-

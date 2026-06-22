@@ -25,6 +25,7 @@ from agents.mcp_agent import (
 # Fixtures
 # ============================================================
 
+
 @pytest.fixture
 def mock_llm():
     """A mock LLM that returns a configurable response."""
@@ -35,9 +36,7 @@ def mock_llm():
 @pytest.fixture
 def sample_state():
     """Minimal LangGraph state with one HumanMessage."""
-    return {
-        "messages": [HumanMessage(content="What is the ICD code for diabetes?")]
-    }
+    return {"messages": [HumanMessage(content="What is the ICD code for diabetes?")]}
 
 
 @pytest.fixture
@@ -90,6 +89,7 @@ def mock_config_with_llm(mock_llm):
 # ============================================================
 # _determine_mcp_tools_keyword
 # ============================================================
+
 
 class TestMCPKeywordRouting:
     """Keyword-based fallback routing — 8 categories."""
@@ -187,6 +187,7 @@ class TestMCPKeywordRouting:
 # _determine_mcp_tools_llm
 # ============================================================
 
+
 class TestMCPLLMRouting:
     """LLM-based routing with keyword fallback."""
 
@@ -240,6 +241,7 @@ class TestMCPLLMRouting:
 # _format_tool_results_raw
 # ============================================================
 
+
 class TestFormatToolResultsRaw:
     """Raw formatting when LLM synthesis is unavailable."""
 
@@ -283,6 +285,7 @@ class TestFormatToolResultsRaw:
 # ============================================================
 # mcp_agent_node (async)
 # ============================================================
+
 
 class TestMCPAgentNode:
     """Async LangGraph node — mcp_agent_node."""

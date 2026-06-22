@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Simple launcher for uvicorn on port 8001."""
+
 import uvicorn
 
 if __name__ == "__main__":

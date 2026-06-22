@@ -2,6 +2,7 @@
 Unit tests for edge_tts_service.py — TTS text splitting, voice resolution, constants.
 Run: python -m pytest tests/test_edge_tts_service.py -v
 """
+
 import os
 import sys
 
@@ -124,10 +125,14 @@ class TestEdgeTtsGenerate:
     @pytest.mark.asyncio
     async def test_generate_calls_edge_tts(self, monkeypatch):
         """Mock edge_tts.Communicate to avoid network calls."""
+
         class FakeCommunicate:
-            def __init__(self, **kwargs): pass
+            def __init__(self, **kwargs):
+                pass
+
             async def stream(self):
                 yield {"type": "audio", "data": b"\x00\x01\x02"}
+
         monkeypatch.setattr("edge_tts_service.edge_tts.Communicate", FakeCommunicate)
         result = await edge_tts_generate("测试")
         assert result == b"\x00\x01\x02"
@@ -135,9 +140,12 @@ class TestEdgeTtsGenerate:
     @pytest.mark.asyncio
     async def test_generate_empty_audio_raises(self, monkeypatch):
         class FakeCommunicate:
-            def __init__(self, **kwargs): pass
+            def __init__(self, **kwargs):
+                pass
+
             async def stream(self):
                 yield {"type": "metadata", "data": b""}
+
         monkeypatch.setattr("edge_tts_service.edge_tts.Communicate", FakeCommunicate)
         with pytest.raises(RuntimeError, match="no audio output"):
             await edge_tts_generate("测试")
@@ -151,8 +159,10 @@ class TestListChineseVoices:
             {"ShortName": "zh-CN-XiaoxiaoNeural", "Gender": "Female", "Locale": "zh-CN"},
             {"ShortName": "en-US-JennyNeural", "Gender": "Female", "Locale": "en-US"},
         ]
+
         async def fake_list():
             return fake_voices
+
         monkeypatch.setattr("edge_tts_service.edge_tts.list_voices", fake_list)
         result = await list_chinese_voices()
         assert len(result) == 1
@@ -162,6 +172,7 @@ class TestListChineseVoices:
     async def test_fallback_on_error(self, monkeypatch):
         async def fake_list():
             raise RuntimeError("network error")
+
         monkeypatch.setattr("edge_tts_service.edge_tts.list_voices", fake_list)
         result = await list_chinese_voices()
         # Should return curated fallback
