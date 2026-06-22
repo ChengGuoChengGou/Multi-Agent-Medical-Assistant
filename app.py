@@ -43,7 +43,26 @@ _app_start_time = time.time()
 setup_logging()
 
 # Initialize FastAPI app
-app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
+app = FastAPI(
+    title="Multi-Agent Medical Chatbot",
+    version="2.0",
+    description=(
+        "A multi-agent medical information system powered by RAG (Retrieval-Augmented Generation). "
+        "Provides evidence-based health information with source citations from a curated medical knowledge base. "
+        "Supports text chat (synchronous & SSE streaming), document upload, voice transcription, and speech synthesis.\n\n"
+        "⚠️ **Disclaimer**: This system provides health information for educational purposes only. "
+        "It does not constitute medical diagnosis, treatment, or professional medical advice. "
+        "Always consult a qualified healthcare provider for medical concerns."
+    ),
+    openapi_tags=[
+        {"name": "System", "description": "Health check, metrics, and service status endpoints."},
+        {"name": "Chat", "description": "Multi-agent chat endpoints (synchronous and SSE streaming)."},
+        {"name": "Document", "description": "Document upload and medical content validation."},
+        {"name": "Voice", "description": "Speech-to-text and text-to-speech services."},
+    ],
+    contact={"name": "Medical Chatbot Team", "url": "https://github.com/medical-chatbot"},
+    license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
+)
 
 # ── Register Middleware (order matters: outermost first) ──
 # 0. CORS: allow frontend origin for cross-origin requests
@@ -116,12 +135,12 @@ class SpeechRequest(BaseModel):
     text: str
     voice_id: str = "EXAMPLE_VOICE_ID"  # Default voice ID
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, tags=["System"])
 async def index(request: Request):
     """Serve the main HTML page"""
     return templates.TemplateResponse(request, "index.html")
 
-@app.get("/health")
+@app.get("/health", tags=["System"])
 def health_check():
     """Health check endpoint for Docker / load balancer probes."""
     return {
@@ -135,7 +154,7 @@ def health_check():
         "dedup_stats": get_dedup_stats(),
     }
 
-@app.get("/metrics")
+@app.get("/metrics", tags=["System"])
 def metrics():
     """Prometheus-compatible metrics endpoint (plain text exposition format)."""
     uptime_seconds = time.time() - _app_start_time
@@ -160,7 +179,7 @@ def metrics():
     ]
     return Response(content="\n".join(lines), media_type="text/plain; version=0.0.4; charset=utf-8")
 
-@app.post("/chat")
+@app.post("/chat", tags=["Chat"])
 def chat(
     request: QueryRequest, 
     response: Response, 
@@ -197,7 +216,7 @@ def chat(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/chat/stream")
+@app.post("/chat/stream", tags=["Chat"])
 async def chat_stream(
     request: QueryRequest,
     session_id: Optional[str] = Cookie(None)
@@ -212,7 +231,7 @@ async def chat_stream(
         streaming_fn=process_query_streaming,
     )
 
-@app.post("/upload")
+@app.post("/upload", tags=["Document"])
 async def upload_image(
     response: Response,
     image: UploadFile = File(...), 
@@ -286,7 +305,7 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/validate")
+@app.post("/validate", tags=["Document"])
 def validate_medical_output(
     response: Response,
     validation_result: str = Form(...), 
@@ -325,7 +344,7 @@ def validate_medical_output(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/transcribe")
+@app.post("/transcribe", tags=["Voice"])
 async def transcribe_audio(audio: UploadFile = File(...)):
     """Endpoint to transcribe speech using ElevenLabs API"""
     if not audio.filename:
@@ -408,7 +427,7 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             content={"error": str(e)}
         )
 
-@app.post("/generate-speech")
+@app.post("/generate-speech", tags=["Voice"])
 async def generate_speech(request: SpeechRequest):
     """Endpoint to generate speech using ElevenLabs API"""
     try:
