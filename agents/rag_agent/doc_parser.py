@@ -3,15 +3,20 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import (
-    PdfPipelineOptions, 
-    TableFormerMode, 
-    RapidOcrOptions, 
-    smolvlm_picture_description
-)
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling_core.types.doc import PictureItem, TableItem
+try:
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import (
+        PdfPipelineOptions, 
+        TableFormerMode, 
+        RapidOcrOptions, 
+        smolvlm_picture_description
+    )
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+    from docling_core.types.doc import PictureItem, TableItem
+    DOCLING_AVAILABLE = True
+except ImportError:
+    DOCLING_AVAILABLE = False
+    logging.warning("[DOC_PARSER] docling not available, using lightweight PyPDF2 fallback")
 
 class MedicalDocParser:
     """
@@ -33,19 +38,45 @@ class MedicalDocParser:
         ) -> Tuple[Any, List[str]]:
         """
         Parse the document and extract structured content and images.
-        
-        Args:
-            document_path: Path to the document to parse
-            output_dir: Directory to save extracted images
-            image_resolution_scale: Resolution scale for extracted images
-            do_ocr: Enable OCR processing
-            do_tables: Enable table structure extraction
-            do_formulas: Enable formula enrichment
-            do_picture_desc: Enable picture description generation
-            
-        Returns:
-            Tuple containing (parsed_document, list_of_image_paths)
+        Uses docling if available, otherwise falls back to PyPDF2 for basic text extraction.
         """
+        if not DOCLING_AVAILABLE:
+            return self._parse_with_pypdf2(document_path, output_dir)
+        return self._parse_with_docling(document_path, output_dir, image_resolution_scale, do_ocr, do_tables, do_formulas, do_picture_desc)
+
+    def _parse_with_pypdf2(self, document_path: str, output_dir: str) -> Tuple[Any, List[str]]:
+        """Lightweight fallback using PyPDF2 for text extraction."""
+        import PyPDF2
+        output_dir_path = Path(output_dir)
+        output_dir_path.mkdir(parents=True, exist_ok=True)
+
+        with open(document_path, "rb") as f:
+            reader = PyPDF2.PdfReader(f)
+            pages_text = []
+            for i, page in enumerate(reader.pages):
+                text = page.extract_text() or ""
+                pages_text.append(text)
+            full_text = "\n\n".join(pages_text)
+
+        class FallbackDoc:
+            """Minimal doc object mimicking docling's document interface."""
+            def __init__(self, text, num_pages):
+                self.text = text
+                self.pages = {i+1: type("Page", (), {"image": None})() for i in range(num_pages)}
+                self.pictures = []
+                self.tables = []
+            def get_text(self):
+                return self.text
+            def iterate_items(self):
+                return []
+
+        self.logger.info(f"[DOC_PARSER] PyPDF2 fallback: extracted {len(full_text)} chars from {len(pages_text)} pages")
+        return FallbackDoc(full_text, len(pages_text)), []
+
+    def _parse_with_docling(self, document_path: str, output_dir: str,
+                            image_resolution_scale: float, do_ocr: bool,
+                            do_tables: bool, do_formulas: bool,
+                            do_picture_desc: bool) -> Tuple[Any, List[str]]:
         # Create output directory if it doesn't exist
         output_dir_path = Path(output_dir)
         output_dir_path.mkdir(parents=True, exist_ok=True)

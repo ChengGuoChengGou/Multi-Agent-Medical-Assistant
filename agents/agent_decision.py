@@ -40,6 +40,26 @@ except Exception as e:
     VECTOR_MEMORY_AVAILABLE = False
     logger.warning(f"Medical vector memory unavailable: {e}")
 
+# Memory Module (Three-tier: Vector → Mem0 → InMemory)
+from agents.memory_module import get_memory_store
+
+# Prompt Manager (Centralized template management)
+try:
+    from prompts.manager import get_prompt_manager
+    PROMPT_MANAGER_AVAILABLE = True
+except Exception:
+    PROMPT_MANAGER_AVAILABLE = False
+    logger.warning("[PROMPT] PromptManager not available, using inline prompts")
+
+# Medical Tool System (Phase 4: Unified Tool Interface)
+try:
+    from agents.medical_tool import get_tool_registry, init_tool_registry
+    MEDICAL_TOOL_AVAILABLE = True
+    logger.info("Medical tool system loaded successfully")
+except ImportError:
+    MEDICAL_TOOL_AVAILABLE = False
+    logger.warning("Medical tool system not available")
+
 # Optional: Langfuse observability (graceful degradation if not installed)
 try:
     from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
@@ -105,8 +125,9 @@ class AgentConfig:
     # Confidence threshold for responses
     CONFIDENCE_THRESHOLD = 0.85
     
-    # System instructions for the decision agent
-    DECISION_SYSTEM_PROMPT = """You are an intelligent medical triage system that routes user queries to 
+    # System instructions for the decision agent (loaded from prompts/decision_system.md via PromptManager)
+    _decision_prompt_tmpl = get_prompt_manager().get("decision_system") if PROMPT_MANAGER_AVAILABLE else None
+    DECISION_SYSTEM_PROMPT = _decision_prompt_tmpl if _decision_prompt_tmpl else """You are an intelligent medical triage system that routes user queries to
     the appropriate specialized agent. Your job is to analyze the user's request and determine which agent 
     is best suited to handle it based on the query content, presence of images, and conversation context.
 
@@ -382,8 +403,20 @@ def create_agent_graph():
             except Exception as e:
                 logger.debug(f"[VECTOR_MEMORY] Decision search failed (non-fatal): {e}")
         ctx.set_chat_history(messages, max_messages=6)
+        
+        # Phase 4: Inject tool registry summary for better routing decisions
+        tool_context = ""
+        if MEDICAL_TOOL_AVAILABLE:
+            try:
+                registry = get_tool_registry()
+                if len(registry) > 0:
+                    tool_context = f"\n\n[AVAILABLE TOOLS]\n{registry.get_summary(max_desc_len=80)}\n"
+                    logger.debug(f"[TOOL_REGISTRY] Injected {len(registry)} tools into decision context")
+            except Exception as e:
+                logger.debug(f"[TOOL_REGISTRY] Tool summary failed (non-fatal): {e}")
+        
         decision_input = ctx.build(
-            f"User query: {input_text}\n\nHas image: {has_image}\nImage type: {image_type if has_image else 'None'}{plan_context}\n\nBased on this information, which agent should handle this query?"
+            f"User query: {input_text}\n\nHas image: {has_image}\nImage type: {image_type if has_image else 'None'}{plan_context}{tool_context}\n\nBased on this information, which agent should handle this query?"
         )
         
         # Make the decision with structured output validation + fallback
@@ -442,6 +475,8 @@ def create_agent_graph():
         # Build context using ContextBuilder (Phase 2)
         ctx = ContextBuilder()
         ctx.set_system(MedicalSystemPrompt.conversation())
+        
+        # Phase 1: Vector memory (existing)
         if VECTOR_MEMORY_AVAILABLE:
             try:
                 mem_results = search_memory(input_text, min_score=0.45, top_k=3)
@@ -450,6 +485,18 @@ def create_agent_graph():
                     logger.debug(f"[VECTOR_MEMORY] Injected {len(mem_results)} memories into conversation")
             except Exception as e:
                 logger.debug(f"[VECTOR_MEMORY] Conversation search failed (non-fatal): {e}")
+        
+        # Memory Module recall (three-tier: Vector → Mem0 → InMemory)
+        try:
+            memory = get_memory_store()
+            user_id = state.get("thread_id", "default")
+            memory_context = memory.recall(user_id, input_text, limit=3)
+            if memory_context:
+                ctx.set_vector_memory([{"content": memory_context, "score": 0.5, "source": "memory_module"}])
+                logger.debug(f"[MEMORY_MODULE] Injected memory context for user {user_id}")
+        except Exception as e:
+            logger.debug(f"[MEMORY_MODULE] Recall failed (non-fatal): {e}")
+        
         ctx.set_chat_history(messages, max_messages=20)
         conversation_prompt = ctx.build(input_text)
 
@@ -495,6 +542,17 @@ def create_agent_graph():
             elif isinstance(msg, AIMessage):
                 # print("######### DEBUG 2:", msg)
                 recent_context += f"Assistant: {msg.content}\n"
+
+        # Memory Module recall (three-tier: Vector → Mem0 → InMemory)
+        try:
+            memory = get_memory_store()
+            user_id = state.get("thread_id", "default")
+            memory_context = memory.recall(user_id, query if isinstance(query, str) else str(query), limit=3)
+            if memory_context:
+                recent_context = memory_context + "\n\n" + recent_context
+                logger.debug(f"[MEMORY_MODULE] Injected memory context for user {user_id} in RAG")
+        except Exception as e:
+            logger.debug(f"[MEMORY_MODULE] RAG recall failed (non-fatal): {e}")
 
         # [Phase 3.4] Wrapped with llm_call_with_recovery for error classification
         try:
@@ -1050,6 +1108,13 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     """
     # Initialize the graph
     graph = create_agent_graph()
+    
+    # Phase 4: Initialize tool registry (lazy, only on first call)
+    if MEDICAL_TOOL_AVAILABLE:
+        try:
+            init_tool_registry()
+        except Exception as e:
+            logger.debug(f"[TOOL_REGISTRY] Init failed (non-fatal): {e}")
 
     # # Save Graph Flowchart
     # image_bytes = graph.get_graph().draw_mermaid_png()
@@ -1149,6 +1214,31 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     # visualize conversation history in console
     for m in result["messages"]:
         logger.debug(f"Graph:\n{m}")
+    
+    # Step 1.4: Save conversation to memory_module
+    try:
+        memory = get_memory_store()
+        user_id = "default"
+        thread_id = config.get("configurable", {}).get("thread_id")
+        if thread_id:
+            user_id = thread_id
+        # Extract last Q&A for memory
+        last_messages = result.get("messages", [])
+        if len(last_messages) >= 2:
+            user_msg = ""
+            ai_msg = ""
+            for m in reversed(last_messages):
+                if isinstance(m, AIMessage) and not ai_msg:
+                    ai_msg = m.content[:500]
+                elif isinstance(m, HumanMessage) and not user_msg:
+                    user_msg = m.content[:500]
+                if user_msg and ai_msg:
+                    break
+            if user_msg and ai_msg:
+                memory.remember(user_id, f"Q: {user_msg}\nA: {ai_msg}", metadata={"type": "conversation"})
+                logger.debug(f"[MEMORY_MODULE] Stored conversation for user {user_id}")
+    except Exception as e:
+        logger.debug(f"[MEMORY_MODULE] Remember failed (non-fatal): {e}")
     
     # Add the response to conversation history
     return result

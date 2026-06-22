@@ -15,7 +15,7 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
@@ -355,16 +355,38 @@ def create_default_mcp_client() -> MCPClientManager:
 # Singleton for reuse across the application
 # ============================================================
 
-_global_client: Optional[MCPClientManager] = None
+_global_client: Optional[Union[MCPClientManager, Any]] = None
 
 
-async def get_mcp_client() -> MCPClientManager:
-    """Get or create the global MCP client instance."""
+async def get_mcp_client() -> Any:
+    """
+    Get or create the global MCP client instance.
+    
+    Returns a ResilientMCPClientManager that wraps the original MCPClientManager
+    with automatic retry, reconnect, and health checking (Phase 4.4).
+    
+    The returned object has the same call_tool/call_on_server/get_all_tools
+    interface as MCPClientManager, so it's a drop-in replacement.
+    """
     global _global_client
     if _global_client is None:
-        _global_client = create_default_mcp_client()
-        results = await _global_client.start_all()
+        raw_client = create_default_mcp_client()
+        results = await raw_client.start_all()
         logger.info(f"MCP servers started: {results}")
+        
+        # Wrap with ResilientMCPClientManager for retry/reconnect/health
+        try:
+            from agents.mcp_connection_manager import (
+                ResilientMCPClientManager, RetryConfig, TimeoutConfig,
+            )
+            resilient = ResilientMCPClientManager()
+            for name, conn in raw_client._connections.items():
+                resilient.add_server(conn)
+            _global_client = resilient
+            logger.info("[MCP] Using ResilientMCPClientManager (retry + reconnect)")
+        except ImportError:
+            logger.warning("[MCP] mcp_connection_manager not available, using plain MCPClientManager")
+            _global_client = raw_client
     return _global_client
 
 

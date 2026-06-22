@@ -170,6 +170,7 @@ class RAGConfig:
         self.vector_local_path = "./data/qdrant_db"  # Add this with a default value
         self.doc_local_path = "./data/docs_db"
         self.parsed_content_dir = "./data/parsed_docs"
+        self.raw_content_dir = "./data/raw"
         self.url = os.getenv("QDRANT_URL")
         self.api_key = os.getenv("QDRANT_API_KEY")
         self.collection_name = "medical_assistance_rag"  # Ensure a valid name

@@ -3,14 +3,19 @@ import time
 import logging
 from typing import List, Optional, Dict, Any
 
-from .doc_parser import MedicalDocParser
-from .content_processor import ContentProcessor
-from .vectorstore_qdrant import VectorStore
-from .reranker import Reranker
-from .query_expander import QueryExpander
-from .response_generator import ResponseGenerator
-from .hybrid_search import BM25Index, HybridSearch
-from .incremental_indexing import IncrementalIndexer
+RAG_AVAILABLE = False
+try:
+    from .doc_parser import MedicalDocParser
+    from .content_processor import ContentProcessor
+    from .vectorstore_qdrant import VectorStore
+    from .reranker import Reranker
+    from .query_expander import QueryExpander
+    from .response_generator import ResponseGenerator
+    from .hybrid_search import BM25Index, HybridSearch
+    from .incremental_indexing import IncrementalIndexer
+    RAG_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"[RAG] Some RAG dependencies missing: {e}. RAG features disabled.")
 
 class MedicalRAG:
     """

@@ -1,10 +1,9 @@
 """
 Long-term memory module for the medical chatbot.
-Uses Mem0 for vector-based semantic memory with graceful fallback.
-
-Architecture:
-    - Mem0 (primary): Vector-based semantic memory, supports user isolation
-    - In-memory dict (fallback): When Mem0 is unavailable
+Three-tier architecture (from GenericAgent):
+    1. Vector Memory (primary): Direct qdrant + sentence-transformers semantic search
+    2. Mem0 (secondary): Cloud/local vector memory service
+    3. In-memory dict (fallback): When nothing else is available
 
 Usage:
     from agents.memory_module import get_memory_store
@@ -40,8 +39,84 @@ class MemoryStore:
         raise NotImplementedError
 
 
+class VectorMemoryStore(MemoryStore):
+    """Semantic vector memory backed by qdrant + sentence-transformers.
+    
+    This is the primary memory store, adapted from GenericAgent's vector_memory.
+    Provides real semantic search (not keyword matching) with local persistence.
+    """
+    
+    def __init__(self):
+        try:
+            from agents.medical_vector_memory import (
+                add_memory, search_memory, get_all_memories,
+                collection_stats, _lazy_init
+            )
+            
+            if not _lazy_init():
+                raise RuntimeError("vector memory init failed")
+            
+            self._add_memory = add_memory
+            self._search_memory = search_memory
+            self._get_all_memories = get_all_memories
+            self._stats = collection_stats
+            self._available = True
+            
+            stats = self._stats()
+            logger.info(
+                f"VectorMemoryStore initialized: "
+                f"{stats.get('points_count', 0)} vectors, "
+                f"collection={stats.get('collection', '?')}"
+            )
+            
+        except Exception as e:
+            logger.warning(f"VectorMemoryStore init failed: {e}")
+            self._available = False
+    
+    @property
+    def available(self) -> bool:
+        return self._available
+    
+    def remember(self, user_id: str, content: str, metadata: dict = None) -> bool:
+        if not self._available:
+            return False
+        return self._add_memory(content, user_id=user_id, metadata=metadata)
+    
+    def recall(self, user_id: str, query: str, limit: int = 5) -> str:
+        if not self._available:
+            return ""
+        results = self._search_memory(query, user_id=user_id, top_k=limit)
+        if not results:
+            return ""
+        memories = [f"- {r}" for r in results]
+        return "Previously known information about this user:\n" + "\n".join(memories)
+    
+    def get_history(self, user_id: str, limit: int = 20) -> list:
+        if not self._available:
+            return []
+        return self._get_all_memories(limit=limit, user_id=user_id)
+    
+    def forget(self, user_id: str) -> bool:
+        """Note: qdrant doesn't easily support per-user deletion without filter-based delete."""
+        if not self._available:
+            return False
+        try:
+            from agents.medical_vector_memory import _qdrant_client, _collection_name
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            _qdrant_client.delete(
+                collection_name=_collection_name,
+                points_selector=Filter(
+                    must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
+                ),
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete memories for user {user_id}: {e}")
+            return False
+
+
 class Mem0MemoryStore(MemoryStore):
-    """Mem0-backed semantic memory store.
+    """Mem0-backed semantic memory store (secondary option).
     
     Mem0 provides:
     - Vector-based semantic search over memories
@@ -102,7 +177,7 @@ class Mem0MemoryStore(MemoryStore):
         if not self._available:
             return ""
         try:
-            results = self.client.search(query, user_id=user_id, limit=limit)
+            results = self.client.search(query=query, user_id=user_id, limit=limit)
             if not results:
                 return ""
             memories = []
@@ -147,7 +222,7 @@ class Mem0MemoryStore(MemoryStore):
 
 
 class InMemoryStore(MemoryStore):
-    """Simple in-memory fallback when Mem0 is unavailable.
+    """Simple in-memory fallback when nothing else is available.
     Uses a dict with basic keyword matching for recall.
     NOT suitable for production - no persistence, no semantic search.
     """
@@ -193,15 +268,32 @@ _store_instance: Optional[MemoryStore] = None
 
 def get_memory_store() -> MemoryStore:
     """Get or create the global memory store instance.
-    Tries Mem0 first, falls back to in-memory dict.
+    
+    Priority order (from GenericAgent pattern):
+    1. VectorMemoryStore (qdrant + sentence-transformers) - best semantic search
+    2. Mem0MemoryStore (mem0 cloud/local) - if configured
+    3. InMemoryStore (dict) - always works, no persistence
+    
+    The result is cached as a singleton.
     """
     global _store_instance
     if _store_instance is None:
+        # Tier 1: Vector memory (local qdrant)
+        store = VectorMemoryStore()
+        if store.available:
+            _store_instance = store
+            logger.info("Memory store: VectorMemory (qdrant + sentence-transformers)")
+            return _store_instance
+        
+        # Tier 2: Mem0
         store = Mem0MemoryStore()
         if store.available:
             _store_instance = store
             logger.info("Memory store: Mem0 (vector-based semantic memory)")
-        else:
-            _store_instance = InMemoryStore()
-            logger.warning("Memory store: InMemory fallback (install mem0ai for semantic memory)")
+            return _store_instance
+        
+        # Tier 3: In-memory fallback
+        _store_instance = InMemoryStore()
+        logger.warning("Memory store: InMemory fallback (no vector memory available)")
+    
     return _store_instance
