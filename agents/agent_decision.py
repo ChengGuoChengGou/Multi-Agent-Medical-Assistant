@@ -308,7 +308,11 @@ def create_agent_graph():
         
         # Reconstruct plan for context
         from agents.medical_planner import DiagnosticPlan
-        plan_obj = DiagnosticPlan(**plan_data) if plan_data else None
+        try:
+            plan_obj = DiagnosticPlan(**plan_data) if plan_data else None
+        except Exception as e:
+            logger.warning(f"[REFLECT] Failed to reconstruct plan: {e}")
+            plan_obj = None
         
         # Run reflection (cheap LLM call, ~100 tokens)
         reflection = reflect_on_diagnosis(
@@ -740,15 +744,25 @@ def create_agent_graph():
         rag_state = None
         web_state = None
         
+        # Smart strategy: try RAG first with short timeout, only run WebSearch if RAG fails
+        rag_state = None
+        web_state = None
+        
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             rag_future = executor.submit(run_rag_agent, state)
-            web_future = executor.submit(run_web_search_processor_agent, state)
             try:
-                rag_state = rag_future.result(timeout=120)
+                rag_state = rag_future.result(timeout=30)
+                rag_conf = (rag_state or {}).get("retrieval_confidence", 0.0)
+                if rag_conf >= config.rag.min_retrieval_confidence:
+                    logger.info(f"[PARALLEL] RAG succeeded with confidence={rag_conf:.2f}, skipping WebSearch")
+                    return {**rag_state, "agent_name": "RAG_AGENT"}
             except Exception as e:
                 logger.warning(f"RAG agent failed in parallel: {e}")
+            
+            # RAG failed or low confidence - run WebSearch with timeout
+            web_future = executor.submit(run_web_search_processor_agent, state)
             try:
-                web_state = web_future.result(timeout=120)
+                web_state = web_future.result(timeout=45)
             except Exception as e:
                 logger.warning(f"WebSearch agent failed in parallel: {e}")
         

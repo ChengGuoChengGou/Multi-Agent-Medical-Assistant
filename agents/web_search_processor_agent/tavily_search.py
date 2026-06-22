@@ -64,7 +64,7 @@ class TavilySearchAgent:
                 except ImportError:
                     from duckduckgo_search import DDGS
                 with DDGS() as ddgs:
-                    results = list(ddgs.text(query, max_results=5))
+                    results = list(ddgs.text(query, max_results=3, timeout=10))
                 if results:
                     return "\n".join([
                         f"title: {r.get('title','')} - "
