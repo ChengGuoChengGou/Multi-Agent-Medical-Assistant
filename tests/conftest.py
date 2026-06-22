@@ -31,7 +31,7 @@ _MOCK_PACKAGES = [
     "agents.rag_agent.vectorstore_qdrant",
     "agents.agent_decision",
     "agents.mcp_client",
-    "agents.memory_module",
+    # agents.memory_module removed from mock – pure dict, no heavy deps
     # langchain ecosystem (not needed for routing tests)
     "langchain_qdrant",
     "langchain.storage",
