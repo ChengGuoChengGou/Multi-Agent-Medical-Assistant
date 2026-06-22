@@ -13,6 +13,7 @@ try:
     from .response_generator import ResponseGenerator
     from .hybrid_search import BM25Index, HybridSearch
     from .incremental_indexing import IncrementalIndexer
+    from langchain_community.storage import LocalFileStore
     RAG_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"[RAG] Some RAG dependencies missing: {e}. RAG features disabled.")
@@ -40,8 +41,9 @@ class MedicalRAG:
         self.response_generator = ResponseGenerator(config)
         self.parsed_content_dir = self.config.rag.parsed_content_dir
         self.hybrid_search = HybridSearch(
-            vectorstore_manager=self.vector_store,
-            k=60
+            vectorstore=self.vector_store,
+            docstore=LocalFileStore(self.vector_store.docstore_local_path),
+            rrf_k=60
         )
         self.incremental_indexer = IncrementalIndexer(
             watch_paths=[self.config.rag.raw_content_dir],

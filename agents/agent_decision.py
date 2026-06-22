@@ -393,7 +393,7 @@ def create_agent_graph():
         
         # Build context using ContextBuilder (Phase 2)
         ctx = ContextBuilder()
-        ctx.set_system(MedicalSystemPrompt.decision())
+        ctx.set_system(MedicalSystemPrompt.DECISION)
         if VECTOR_MEMORY_AVAILABLE and input_text:
             try:
                 mem_results = search_memory(input_text, top_k=3)
@@ -427,8 +427,8 @@ def create_agent_graph():
                     lambda: llm_breaker.call(
                         lambda: decision_chain.invoke({"input": decision_input})
                     ),
-                    context_builder=lambda: list(messages[-6:]),
-                    max_context_retries=1,
+                    on_context_too_long=lambda: list(messages[-6:]),
+                    max_retries=1,
                 )
             # Validate through Pydantic model
             validated = AgentDecision(**decision)
@@ -474,7 +474,7 @@ def create_agent_graph():
         
         # Build context using ContextBuilder (Phase 2)
         ctx = ContextBuilder()
-        ctx.set_system(MedicalSystemPrompt.conversation())
+        ctx.set_system(MedicalSystemPrompt.CONVERSATION)
         
         # Phase 1: Vector memory (existing)
         if VECTOR_MEMORY_AVAILABLE:
@@ -509,8 +509,8 @@ def create_agent_graph():
                     lambda: llm_breaker.call(
                         lambda: config.conversation.llm.invoke(conversation_prompt)
                     ),
-                    context_builder=lambda: list(messages[-20:]),
-                    max_context_retries=2,
+                    on_context_too_long=lambda: list(messages[-20:]),
+                    max_retries=2,
                 )
         except (RetryExhausted, Exception) as e:
             logger.error(f"[CONVERSATION_AGENT] LLM invocation failed: {e}", exc_info=True)
@@ -668,7 +668,7 @@ def create_agent_graph():
                     lambda: web_search_breaker.call(
                         lambda: web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
                     ),
-                    max_context_retries=1,
+                    max_retries=1,
                 )
         except (RetryExhausted, Exception) as e:
             logger.error(f"[WEB_SEARCH_PROCESSOR_AGENT] Web search processing failed: {e}", exc_info=True)
@@ -1137,11 +1137,12 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     state["messages"] = [HumanMessage(content=query)]
 
     # Invoke with Langfuse callbacks if available
-    invoke_kwargs = {"state": state, "config": config}
+    runnable_config = {"configurable": {"thread_id": "default"}}
+    invoke_kwargs = {"state": state, "config": runnable_config}
     if LANGFUSE_ENABLED and langfuse_handler:
-        result = graph.invoke(state, config, callbacks=[langfuse_handler])
+        result = graph.invoke(state, runnable_config, callbacks=[langfuse_handler])
     else:
-        result = graph.invoke(state, config)
+        result = graph.invoke(state, runnable_config)
     # print("######### DEBUG 4:", result)
     # state["messages"] = [result["messages"][-1].content]
 
@@ -1174,7 +1175,7 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
                     # [Phase 3.4] Wrapped with llm_call_with_recovery for error classification
                     summary_response = llm_call_with_recovery(
                         lambda: config.conversation.llm.invoke(summary_prompt),
-                        max_context_retries=1,
+                        max_retries=1,
                     )
                     summary_text = getattr(summary_response, "content", str(summary_response))
                     
@@ -1301,7 +1302,7 @@ def process_query_streaming(query: Union[str, Dict], conversation_history: List[
         state["messages"].append(HumanMessage(content=str(query)))
         state["current_input"] = str(query)
 
-    config = {"configurable": {"session_id": "default"}}
+    config = {"configurable": {"thread_id": "default"}}
     callbacks = [langfuse_handler] if LANGFUSE_ENABLED and langfuse_handler else []
 
     # Stream node-by-node progress
@@ -1350,7 +1351,7 @@ def process_query_streaming(query: Union[str, Dict], conversation_history: List[
                         )
                         summary_response = llm_call_with_recovery(
                             lambda: config_default.conversation.llm.invoke(summary_prompt),
-                            max_context_retries=1,
+                            max_retries=1,
                         )
                         summary_text = getattr(summary_response, "content", str(summary_response))
                         from langchain_core.messages import SystemMessage
