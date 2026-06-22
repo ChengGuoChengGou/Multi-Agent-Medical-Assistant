@@ -30,6 +30,7 @@ from middleware import (
     RequestLoggingMiddleware,
     RateLimitMiddleware,
     RequestDedupMiddleware,
+    APIKeyAuthMiddleware,
     get_dedup_stats,
 )
 from utils.logging_config import setup_logging, get_logger
@@ -98,6 +99,8 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 # 4. Request deduplication: coalesce identical in-flight LLM requests
 app.add_middleware(RequestDedupMiddleware)
+# 5. [Phase 53] API key authentication for protected endpoints
+app.add_middleware(APIKeyAuthMiddleware)
 
 # Set up directories
 UPLOAD_FOLDER = "uploads/backend"

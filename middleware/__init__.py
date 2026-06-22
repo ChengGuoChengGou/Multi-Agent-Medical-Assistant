@@ -6,6 +6,7 @@ Provides:
 - RequestLoggingMiddleware: Structured request/response logging
 - RateLimitMiddleware: Sliding window rate limiting per client IP
 - RequestDeduplicationMiddleware: Coalesce identical in-flight requests
+- APIKeyAuthMiddleware: API key authentication for protected endpoints
 - CSRFProtection: CSRF token generation and validation
 - sanitize_input / sanitize_filename / validate_mime_type: Input safety utilities
 """
@@ -22,6 +23,7 @@ from .security import (
 )
 from .rate_limiter import RateLimitMiddleware
 from .request_dedup import RequestDedupMiddleware, get_dedup_stats
+from .api_key_auth import APIKeyAuthMiddleware
 
 __all__ = [
     "SecurityHeadersMiddleware",
@@ -29,6 +31,7 @@ __all__ = [
     "CSRFProtection",
     "RateLimitMiddleware",
     "RequestDedupMiddleware",
+    "APIKeyAuthMiddleware",
     "sanitize_input",
     "sanitize_filename",
     "validate_mime_type",
