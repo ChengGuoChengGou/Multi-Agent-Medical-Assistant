@@ -8,6 +8,7 @@ import time
 from io import BytesIO
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response, Cookie
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -38,6 +39,14 @@ config = Config()
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
 
 # ── Register Middleware (order matters: outermost first) ──
+# 0. CORS: allow frontend origin for cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # 1. Rate limiting: protect against abuse (60 rpm / 500 rph per IP)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=60, requests_per_hour=500)
 # 2. Security headers: CSP, X-Frame-Options, XSS-Protection, etc.
