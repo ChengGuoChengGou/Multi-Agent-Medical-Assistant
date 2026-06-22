@@ -13,7 +13,11 @@ try:
     from .response_generator import ResponseGenerator
     from .hybrid_search import BM25Index, HybridSearch
     from .incremental_indexing import IncrementalIndexer
-    from langchain_community.storage import LocalFileStore
+    try:
+        from langchain_community.storage import LocalFileStore
+    except ImportError:
+        from langchain_core.stores import InMemoryStore
+        LocalFileStore = InMemoryStore  # fallback if langchain-community sunset
     RAG_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"[RAG] Some RAG dependencies missing: {e}. RAG features disabled.")
