@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class MemoryStore:
     """Abstract interface for long-term memory operations."""
 
-    def remember(self, user_id: str, content: str, metadata: dict = None) -> bool:
+    def remember(self, user_id: str, content: str, metadata: dict | None = None) -> bool:
         raise NotImplementedError
 
     def recall(self, user_id: str, query: str, limit: int = 5) -> str:
@@ -80,7 +80,7 @@ class VectorMemoryStore(MemoryStore):
     def available(self) -> bool:
         return self._available
 
-    def remember(self, user_id: str, content: str, metadata: dict = None) -> bool:
+    def remember(self, user_id: str, content: str, metadata: dict | None = None) -> bool:
         if not self._available:
             return False
         return self._add_memory(content, user_id=user_id, metadata=metadata)
@@ -159,7 +159,7 @@ class Mem0MemoryStore(MemoryStore):
     def available(self) -> bool:
         return self._available
 
-    def remember(self, user_id: str, content: str, metadata: dict = None) -> bool:
+    def remember(self, user_id: str, content: str, metadata: dict | None = None) -> bool:
         """Store a memory for a user."""
         if not self._available:
             return False
@@ -235,7 +235,7 @@ class InMemoryStore(MemoryStore):
         self._store: dict[str, list[dict]] = {}
         logger.info("Using in-memory fallback store (no persistence)")
 
-    def remember(self, user_id: str, content: str, metadata: dict = None) -> bool:
+    def remember(self, user_id: str, content: str, metadata: dict | None = None) -> bool:
         if user_id not in self._store:
             self._store[user_id] = []
         self._store[user_id].append({"content": content, "metadata": metadata or {}})
@@ -267,7 +267,7 @@ class InMemoryStore(MemoryStore):
 
 
 # === Singleton factory ===
-_store_instance: Optional[MemoryStore] = None
+_store_instance: MemoryStore | None = None
 
 
 def get_memory_store() -> MemoryStore:

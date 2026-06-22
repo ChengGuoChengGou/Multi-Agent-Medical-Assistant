@@ -12,8 +12,9 @@ import json
 import logging
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,11 @@ class MedicalToolResult:
     content: str
     tool_name: str
     source: str  # "mcp", "built_in", "fallback"
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
     execution_time_ms: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "content": self.content,
@@ -70,7 +71,7 @@ class MedicalTool(ABC):
 
     @property
     @abstractmethod
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         """JSON Schema for input parameters."""
         ...
 
@@ -79,7 +80,7 @@ class MedicalTool(ABC):
         """Execute the tool with validated parameters."""
         ...
 
-    def describe(self) -> Dict[str, Any]:
+    def describe(self) -> dict[str, Any]:
         """Return tool metadata for LLM routing context."""
         return {
             "name": self.name,
@@ -88,7 +89,7 @@ class MedicalTool(ABC):
             "input_schema": self.input_schema,
         }
 
-    def validate(self, **kwargs) -> tuple[bool, Optional[str]]:
+    def validate(self, **kwargs) -> tuple[bool, str | None]:
         """
         Validate input parameters against the schema.
         Returns (is_valid, error_message).
@@ -108,9 +109,9 @@ class MedicalTool(ABC):
                 expected_type = properties[field_name].get("type")
                 if expected_type == "string" and not isinstance(value, str):
                     return False, f"Parameter '{field_name}' must be string, got {type(value).__name__}"
-                elif expected_type == "integer" and not isinstance(value, int):
+                if expected_type == "integer" and not isinstance(value, int):
                     return False, f"Parameter '{field_name}' must be integer, got {type(value).__name__}"
-                elif expected_type == "number" and not isinstance(value, (int, float)):
+                if expected_type == "number" and not isinstance(value, (int, float)):
                     return False, f"Parameter '{field_name}' must be number, got {type(value).__name__}"
 
         return True, None
@@ -201,7 +202,7 @@ class MCPMedicalTool(MedicalTool):
         return "utility"
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return self._input_schema
 
     @property
@@ -233,7 +234,7 @@ class MedicalToolRegistry:
     """
 
     def __init__(self):
-        self._tools: Dict[str, MedicalTool] = {}
+        self._tools: dict[str, MedicalTool] = {}
 
     def register(self, tool: MedicalTool) -> None:
         """Register a tool. Logs warning if overwriting."""
@@ -242,22 +243,22 @@ class MedicalToolRegistry:
         self._tools[tool.name] = tool
         logger.debug(f"[ToolRegistry] Registered: {tool.name} ({tool.category})")
 
-    def get(self, name: str) -> Optional[MedicalTool]:
+    def get(self, name: str) -> MedicalTool | None:
         """Get tool by name."""
         return self._tools.get(name)
 
-    def get_by_category(self, category: str) -> List[MedicalTool]:
+    def get_by_category(self, category: str) -> list[MedicalTool]:
         """Get all tools in a category."""
         return [t for t in self._tools.values() if t.category == category]
 
-    def get_all(self) -> List[MedicalTool]:
+    def get_all(self) -> list[MedicalTool]:
         """Get all registered tools."""
         return list(self._tools.values())
 
     def get_summary(self, max_desc_len: int = 100) -> str:
         """Human-readable summary for LLM routing context."""
         lines = ["Available Medical Tools:"]
-        by_category: Dict[str, List[MedicalTool]] = {}
+        by_category: dict[str, list[MedicalTool]] = {}
         for tool in self._tools.values():
             by_category.setdefault(tool.category, []).append(tool)
 
@@ -269,7 +270,7 @@ class MedicalToolRegistry:
 
         return "\n".join(lines)
 
-    def get_tools_for_llm(self) -> List[Dict[str, Any]]:
+    def get_tools_for_llm(self) -> list[dict[str, Any]]:
         """Return tool descriptions in a format suitable for LLM context."""
         return [tool.describe() for tool in self._tools.values()]
 
@@ -284,7 +285,7 @@ class MedicalToolRegistry:
 # Singleton registry
 # ============================================================
 
-_global_registry: Optional[MedicalToolRegistry] = None
+_global_registry: MedicalToolRegistry | None = None
 
 
 def get_tool_registry() -> MedicalToolRegistry:

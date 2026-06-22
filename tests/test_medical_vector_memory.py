@@ -368,9 +368,8 @@ class TestSeedFromMedicalKnowledge:
         model.encode.return_value = [[0.1] * 384, [0.2] * 384]
 
         content = "# Header\n---\nSymptom: chronic cough and fever\nDiagnosis | Pneumonia confirmed by X-ray"
-        with patch("builtins.open", mock_open(read_data=content)):
-            with patch("os.path.exists", return_value=True):
-                result = mvm.seed_from_medical_knowledge(["/fake.txt"])
+        with patch("builtins.open", mock_open(read_data=content)), patch("os.path.exists", return_value=True):
+            result = mvm.seed_from_medical_knowledge(["/fake.txt"])
         assert result >= 2
 
     def test_skips_headers_and_short(self, mock_deps):
@@ -380,9 +379,8 @@ class TestSeedFromMedicalKnowledge:
         model.encode.return_value = []
 
         content = "# Header\n---\nshort\nab"
-        with patch("builtins.open", mock_open(read_data=content)):
-            with patch("os.path.exists", return_value=True):
-                result = mvm.seed_from_medical_knowledge(["/fake.txt"])
+        with patch("builtins.open", mock_open(read_data=content)), patch("os.path.exists", return_value=True):
+            result = mvm.seed_from_medical_knowledge(["/fake.txt"])
         assert result == 0
 
     def test_nonexistent_file(self, mock_deps):
@@ -398,9 +396,8 @@ class TestSeedFromMedicalKnowledge:
         model.encode.return_value = [[0.1] * 384]
 
         content = "Symptom: Patient has recurring headache\nSymptom: Patient has recurring headache"
-        with patch("builtins.open", mock_open(read_data=content)):
-            with patch("os.path.exists", return_value=True):
-                result = mvm.seed_from_medical_knowledge(["/fake.txt"])
+        with patch("builtins.open", mock_open(read_data=content)), patch("os.path.exists", return_value=True):
+            result = mvm.seed_from_medical_knowledge(["/fake.txt"])
         # Should add 1 unique entry
         assert result >= 1
         if result > 0:

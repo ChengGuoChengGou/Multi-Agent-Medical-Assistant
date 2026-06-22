@@ -27,7 +27,7 @@ def pytest_addoption(parser):
 def benchmark_data():
     """Load benchmark dataset."""
     data_path = PROJECT_ROOT / "evaluation" / "medical_qa_benchmark.json"
-    with open(data_path, "r", encoding="utf-8") as f:
+    with open(data_path, encoding="utf-8") as f:
         return json.load(f)
 
 

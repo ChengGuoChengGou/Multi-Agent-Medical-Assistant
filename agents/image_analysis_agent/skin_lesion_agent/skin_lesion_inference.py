@@ -23,7 +23,7 @@ class UNet(nn.Module):
     """U-Net model for image segmentation."""
 
     def __init__(self, n_channels, n_classes):
-        super(UNet, self).__init__()
+        super().__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
 

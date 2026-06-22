@@ -27,7 +27,7 @@ class MCPTool:
 
     name: str
     description: str
-    input_schema: Dict[str, Any]
+    input_schema: dict[str, Any]
     server_name: str
 
 
@@ -39,22 +39,22 @@ class MCPToolResult:
     content: str
     tool_name: str
     server_name: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class MCPServerConnection:
     """Manages a single MCP server subprocess connection via stdio."""
 
     def __init__(
-        self, name: str, command: str, args: List[str], env: Optional[Dict[str, str]] = None, cwd: Optional[str] = None
+        self, name: str, command: str, args: list[str], env: dict[str, str] | None = None, cwd: str | None = None
     ):
         self.name = name
         self.command = command
         self.args = args
         self.env = env or {}
         self.cwd = cwd
-        self.process: Optional[subprocess.Popen] = None
-        self.tools: List[MCPTool] = []
+        self.process: subprocess.Popen | None = None
+        self.tools: list[MCPTool] = []
         self._initialized = False
         self._request_id = 0
 
@@ -67,7 +67,7 @@ class MCPServerConnection:
         try:
             full_env = {**os.environ, **self.env}
             self.process = subprocess.Popen(
-                [self.command] + self.args,
+                [self.command, *self.args],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -93,14 +93,13 @@ class MCPServerConnection:
                 await self._discover_tools()
                 logger.info(f"[MCP:{self.name}] Started with {len(self.tools)} tools")
                 return True
-            else:
-                logger.error(f"[MCP:{self.name}] Failed to initialize")
-                return False
+            logger.error(f"[MCP:{self.name}] Failed to initialize")
+            return False
         except Exception as e:
             logger.error(f"[MCP:{self.name}] Failed to start: {e}")
             return False
 
-    async def _send_request(self, method: str, params: Dict[str, Any]) -> Optional[Dict]:
+    async def _send_request(self, method: str, params: dict[str, Any]) -> dict | None:
         """Send a JSON-RPC request and wait for response."""
         if not self.process:
             return None
@@ -124,18 +123,18 @@ class MCPServerConnection:
                 response = json.loads(response_line.strip())
                 if "result" in response:
                     return response["result"]
-                elif "error" in response:
+                if "error" in response:
                     logger.error(f"[MCP:{self.name}] Error: {response['error']}")
                     return None
             return None
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"[MCP:{self.name}] Request timeout for {method}")
             return None
         except Exception as e:
             logger.error(f"[MCP:{self.name}] Request error: {e}")
             return None
 
-    async def _send_notification(self, method: str, params: Dict[str, Any]) -> None:
+    async def _send_notification(self, method: str, params: dict[str, Any]) -> None:
         """Send a JSON-RPC notification (no response expected)."""
         if not self.process:
             return
@@ -165,7 +164,7 @@ class MCPServerConnection:
                     )
                 )
 
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> MCPToolResult:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> MCPToolResult:
         """Call a tool on this server."""
         if not self._initialized:
             return MCPToolResult(
@@ -218,17 +217,17 @@ class MCPClientManager:
     """
 
     def __init__(self):
-        self.servers: Dict[str, MCPServerConnection] = {}
-        self._all_tools: List[MCPTool] = []
+        self.servers: dict[str, MCPServerConnection] = {}
+        self._all_tools: list[MCPTool] = []
         self._started = False
 
     def register_server(
-        self, name: str, command: str, args: List[str], env: Optional[Dict[str, str]] = None, cwd: Optional[str] = None
+        self, name: str, command: str, args: list[str], env: dict[str, str] | None = None, cwd: str | None = None
     ) -> None:
         """Register an MCP server configuration."""
         self.servers[name] = MCPServerConnection(name=name, command=command, args=args, env=env, cwd=cwd)
 
-    async def start_all(self) -> Dict[str, bool]:
+    async def start_all(self) -> dict[str, bool]:
         """Start all registered servers. Returns dict of server_name -> success."""
         results = {}
         for name, server in self.servers.items():
@@ -245,11 +244,11 @@ class MCPClientManager:
             await server.stop()
         self._started = False
 
-    def get_all_tools(self) -> List[MCPTool]:
+    def get_all_tools(self) -> list[MCPTool]:
         """Get all available tools across all servers."""
         return self._all_tools
 
-    def get_tools_by_server(self, server_name: str) -> List[MCPTool]:
+    def get_tools_by_server(self, server_name: str) -> list[MCPTool]:
         """Get tools from a specific server."""
         return [t for t in self._all_tools if t.server_name == server_name]
 
@@ -263,7 +262,7 @@ class MCPClientManager:
                 lines.append(f"  - {tool.name}: {tool.description[:100]}")
         return "\n".join(lines)
 
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> MCPToolResult:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> MCPToolResult:
         """Call a tool by name. Automatically finds the right server."""
         for server in self.servers.values():
             for tool in server.tools:
@@ -274,7 +273,7 @@ class MCPClientManager:
             success=False, content="", tool_name=tool_name, server_name="unknown", error=f"Tool '{tool_name}' not found"
         )
 
-    async def call_on_server(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> MCPToolResult:
+    async def call_on_server(self, server_name: str, tool_name: str, arguments: dict[str, Any]) -> MCPToolResult:
         """Call a tool on a specific server."""
         server = self.servers.get(server_name)
         if not server:
@@ -363,7 +362,7 @@ def create_default_mcp_client() -> MCPClientManager:
 # Singleton for reuse across the application
 # ============================================================
 
-_global_client: Optional[Union[MCPClientManager, Any]] = None
+_global_client: MCPClientManager | Any | None = None
 
 
 async def get_mcp_client() -> Any:
@@ -391,7 +390,7 @@ async def get_mcp_client() -> Any:
             )
 
             resilient = ResilientMCPClientManager()
-            for name, conn in raw_client._connections.items():
+            for _name, conn in raw_client._connections.items():
                 resilient.add_server(conn)
             _global_client = resilient
             logger.info("[MCP] Using ResilientMCPClientManager (retry + reconnect)")

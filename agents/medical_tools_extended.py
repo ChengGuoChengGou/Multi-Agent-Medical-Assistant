@@ -59,10 +59,10 @@ class PubMedTool(MedicalTool):
         return self._category
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return self._input_schema
 
-    def _build_schema(self) -> Dict[str, Any]:
+    def _build_schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -85,7 +85,7 @@ class PubMedTool(MedicalTool):
             "required": ["query"],
         }
 
-    def validate(self, params: Dict[str, Any]) -> Optional[str]:
+    def validate(self, params: dict[str, Any]) -> str | None:
         query = params.get("query", "")
         if not query or not isinstance(query, str):
             return "query is required and must be a non-empty string"
@@ -96,14 +96,14 @@ class PubMedTool(MedicalTool):
             return "max_results must be an integer between 1 and 20"
         return None
 
-    def get_examples(self) -> List[str]:
+    def get_examples(self) -> list[str]:
         return [
             "diabetes treatment guidelines 2024",
             "CRISPR gene therapy clinical trials",
             "machine learning radiology diagnosis",
         ]
 
-    async def execute(self, params: Dict[str, Any]) -> MedicalToolResult:
+    async def execute(self, params: dict[str, Any]) -> MedicalToolResult:
         query = params["query"]
         max_results = min(params.get("max_results", 5), 20)
         sort = params.get("sort", "relevance")
@@ -244,10 +244,10 @@ class DrugInteractionTool(MedicalTool):
         return self._category
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return self._input_schema
 
-    def _build_schema(self) -> Dict[str, Any]:
+    def _build_schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -273,7 +273,7 @@ class DrugInteractionTool(MedicalTool):
             "required": ["action", "drug_name"],
         }
 
-    def validate(self, params: Dict[str, Any]) -> Optional[str]:
+    def validate(self, params: dict[str, Any]) -> str | None:
         action = params.get("action", "")
         if action not in ("check_interaction", "get_label", "search_adverse_events"):
             return "action must be one of: check_interaction, get_label, search_adverse_events"
@@ -286,14 +286,14 @@ class DrugInteractionTool(MedicalTool):
                 return "second_drug is required for interaction check"
         return None
 
-    def get_examples(self) -> List[str]:
+    def get_examples(self) -> list[str]:
         return [
             "check interaction between warfarin and aspirin",
             "get label info for metformin",
             "search adverse events for ibuprofen",
         ]
 
-    async def execute(self, params: Dict[str, Any]) -> MedicalToolResult:
+    async def execute(self, params: dict[str, Any]) -> MedicalToolResult:
         action = params["action"]
         drug_name = params["drug_name"]
         second_drug = params.get("second_drug", "")
@@ -303,18 +303,17 @@ class DrugInteractionTool(MedicalTool):
             async with httpx.AsyncClient(timeout=15.0) as client:
                 if action == "check_interaction":
                     return await self._check_interaction(client, drug_name, second_drug, max_results)
-                elif action == "get_label":
+                if action == "get_label":
                     return await self._get_label(client, drug_name)
-                elif action == "search_adverse_events":
+                if action == "search_adverse_events":
                     return await self._search_adverse_events(client, drug_name, max_results)
-                else:
-                    return MedicalToolResult(
-                        success=False,
-                        content=f"Unknown action: {action}",
-                        tool_name=self.name,
-                        source="built_in",
-                        error="invalid_action",
-                    )
+                return MedicalToolResult(
+                    success=False,
+                    content=f"Unknown action: {action}",
+                    tool_name=self.name,
+                    source="built_in",
+                    error="invalid_action",
+                )
 
         except httpx.TimeoutException:
             return MedicalToolResult(

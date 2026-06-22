@@ -23,35 +23,35 @@ class MetricsCollector:
     """
 
     def __init__(self):
-        self._counters: Dict[str, float] = defaultdict(float)
-        self._gauges: Dict[str, float] = {}
-        self._histograms: Dict[str, list] = defaultdict(list)
+        self._counters: dict[str, float] = defaultdict(float)
+        self._gauges: dict[str, float] = {}
+        self._histograms: dict[str, list] = defaultdict(list)
         self._start_time = time.time()
 
-    def inc(self, name: str, value: float = 1.0, labels: Optional[Dict] = None):
+    def inc(self, name: str, value: float = 1.0, labels: dict | None = None):
         """Increment a counter."""
         key = self._metric_key(name, labels)
         self._counters[key] += value
 
-    def set_gauge(self, name: str, value: float, labels: Optional[Dict] = None):
+    def set_gauge(self, name: str, value: float, labels: dict | None = None):
         """Set a gauge value."""
         key = self._metric_key(name, labels)
         self._gauges[key] = value
 
-    def observe(self, name: str, value: float, labels: Optional[Dict] = None):
+    def observe(self, name: str, value: float, labels: dict | None = None):
         """Record a histogram observation."""
         key = self._metric_key(name, labels)
         self._histograms[key].append(value)
 
     @contextmanager
-    def timer(self, name: str, labels: Optional[Dict] = None):
+    def timer(self, name: str, labels: dict | None = None):
         """Context manager to time a block and record as histogram."""
         start = time.monotonic()
         yield
         elapsed = time.monotonic() - start
         self.observe(name, elapsed, labels)
 
-    def _metric_key(self, name: str, labels: Optional[Dict] = None) -> str:
+    def _metric_key(self, name: str, labels: dict | None = None) -> str:
         if labels:
             label_str = ",".join(f'{k}="{v}"' for k, v in sorted(labels.items()))
             return f"{name}{{{label_str}}}"
@@ -142,7 +142,7 @@ class AgentMetrics:
     """
 
     def __init__(self):
-        self._stats: Dict[str, Dict[str, Any]] = defaultdict(
+        self._stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "calls": 0,
                 "failures": 0,

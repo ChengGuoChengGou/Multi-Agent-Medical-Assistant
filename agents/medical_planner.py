@@ -62,9 +62,9 @@ class PlanStep:
     step_type: StepType
     description: str
     priority: StepPriority = StepPriority.MEDIUM
-    depends_on: List[str] = field(default_factory=list)  # step_ids this depends on
-    agent_hint: Optional[str] = None  # Suggested agent name
-    query_hint: Optional[str] = None  # Refined query for this step
+    depends_on: list[str] = field(default_factory=list)  # step_ids this depends on
+    agent_hint: str | None = None  # Suggested agent name
+    query_hint: str | None = None  # Refined query for this step
     expected_output: str = ""  # What we expect to learn
     status: str = "pending"  # pending / running / done / failed / skipped
     result_summary: str = ""
@@ -78,14 +78,14 @@ class DiagnosticPlan:
     plan_id: str
     patient_query: str
     stage: PlanStage = PlanStage.EXPLORATION
-    steps: List[PlanStep] = field(default_factory=list)
-    exploration_findings: Dict[str, Any] = field(default_factory=dict)
-    verification_notes: List[str] = field(default_factory=list)
+    steps: list[PlanStep] = field(default_factory=list)
+    exploration_findings: dict[str, Any] = field(default_factory=dict)
+    verification_notes: list[str] = field(default_factory=list)
     overall_confidence: float = 0.0
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "plan_id": self.plan_id,
             "patient_query": self.patient_query[:200],
@@ -96,7 +96,7 @@ class DiagnosticPlan:
             "verification_notes": self.verification_notes,
         }
 
-    def pending_steps(self) -> List[PlanStep]:
+    def pending_steps(self) -> list[PlanStep]:
         return [s for s in self.steps if s.status == "pending"]
 
     def is_complete(self) -> bool:
@@ -116,11 +116,11 @@ class DiagnosisReflection:
     safety_score: float = 0.0
     relevance_score: float = 0.0
     # Issues found
-    issues: List[str] = field(default_factory=list)
-    suggestions: List[str] = field(default_factory=list)
+    issues: list[str] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
     # Should we re-route or refine?
     needs_refinement: bool = False
-    refinement_query: Optional[str] = None
+    refinement_query: str | None = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -186,9 +186,7 @@ def _needs_planning(query: str) -> bool:
     if any(indicator in q for indicator in COMPLEX_QUERY_INDICATORS):
         return True
     # Multi-sentence queries with symptoms → likely complex
-    if len(q.split(".")) >= 3 and any(w in q for w in ["pain", "symptom", "feel", "diagnos"]):
-        return True
-    return False
+    return bool(len(q.split(".")) >= 3 and any(w in q for w in ["pain", "symptom", "feel", "diagnos"]))
 
 
 def _generate_plan_id() -> str:
@@ -197,7 +195,7 @@ def _generate_plan_id() -> str:
     return f"plan_{uuid.uuid4().hex[:8]}"
 
 
-def _analyze_query_complexity(query: str) -> Dict[str, Any]:
+def _analyze_query_complexity(query: str) -> dict[str, Any]:
     """Extract features from query to inform plan generation."""
     q = query.lower()
 
@@ -238,7 +236,7 @@ def _analyze_query_complexity(query: str) -> Dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════
 
 
-def exploration_stage(query: str, has_image: bool = False, image_type: str = None) -> Dict[str, Any]:
+def exploration_stage(query: str, has_image: bool = False, image_type: str | None = None) -> dict[str, Any]:
     """
     Stage 1: Exploration — Analyze what we know and what we need.
 
@@ -315,9 +313,9 @@ def exploration_stage(query: str, has_image: bool = False, image_type: str = Non
 
 def planning_stage(
     query: str,
-    findings: Dict[str, Any],
+    findings: dict[str, Any],
     has_image: bool = False,
-    image_type: str = None,
+    image_type: str | None = None,
 ) -> DiagnosticPlan:
     """
     Stage 2: Generate an actionable diagnostic plan from exploration findings.
@@ -412,7 +410,7 @@ def _agent_to_step_type(agent_name: str) -> StepType:
     return StepType.CONVERSATION
 
 
-def _refine_query_for_agent(query: str, agent: str, findings: Dict) -> Optional[str]:
+def _refine_query_for_agent(query: str, agent: str, findings: dict) -> str | None:
     """Refine the query with context for a specific agent."""
     features = findings.get("query_features", {})
 
@@ -559,9 +557,9 @@ def verification_stage(
 def create_diagnostic_plan(
     query: str,
     has_image: bool = False,
-    image_type: str = None,
+    image_type: str | None = None,
     skip_if_simple: bool = True,
-) -> Optional[DiagnosticPlan]:
+) -> DiagnosticPlan | None:
     """
     Main entry point: Create a diagnostic plan for a patient query.
 
@@ -598,7 +596,7 @@ def reflect_on_diagnosis(
     return verification_stage(plan, response)
 
 
-def get_plan_routing_hints(plan: DiagnosticPlan) -> Dict[str, Any]:
+def get_plan_routing_hints(plan: DiagnosticPlan) -> dict[str, Any]:
     """
     Extract routing hints from a plan to influence the agent graph.
 
@@ -659,7 +657,7 @@ class RefreshConfig:
 _refresh_config = RefreshConfig()
 
 
-def check_refresh_needed() -> Dict[str, bool]:
+def check_refresh_needed() -> dict[str, bool]:
     """
     Check if knowledge base refresh is needed. Pure function, no side effects.
     Call from scheduler or periodically.

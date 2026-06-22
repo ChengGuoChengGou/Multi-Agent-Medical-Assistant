@@ -29,12 +29,12 @@ class BM25Index:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self._documents: List[Document] = []
-        self._tokenized_corpus: List[List[str]] = []
-        self._bm25: Optional[BM25Okapi] = None
+        self._documents: list[Document] = []
+        self._tokenized_corpus: list[list[str]] = []
+        self._bm25: BM25Okapi | None = None
         self._built = False
 
-    def _tokenize(self, text: str) -> List[str]:
+    def _tokenize(self, text: str) -> list[str]:
         """
         Tokenize text for BM25 indexing.
         Lowercases, splits on non-alphanumeric, keeps medical terms intact.
@@ -44,7 +44,7 @@ class BM25Index:
         tokens = re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", text)
         return [t for t in tokens if len(t) > 1]  # Filter single chars
 
-    def build_index(self, documents: List[Document]) -> None:
+    def build_index(self, documents: list[Document]) -> None:
         """
         Build BM25 index from a list of LangChain Documents.
 
@@ -57,7 +57,7 @@ class BM25Index:
         self._built = True
         self.logger.info(f"[BM25] Index built with {len(documents)} documents")
 
-    def add_documents(self, documents: List[Document]) -> None:
+    def add_documents(self, documents: list[Document]) -> None:
         """Add documents to existing index (rebuilds)."""
         self._documents.extend(documents)
         self._tokenized_corpus.extend([self._tokenize(doc.page_content) for doc in documents])
@@ -69,11 +69,11 @@ class BM25Index:
         before = len(self._documents)
         filtered = [
             (doc, tokens)
-            for doc, tokens in zip(self._documents, self._tokenized_corpus)
+            for doc, tokens in zip(self._documents, self._tokenized_corpus, strict=False)
             if doc.metadata.get("source") != source
         ]
         if filtered:
-            self._documents, self._tokenized_corpus = zip(*filtered)
+            self._documents, self._tokenized_corpus = zip(*filtered, strict=False)
             self._documents = list(self._documents)
             self._tokenized_corpus = list(self._tokenized_corpus)
         else:
@@ -84,7 +84,7 @@ class BM25Index:
         self.logger.info(f"[BM25] Removed {removed} docs from source: {source}")
         return removed
 
-    def search(self, query: str, top_k: int = 20) -> List[Tuple[Document, float]]:
+    def search(self, query: str, top_k: int = 20) -> list[tuple[Document, float]]:
         """
         Search index with BM25.
 
@@ -156,7 +156,7 @@ class HybridSearch:
         self.reranker = reranker
         self.rrf_k = rrf_k
 
-    def _load_docs_from_docstore(self) -> List[Document]:
+    def _load_docs_from_docstore(self) -> list[Document]:
         """Load all documents from docstore into BM25 index."""
         if self.docstore is None:
             self.logger.warning("[HYBRID] No docstore available for BM25 indexing")
@@ -165,7 +165,7 @@ class HybridSearch:
         documents = []
         try:
             # LocalFileStore yields (key, value) pairs
-            for key, value in self.docstore.yield_keys():
+            for key, _value in self.docstore.yield_keys():
                 content = self.docstore.mget([key])
                 if content and content[0]:
                     text = content[0].decode("utf-8") if isinstance(content[0], bytes) else str(content[0])
@@ -189,16 +189,16 @@ class HybridSearch:
         else:
             self.logger.warning("[HYBRID] No documents found in docstore for BM25")
 
-    def build_bm25_from_documents(self, documents: List[Document]) -> None:
+    def build_bm25_from_documents(self, documents: list[Document]) -> None:
         """Build BM25 index from a provided list of documents."""
         self.bm25_index.build_index(documents)
 
     def _rrf_fusion(
         self,
-        vector_results: List[Tuple[Document, float]],
-        bm25_results: List[Tuple[Document, float]],
+        vector_results: list[tuple[Document, float]],
+        bm25_results: list[tuple[Document, float]],
         top_k: int = 10,
-    ) -> List[Tuple[Document, float, Dict[str, Any]]]:
+    ) -> list[tuple[Document, float, dict[str, Any]]]:
         """
         Fuse vector and BM25 results using Reciprocal Rank Fusion.
 
@@ -214,7 +214,7 @@ class HybridSearch:
             List of (Document, rrf_score, debug_info) tuples
         """
         # Map documents by a content hash for deduplication
-        doc_scores: Dict[str, Dict[str, Any]] = {}
+        doc_scores: dict[str, dict[str, Any]] = {}
 
         def _doc_key(doc: Document) -> str:
             """Generate a dedup key from document content and source."""
@@ -263,8 +263,8 @@ class HybridSearch:
         vector_top_k: int = 20,
         bm25_top_k: int = 20,
         use_reranker: bool = True,
-        parsed_content_dir: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        parsed_content_dir: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Perform hybrid search: BM25 + Vector with RRF fusion.
 
@@ -356,7 +356,7 @@ class HybridSearch:
 
         return results
 
-    def incremental_update(self, source: str, new_documents: List[Document]) -> None:
+    def incremental_update(self, source: str, new_documents: list[Document]) -> None:
         """
         Incrementally update BM25 index for a specific source file.
         Removes old entries for the source and adds new ones.

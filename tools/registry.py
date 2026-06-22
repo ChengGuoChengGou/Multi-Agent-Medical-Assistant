@@ -33,7 +33,7 @@ class ToolRegistry:
     def __init__(self):
         if not self._initialized:
             self._medical_registry = None
-            self._external_tools: Dict[str, Any] = {}
+            self._external_tools: dict[str, Any] = {}
             self._initialized = True
             logger.info("[TOOL_REGISTRY] ToolRegistry initialized")
 
@@ -67,7 +67,7 @@ class ToolRegistry:
         """Get the underlying MedicalToolRegistry."""
         return self._medical_registry
 
-    def get_tool(self, name: str) -> Optional[Any]:
+    def get_tool(self, name: str) -> Any | None:
         """
         Get a tool by name (checks medical registry first, then external).
 
@@ -86,7 +86,7 @@ class ToolRegistry:
         # Check external tools
         return self._external_tools.get(name)
 
-    def get_tools_by_category(self, category: str) -> List[Any]:
+    def get_tools_by_category(self, category: str) -> list[Any]:
         """
         Get all tools in a category.
 
@@ -141,7 +141,7 @@ class ToolRegistry:
 
         return "\n\n".join(summaries) if summaries else "No tools available"
 
-    def get_all_tool_names(self) -> List[str]:
+    def get_all_tool_names(self) -> list[str]:
         """Get list of all registered tool names."""
         names = []
 
@@ -166,7 +166,7 @@ class ToolRegistry:
 
 
 # Singleton accessor
-_registry_instance: Optional[ToolRegistry] = None
+_registry_instance: ToolRegistry | None = None
 
 
 def get_registry() -> ToolRegistry:

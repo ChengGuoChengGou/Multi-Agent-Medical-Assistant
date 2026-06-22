@@ -13,7 +13,6 @@ class PubmedSearchAgent:
         Args:
             query: User query
         """
-        pass
 
     def search_pubmed(self, pubmed_api_url, query: str) -> str:
         """Search PubMed for relevant medical articles."""

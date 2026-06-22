@@ -360,7 +360,7 @@ class TestBuildContextMethods:
             vector_memory_text="some memory",
         )
         assert "medical assistant" in seg.system_prompt.lower()
-        assert "some memory" == seg.vector_memory
+        assert seg.vector_memory == "some memory"
         assert "User: hello" in seg.chat_history
 
     def test_build_rag_context(self):

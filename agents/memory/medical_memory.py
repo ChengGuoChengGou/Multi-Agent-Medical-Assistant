@@ -51,7 +51,7 @@ class MedicalMemory:
         return self._available and self._store is not None
 
     def remember_medical(
-        self, user_id: str, content: str, category: str = "general", metadata: Dict[str, Any] = None
+        self, user_id: str, content: str, category: str = "general", metadata: dict[str, Any] | None = None
     ) -> bool:
         """
         Store medical information with category tagging.
@@ -79,7 +79,7 @@ class MedicalMemory:
             logger.error(f"[MEDICAL_MEMORY] Remember failed: {e}")
             return False
 
-    def recall_medical(self, user_id: str, query: str, category: str = None, limit: int = 5) -> str:
+    def recall_medical(self, user_id: str, query: str, category: str | None = None, limit: int = 5) -> str:
         """
         Recall medical context relevant to a query.
 
@@ -106,7 +106,7 @@ class MedicalMemory:
             logger.error(f"[MEDICAL_MEMORY] Recall failed: {e}")
             return ""
 
-    def get_patient_history(self, user_id: str, limit: int = 20) -> List[Dict]:
+    def get_patient_history(self, user_id: str, limit: int = 20) -> list[dict]:
         """
         Get patient's medical history as structured records.
 
@@ -147,7 +147,7 @@ class MedicalMemory:
 
 
 # Singleton
-_medical_memory: Optional[MedicalMemory] = None
+_medical_memory: MedicalMemory | None = None
 
 
 def get_medical_memory() -> MedicalMemory:

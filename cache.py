@@ -61,7 +61,7 @@ def _memory_cache_cleanup() -> int:
     return len(expired)
 
 
-async def cache_get(key: str) -> Optional[dict]:
+async def cache_get(key: str) -> dict | None:
     """Retrieve cached response. Redis first, then memory fallback."""
     global _redis_client
     if REDIS_AVAILABLE and _redis_client:
@@ -149,9 +149,72 @@ _semantic_misses = 0
 
 # Chinese-aware stop words (minimal set)
 _STOP_WORDS = frozenset(
-    "的 了 在 是 我 有 和 就 不 人 都 一 一个 上 也 很 到 说 要 去 你 会 着 没有 看 好 自己 这 "
-    "the a an is are was were be been being have has had do does did will would shall should may "
-    "might can could of in to for on with at by from as into about".split()
+    [
+        "的",
+        "了",
+        "在",
+        "是",
+        "我",
+        "有",
+        "和",
+        "就",
+        "不",
+        "人",
+        "都",
+        "一",
+        "一个",
+        "上",
+        "也",
+        "很",
+        "到",
+        "说",
+        "要",
+        "去",
+        "你",
+        "会",
+        "着",
+        "没有",
+        "看",
+        "好",
+        "自己",
+        "这",
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "shall",
+        "should",
+        "may",
+        "might",
+        "can",
+        "could",
+        "of",
+        "in",
+        "to",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "about",
+    ]
 )
 
 
@@ -219,7 +282,7 @@ def _semantic_cleanup_expired() -> int:
     return before - len(_semantic_cache)
 
 
-def semantic_get(query: str) -> Optional[dict]:
+def semantic_get(query: str) -> dict | None:
     """Find a cached response for a semantically similar query."""
     global _semantic_hits, _semantic_misses
     if not _semantic_cache:

@@ -13,8 +13,9 @@ Phase 4.4: MCP连接管理增强
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class ConnectionHealth:
     consecutive_failures: int = 0
     total_calls: int = 0
     total_failures: int = 0
-    last_error: Optional[str] = None
+    last_error: str | None = None
 
     @property
     def failure_rate(self) -> float:
@@ -93,8 +94,8 @@ class ResilientMCPConnection:
     def __init__(
         self,
         connection: Any,  # MCPServerConnection
-        retry_config: Optional[RetryConfig] = None,
-        timeout_config: Optional[TimeoutConfig] = None,
+        retry_config: RetryConfig | None = None,
+        timeout_config: TimeoutConfig | None = None,
     ):
         self._conn = connection
         self._retry = retry_config or RetryConfig()
@@ -116,7 +117,7 @@ class ResilientMCPConnection:
         return self._conn._initialized
 
     @property
-    def tools(self) -> List:
+    def tools(self) -> list:
         return self._conn.tools
 
     async def start(self) -> bool:
@@ -132,7 +133,7 @@ class ResilientMCPConnection:
             else:
                 self._health.record_failure("Initialization returned False")
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._health.record_failure(f"Init timeout ({self._timeouts.init_timeout}s)")
             logger.error(f"[MCP:{self.name}] Start timeout")
             return False
@@ -141,7 +142,7 @@ class ResilientMCPConnection:
             logger.error(f"[MCP:{self.name}] Start error: {e}")
             return False
 
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """
         Call tool with retry logic and health tracking.
 
@@ -179,7 +180,7 @@ class ResilientMCPConnection:
                         self._health.record_success()
                     return result
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 last_error = f"Timeout ({self._timeouts.tool_call_timeout}s)"
                 logger.warning(
                     f"[MCP:{self.name}] {tool_name} timeout, attempt {attempt + 1}/{self._retry.max_retries + 1}"
@@ -244,9 +245,8 @@ class ResilientMCPConnection:
             if result:
                 logger.info(f"[MCP:{self.name}] Reconnect successful")
                 return True
-            else:
-                logger.error(f"[MCP:{self.name}] Reconnect failed")
-                return False
+            logger.error(f"[MCP:{self.name}] Reconnect failed")
+            return False
         finally:
             self._reconnecting = False
 
@@ -286,13 +286,13 @@ class ResilientMCPClientManager:
     """
 
     def __init__(self):
-        self._connections: Dict[str, ResilientMCPConnection] = {}
+        self._connections: dict[str, ResilientMCPConnection] = {}
 
     def add_server(
         self,
         connection: Any,
-        retry_config: Optional[RetryConfig] = None,
-        timeout_config: Optional[TimeoutConfig] = None,
+        retry_config: RetryConfig | None = None,
+        timeout_config: TimeoutConfig | None = None,
     ) -> None:
         """Add a server with resilient wrapping."""
         resilient = ResilientMCPConnection(
@@ -302,7 +302,7 @@ class ResilientMCPClientManager:
         )
         self._connections[connection.name] = resilient
 
-    async def start_all(self) -> Dict[str, bool]:
+    async def start_all(self) -> dict[str, bool]:
         """Start all servers concurrently."""
         tasks = {name: asyncio.create_task(conn.start()) for name, conn in self._connections.items()}
         results = {}
@@ -317,10 +317,10 @@ class ResilientMCPClientManager:
             return_exceptions=True,
         )
 
-    def get_connection(self, name: str) -> Optional[ResilientMCPConnection]:
+    def get_connection(self, name: str) -> ResilientMCPConnection | None:
         return self._connections.get(name)
 
-    def get_all_tools(self) -> List:
+    def get_all_tools(self) -> list:
         """Get all tools from all healthy connections."""
         tools = []
         for conn in self._connections.values():
@@ -328,7 +328,7 @@ class ResilientMCPClientManager:
                 tools.extend(conn.tools)
         return tools
 
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Find and call tool across all connections with retry."""
         for conn in self._connections.values():
             if any(t.name == tool_name for t in conn.tools):
@@ -344,7 +344,7 @@ class ResilientMCPClientManager:
             error=f"Tool '{tool_name}' not found on any server",
         )
 
-    async def call_on_server(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def call_on_server(self, server_name: str, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Call tool on specific server with retry."""
         conn = self._connections.get(server_name)
         if conn:
@@ -360,14 +360,14 @@ class ResilientMCPClientManager:
             error=f"Server '{server_name}' not found",
         )
 
-    async def health_check_all(self) -> Dict[str, bool]:
+    async def health_check_all(self) -> dict[str, bool]:
         """Run health checks on all connections."""
         results = {}
         for name, conn in self._connections.items():
             results[name] = await conn.health_check()
         return results
 
-    def get_health_summary(self) -> Dict[str, Dict[str, Any]]:
+    def get_health_summary(self) -> dict[str, dict[str, Any]]:
         """Get health metrics for all connections."""
         return {
             name: {

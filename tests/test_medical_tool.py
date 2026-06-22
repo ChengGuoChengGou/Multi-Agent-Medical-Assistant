@@ -36,7 +36,7 @@ class DummyTool(MedicalTool):
         name: str = "dummy_tool",
         description: str = "A dummy tool",
         category: str = "utility",
-        schema: Optional[Dict[str, Any]] = None,
+        schema: dict[str, Any] | None = None,
         execute_fn=None,
     ):
         self._name = name
@@ -58,7 +58,7 @@ class DummyTool(MedicalTool):
         return self._category
 
     @property
-    def input_schema(self) -> Dict[str, Any]:
+    def input_schema(self) -> dict[str, Any]:
         return self._schema
 
     async def execute(self, **kwargs) -> MedicalToolResult:

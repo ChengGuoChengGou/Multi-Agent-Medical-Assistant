@@ -64,7 +64,7 @@ Respond with a JSON array of tool calls to make (can be multiple for comprehensi
 Only output the JSON array, nothing else."""
 
 
-def _determine_mcp_tools_llm(query: str, llm) -> List[Dict[str, Any]]:
+def _determine_mcp_tools_llm(query: str, llm) -> list[dict[str, Any]]:
     """
     Use the LLM to determine which MCP tools to call for a given query.
     Falls back to keyword-based routing if LLM fails.
@@ -93,7 +93,7 @@ def _determine_mcp_tools_llm(query: str, llm) -> List[Dict[str, Any]]:
     return _determine_mcp_tools_keyword(query)
 
 
-def _determine_mcp_tools_keyword(query: str) -> List[Dict[str, Any]]:
+def _determine_mcp_tools_keyword(query: str) -> list[dict[str, Any]]:
     """
     Keyword-based fallback routing for MCP tools.
     """
@@ -211,7 +211,7 @@ def _determine_mcp_tools_keyword(query: str) -> List[Dict[str, Any]]:
 # ============================================================
 
 
-async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
+async def mcp_agent_node(state: dict[str, Any], config: Any) -> dict[str, Any]:
     """
     LangGraph node: MCP Agent.
 
@@ -227,9 +227,7 @@ async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
     messages = state["messages"]
     last_message = messages[-1] if messages else None
     user_query = ""
-    if isinstance(last_message, HumanMessage):
-        user_query = last_message.content
-    elif hasattr(last_message, "content"):
+    if isinstance(last_message, HumanMessage) or hasattr(last_message, "content"):
         user_query = last_message.content
 
     print(f"[MCP_AGENT] Processing: {user_query[:100]}...")
@@ -251,10 +249,10 @@ async def mcp_agent_node(state: Dict[str, Any], config: Any) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"[MCP_AGENT] Failed to get MCP client: {e}")
         error_msg = AIMessage(
-            content=f"I encountered an error connecting to external medical databases: {str(e)}. "
+            content=f"I encountered an error connecting to external medical databases: {e!s}. "
             f"Falling back to internal knowledge for your query."
         )
-        state["messages"] = messages + [error_msg]
+        state["messages"] = [*messages, error_msg]
         return state
 
     # Execute tool calls
@@ -333,12 +331,12 @@ Always remind the user to consult healthcare professionals for clinical decision
         answer = _format_tool_results_raw(user_query, tool_results)
 
     ai_message = AIMessage(content=answer)
-    state["messages"] = messages + [ai_message]
+    state["messages"] = [*messages, ai_message]
     print(f"[MCP_AGENT] Response generated: {len(answer)} chars")
     return state
 
 
-def _format_tool_results_raw(query: str, results: List[Dict]) -> str:
+def _format_tool_results_raw(query: str, results: list[dict]) -> str:
     """Format tool results into a readable response when LLM synthesis is unavailable."""
     parts = [f"## Medical Database Search Results\n\n**Query:** {query}\n"]
     for tr in results:

@@ -64,7 +64,7 @@ class TestListProviders:
 
     def test_values_are_descriptions(self):
         result = list_providers()
-        for name, desc in result.items():
+        for _name, desc in result.items():
             assert isinstance(desc, str)
             assert len(desc) > 0
 

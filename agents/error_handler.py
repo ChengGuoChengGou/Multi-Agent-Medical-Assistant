@@ -16,7 +16,8 @@ import enum
 import logging
 import re
 import time
-from typing import Any, Callable, Optional, TypeVar
+from collections.abc import Callable
+from typing import Any, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -121,14 +122,13 @@ def _get_retry_delay(error_type: LLMErrorType, attempt: int) -> float:
     if error_type == LLMErrorType.RATE_LIMIT:
         # Rate limit: longer backoff (2s, 4s, 8s)
         return min(2 ** (attempt + 1), 30.0)
-    elif error_type == LLMErrorType.OVERLOAD:
+    if error_type == LLMErrorType.OVERLOAD:
         # Overload: moderate backoff (1s, 2s, 4s)
         return min(2**attempt, 15.0)
-    elif error_type == LLMErrorType.CONTEXT_LENGTH:
+    if error_type == LLMErrorType.CONTEXT_LENGTH:
         # Context length: no delay, just retry after truncation
         return 0.0
-    else:
-        return 1.0
+    return 1.0
 
 
 def _estimate_token_count(text: str) -> int:
@@ -195,8 +195,8 @@ def llm_call_with_recovery(
     func: Callable[..., T],
     *args,
     max_retries: int = 2,
-    on_context_too_long: Optional[Callable[[], list]] = None,
-    max_tokens_override: Optional[int] = None,
+    on_context_too_long: Callable[[], list] | None = None,
+    max_tokens_override: int | None = None,
     **kwargs,
 ) -> T:
     """Call an LLM function with error classification and recovery.

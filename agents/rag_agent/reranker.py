@@ -34,8 +34,8 @@ class Reranker:
             raise
 
     def rerank(
-        self, query: str, documents: Union[List[Dict[str, Any]], List[str]], parsed_content_dir: str
-    ) -> List[Dict[str, Any]]:
+        self, query: str, documents: list[dict[str, Any]] | list[str], parsed_content_dir: str
+    ) -> list[dict[str, Any]]:
         """
         Rerank documents based on query relevance using cross-encoder.
 

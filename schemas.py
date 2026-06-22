@@ -20,7 +20,7 @@ class QueryRequest(BaseModel):
         max_length=5000,
         examples=["What are the early symptoms of type 2 diabetes?"],
     )
-    conversation_history: List[Dict[str, str]] = Field(
+    conversation_history: list[dict[str, str]] = Field(
         default=[],
         description="Previous conversation turns for context",
         examples=[[{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi, how can I help?"}]],
@@ -72,9 +72,9 @@ class HealthResponse(BaseModel):
     )
     status: str = Field(..., description="Service status", examples=["healthy"])
     uptime_seconds: float = Field(..., description="Server uptime in seconds")
-    middleware: Dict[str, bool] = Field(..., description="Middleware stack status")
-    dedup_stats: Dict[str, Any] = Field(..., description="Request deduplication statistics")
-    api_auth: Dict[str, Any] = Field(default_factory=dict, description="API key auth statistics")
+    middleware: dict[str, bool] = Field(..., description="Middleware stack status")
+    dedup_stats: dict[str, Any] = Field(..., description="Request deduplication statistics")
+    api_auth: dict[str, Any] = Field(default_factory=dict, description="API key auth statistics")
 
 
 class ChatResponse(BaseModel):
@@ -99,7 +99,7 @@ class ChatResponse(BaseModel):
     status: str = Field(..., description="Response status", examples=["success"])
     response: str = Field(..., description="Agent's medical response text")
     agent: str = Field(..., description="Name of the agent that handled the query", examples=["RAG_AGENT"])
-    result_image: Optional[str] = Field(
+    result_image: str | None = Field(
         default=None,
         description="URL path to result image (e.g. skin lesion segmentation plot)",
         examples=["/uploads/skin_lesion_output/segmentation_plot.png"],
@@ -129,7 +129,7 @@ class ValidateResponse(BaseModel):
     status: str = Field(..., description="Validation outcome: 'validated' or 'rejected'", examples=["validated"])
     message: str = Field(..., description="Human-readable status message")
     response: str = Field(..., description="Agent response after processing validation")
-    comments: Optional[str] = Field(
+    comments: str | None = Field(
         default=None,
         description="Validator comments (present when rejected)",
         examples=["Recommend additional chest X-ray for confirmation"],
@@ -154,4 +154,4 @@ class ErrorResponse(BaseModel):
         }
     )
     error: str = Field(..., description="Error message")
-    details: Optional[str] = Field(default=None, description="Additional error details")
+    details: str | None = Field(default=None, description="Additional error details")

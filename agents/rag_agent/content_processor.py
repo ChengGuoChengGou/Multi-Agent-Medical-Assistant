@@ -23,7 +23,7 @@ class ContentProcessor:
         self.summarizer_model = config.rag.summarizer_model  # temperature 0.5
         self.chunker_model = config.rag.chunker_model  # temperature 0.0
 
-    def summarize_images(self, images: List[str]) -> List[str]:
+    def summarize_images(self, images: list[str]) -> list[str]:
         """
         Summarize images using the provided model, with error handling.
 
@@ -66,13 +66,13 @@ class ContentProcessor:
                 results.append(summary)
             except Exception as e:
                 # Log the error if needed
-                print(f"Error processing image: {str(e)}")
+                print(f"Error processing image: {e!s}")
                 # Add placeholder for the failed image
                 results.append("no image summary")
 
         return results
 
-    def format_document_with_images(self, parsed_document: Any, image_summaries: List[str]) -> str:
+    def format_document_with_images(self, parsed_document: Any, image_summaries: list[str]) -> str:
         """
         Format the parsed document by replacing image placeholders with image summaries.
 
@@ -94,7 +94,7 @@ class ContentProcessor:
 
         return formatted_document
 
-    def _replace_occurrences(self, text: str, target: str, replacements: List[str]) -> str:
+    def _replace_occurrences(self, text: str, target: str, replacements: list[str]) -> str:
         """
         Replace occurrences of a target placeholder with corresponding replacements.
 
@@ -119,7 +119,7 @@ class ContentProcessor:
 
         return result
 
-    def chunk_document(self, formatted_document: str) -> List[str]:
+    def chunk_document(self, formatted_document: str) -> list[str]:
         """
         Split the document into semantic chunks.
 
@@ -169,7 +169,7 @@ class ContentProcessor:
 
         return self._split_text_by_llm_suggestions(chunked_text, chunking_response)
 
-    def _split_text_by_llm_suggestions(self, chunked_text: str, llm_response: str) -> List[str]:
+    def _split_text_by_llm_suggestions(self, chunked_text: str, llm_response: str) -> list[str]:
         """
         Split text according to LLM suggested split points.
 

@@ -222,7 +222,7 @@ class ResponseGenerator:
         self.response_generator_model = config.rag.response_generator_model
         self.include_sources = getattr(config.rag, "include_sources", True)
 
-    def _build_prompt(self, query: str, context: str, chat_history: Optional[List[Dict[str, str]]] = None) -> str:
+    def _build_prompt(self, query: str, context: str, chat_history: list[dict[str, str]] | None = None) -> str:
         """
         Build the prompt for the language model.
 
@@ -264,10 +264,10 @@ class ResponseGenerator:
     def generate_response(
         self,
         query: str,
-        retrieved_docs: List[Dict[str, Any]],
-        picture_paths: List[str],
-        chat_history: Optional[List[Dict[str, str]]] = None,
-    ) -> Dict[str, Any]:
+        retrieved_docs: list[dict[str, Any]],
+        picture_paths: list[str],
+        chat_history: list[dict[str, str]] | None = None,
+    ) -> dict[str, Any]:
         """
         Generate a response based on retrieved documents.
 
@@ -347,7 +347,7 @@ class ResponseGenerator:
                 "confidence": 0.0,
             }
 
-    def _build_cross_references(self, retrieved_docs: List[Dict[str, Any]]) -> str:
+    def _build_cross_references(self, retrieved_docs: list[dict[str, Any]]) -> str:
         """
         Analyze retrieved documents across different source papers and build
         cross-reference suggestions when multiple papers discuss related topics.
@@ -445,7 +445,7 @@ class ResponseGenerator:
         # Return top N keywords
         return dict(counts.most_common(top_n))
 
-    def _extract_sources(self, documents: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    def _extract_sources(self, documents: list[dict[str, Any]]) -> list[dict[str, str]]:
         """
         Extract source information from retrieved documents for citation.
 
@@ -495,7 +495,7 @@ class ResponseGenerator:
 
         return formatted_sources
 
-    def _calculate_confidence(self, documents: List[Dict[str, Any]]) -> float:
+    def _calculate_confidence(self, documents: list[dict[str, Any]]) -> float:
         """
         Calculate confidence score based on retrieved documents.
 

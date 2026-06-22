@@ -38,7 +38,7 @@ class MedicalDocParser:
         do_tables: bool = True,
         do_formulas: bool = True,
         do_picture_desc: bool = False,
-    ) -> Tuple[Any, List[str]]:
+    ) -> tuple[Any, list[str]]:
         """
         Parse the document and extract structured content and images.
         Uses docling if available, otherwise falls back to PyPDF2 for basic text extraction.
@@ -49,7 +49,7 @@ class MedicalDocParser:
             document_path, output_dir, image_resolution_scale, do_ocr, do_tables, do_formulas, do_picture_desc
         )
 
-    def _parse_with_pypdf2(self, document_path: str, output_dir: str) -> Tuple[Any, List[str]]:
+    def _parse_with_pypdf2(self, document_path: str, output_dir: str) -> tuple[Any, list[str]]:
         """Lightweight fallback using PyPDF2 for text extraction."""
         import PyPDF2
 
@@ -59,7 +59,7 @@ class MedicalDocParser:
         with open(document_path, "rb") as f:
             reader = PyPDF2.PdfReader(f)
             pages_text = []
-            for i, page in enumerate(reader.pages):
+            for _i, page in enumerate(reader.pages):
                 text = page.extract_text() or ""
                 pages_text.append(text)
             full_text = "\n\n".join(pages_text)
@@ -91,7 +91,7 @@ class MedicalDocParser:
         do_tables: bool,
         do_formulas: bool,
         do_picture_desc: bool,
-    ) -> Tuple[Any, List[str]]:
+    ) -> tuple[Any, list[str]]:
         # Create output directory if it doesn't exist
         output_dir_path = Path(output_dir)
         output_dir_path.mkdir(parents=True, exist_ok=True)

@@ -23,9 +23,9 @@ PROMPTS_DIR = Path(__file__).parent
 class PromptManager:
     """Manages prompt templates with caching and variable substitution."""
 
-    def __init__(self, prompts_dir: Path = None):
+    def __init__(self, prompts_dir: Path | None = None):
         self.prompts_dir = prompts_dir or PROMPTS_DIR
-        self._cache: Dict[str, str] = {}
+        self._cache: dict[str, str] = {}
         self._load_templates()
 
     def _load_templates(self):
@@ -37,7 +37,7 @@ class PromptManager:
         for md_file in self.prompts_dir.glob("*.md"):
             try:
                 template_name = md_file.stem
-                with open(md_file, "r", encoding="utf-8") as f:
+                with open(md_file, encoding="utf-8") as f:
                     self._cache[template_name] = f.read()
                 logger.debug(f"[PROMPT_MGR] Loaded template: {template_name}")
             except Exception as e:
@@ -84,7 +84,7 @@ class PromptManager:
 
 
 # Singleton instance
-_manager_instance: Optional[PromptManager] = None
+_manager_instance: PromptManager | None = None
 
 
 def get_prompt_manager() -> PromptManager:

@@ -59,7 +59,7 @@ class VectorMemory:
         """Check if vector memory is available."""
         return self._available
 
-    def add(self, text: str, metadata: Dict[str, Any] = None) -> bool:
+    def add(self, text: str, metadata: dict[str, Any] | None = None) -> bool:
         """
         Add a memory entry to the vector store.
 
@@ -80,7 +80,7 @@ class VectorMemory:
             logger.error(f"[VECTOR_MEMORY] Add failed: {e}")
             return False
 
-    def search(self, query: str, limit: int = 5, score_threshold: float = 0.3) -> List[Tuple[str, float]]:
+    def search(self, query: str, limit: int = 5, score_threshold: float = 0.3) -> list[tuple[str, float]]:
         """
         Semantic search over vector memory.
 
@@ -108,7 +108,7 @@ class VectorMemory:
             logger.error(f"[VECTOR_MEMORY] Search failed: {e}")
             return []
 
-    def get_all(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_all(self, limit: int = 100) -> list[dict[str, Any]]:
         """
         Get all stored memories.
 
@@ -127,7 +127,7 @@ class VectorMemory:
             logger.error(f"[VECTOR_MEMORY] Get all failed: {e}")
             return []
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get vector memory statistics.
 
@@ -147,7 +147,7 @@ class VectorMemory:
 
 
 # Singleton
-_vector_memory: Optional[VectorMemory] = None
+_vector_memory: VectorMemory | None = None
 
 
 def get_vector_memory() -> VectorMemory:

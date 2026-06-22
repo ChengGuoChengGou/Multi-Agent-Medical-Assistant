@@ -98,7 +98,7 @@ def _lazy_init():
 # ── Core API ──
 
 
-def add_memory(text: str, user_id: str = "global", metadata: dict = None) -> bool:
+def add_memory(text: str, user_id: str = "global", metadata: dict | None = None) -> bool:
     """Add a single memory entry."""
     if not _lazy_init():
         return False
@@ -168,7 +168,7 @@ def add_memories_batch(texts: list, user_id: str = "global") -> int:
         embeddings = _model.encode(clean, show_progress_bar=False)
 
         points = []
-        for text, emb in zip(clean, embeddings):
+        for text, emb in zip(clean, embeddings, strict=False):
             points.append(
                 PointStruct(
                     id=str(uuid.uuid4()),
@@ -193,7 +193,7 @@ def add_memories_batch(texts: list, user_id: str = "global") -> int:
         return 0
 
 
-def search_memory(query: str, user_id: str = None, top_k: int = 5, min_score: float = 0.3) -> list:
+def search_memory(query: str, user_id: str | None = None, top_k: int = 5, min_score: float = 0.3) -> list:
     """Semantic search. Returns list of memory text strings."""
     if not _lazy_init():
         return []
@@ -241,7 +241,7 @@ def search_memory(query: str, user_id: str = None, top_k: int = 5, min_score: fl
         return []
 
 
-def get_all_memories(limit: int = 200, user_id: str = None) -> list:
+def get_all_memories(limit: int = 200, user_id: str | None = None) -> list:
     """Return all stored memory texts."""
     if not _lazy_init():
         return []
@@ -290,13 +290,13 @@ def seed_from_medical_knowledge(file_paths: list) -> int:
             continue
 
         try:
-            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            with open(filepath, encoding="utf-8", errors="replace") as f:
                 content = f.read()
 
             for line in content.split("\n"):
                 line = line.strip()
                 # Skip headers, separators, short lines
-                if not line or line.startswith("#") or line.startswith("---"):
+                if not line or line.startswith(("#", "---")):
                     continue
                 if len(line) < 15:
                     continue
@@ -379,7 +379,7 @@ def store_conversation_summary(summary: str, user_id: str = "conversation") -> b
     )
 
 
-def format_memory_for_prompt(query: str = "", user_id: str = None, top_k: int = 8) -> str:
+def format_memory_for_prompt(query: str = "", user_id: str | None = None, top_k: int = 8) -> str:
     """Format semantic search results for injection into system prompt.
     Falls back gracefully if vector memory unavailable.
     """

@@ -12,7 +12,7 @@ class QueryExpander:
         self.config = config
         self.model = config.rag.llm
 
-    def expand_query(self, original_query: str) -> Dict[str, Any]:
+    def expand_query(self, original_query: str) -> dict[str, Any]:
         """
         Expand the original query with relevant medical terms.
 

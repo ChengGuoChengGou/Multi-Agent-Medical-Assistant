@@ -29,11 +29,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 logger = logging.getLogger(__name__)
 
 
-def load_benchmark(path: str = None) -> list[dict]:
+def load_benchmark(path: str | None = None) -> list[dict]:
     """Load medical QA benchmark dataset."""
     if path is None:
         path = Path(__file__).parent / "medical_qa_benchmark.json"
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
     return data["test_cases"]
 
@@ -162,14 +162,14 @@ def generate_report(
     ragas_scores: dict,
     deepeval_scores: dict,
     test_cases: list[dict],
-    output_dir: str = None,
+    output_dir: str | None = None,
 ) -> dict:
     """Generate evaluation report."""
     report = {
         "timestamp": datetime.now().isoformat(),
         "dataset": "medical_qa_benchmark_v1",
         "num_test_cases": len(test_cases),
-        "categories": sorted(set(tc["category"] for tc in test_cases)),
+        "categories": sorted({tc["category"] for tc in test_cases}),
         "ragas": ragas_scores,
         "deepeval": deepeval_scores,
     }

@@ -21,8 +21,8 @@ router = APIRouter(prefix="/api/v1/health", tags=["Health v1"])
 class DependencyStatus(BaseModel):
     name: str
     status: str  # "healthy" | "degraded" | "unhealthy"
-    latency_ms: Optional[float] = None
-    detail: Optional[str] = None
+    latency_ms: float | None = None
+    detail: str | None = None
 
 
 class DetailedHealthResponse(BaseModel):
@@ -75,10 +75,9 @@ def _check_qdrant() -> DependencyStatus:
             return DependencyStatus(
                 name="qdrant", status="healthy", latency_ms=round(latency, 1), detail=f"{len(collections)} collections"
             )
-        else:
-            return DependencyStatus(
-                name="qdrant", status="degraded", latency_ms=round(latency, 1), detail=f"HTTP {r.status_code}"
-            )
+        return DependencyStatus(
+            name="qdrant", status="degraded", latency_ms=round(latency, 1), detail=f"HTTP {r.status_code}"
+        )
     except Exception as e:
         return DependencyStatus(name="qdrant", status="unhealthy", detail=str(e)[:200])
 

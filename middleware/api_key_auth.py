@@ -51,7 +51,7 @@ _PUBLIC_PREFIXES: tuple = (
 )
 
 
-def _load_api_keys() -> Set[str]:
+def _load_api_keys() -> set[str]:
     """Load API keys from MEDICAL_API_KEYS env var (comma-separated)."""
     raw = os.environ.get("MEDICAL_API_KEYS", "").strip()
     if not raw:
@@ -59,7 +59,7 @@ def _load_api_keys() -> Set[str]:
     return {k.strip() for k in raw.split(",") if k.strip()}
 
 
-def _extract_key(request: Request) -> Optional[str]:
+def _extract_key(request: Request) -> str | None:
     """Extract API key from Authorization: Bearer <key> or X-API-Key header."""
     # 1. Authorization: Bearer <key>
     auth = request.headers.get("authorization", "")
@@ -84,11 +84,7 @@ def _is_protected(path: str) -> bool:
         if path.startswith(prefix):
             return False
     # Check protected prefixes
-    for prefix in _PROTECTED_PREFIXES:
-        if path.startswith(prefix):
-            return True
-    # Unknown paths: allow (could be static files, frontend routes, etc.)
-    return False
+    return any(path.startswith(prefix) for prefix in _PROTECTED_PREFIXES)
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
@@ -98,7 +94,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     If MEDICAL_API_KEYS is not set, operates in dev mode (all requests allowed).
     """
 
-    def __init__(self, app, api_keys: Optional[Set[str]] = None):
+    def __init__(self, app, api_keys: set[str] | None = None):
         global _middleware_instance
         super().__init__(app)
         self._api_keys = api_keys if api_keys is not None else _load_api_keys()

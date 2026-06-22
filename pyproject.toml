@@ -59,8 +59,29 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
-ignore = ["E501", "E741", "W2", "W3", "W6", "E401", "E402", "F401", "F841", "F541", "F821", "F811", "E711", "E722", "E731"]
+select = ["E", "F", "W", "I", "B", "SIM", "UP", "C4", "PIE", "RUF", "PT"]
+ignore = [
+    "E501", "E741", "W2", "W3", "W6",
+    "E401", "E402", "F401", "F841", "F541", "F821", "F811", "E711", "E722", "E731",
+    "B008",  # function-call-in-default-argument (FastAPI Depends)
+    "PT001", # pytest-fixture-incorrect-parentheses-style
+    "PT017", # pytest-assert-in-except
+    "SIM108",# if-else-block-instead-of-if-exp (readability preference)
+    "SIM114",# if-with-same-arms
+    "RUF003",# ambiguous-unicode-character-comment
+    "B904",  # raise-without-from-inside-except
+    "UP035", # deprecated-import (typing → collections.abc, low risk)
+    "UP031", # printf-string-formatting (%-format is fine in logging)
+    "UP038", # non-pep604-isinstance (Union[X,Y] in isinstance)
+    "PT011", # pytest-raises-too-broad (too strict for existing tests)
+    "B017",  # assert-raises-exception (same as PT011)
+    "RUF001",# ambiguous-unicode-character-string (Chinese chars)
+    "RUF002",# ambiguous-unicode-character-docstring (Chinese chars)
+    "RUF012",# mutable-class-default
+    "SIM112",# uncapitalized-environment-variables
+    "SIM102",# collapsible-if (readability preference)
+    "SIM105",# suppressible-exception (try/except vs contextlib.suppress)
+]
 
 [tool.ruff.format]
 quote-style = "double"

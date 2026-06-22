@@ -260,7 +260,7 @@ class TestSecurityHeaders:
 
     def test_has_csp_header(self, client):
         resp = client.get("/health")
-        assert "content-security-policy" in {k.lower() for k in resp.headers.keys()}
+        assert "content-security-policy" in {k.lower() for k in resp.headers}
 
 
 class TestCORS:
@@ -275,7 +275,7 @@ class TestCORS:
             },
         )
         assert resp.status_code == 200
-        assert "access-control-allow-origin" in {k.lower() for k in resp.headers.keys()}
+        assert "access-control-allow-origin" in {k.lower() for k in resp.headers}
 
 
 # ── OpenAPI Schema ────────────────────────────────────────────────────────

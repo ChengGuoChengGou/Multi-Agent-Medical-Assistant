@@ -95,7 +95,7 @@ class VectorStore:
             self.logger.error(f"Error creating collection: {e}")
             raise e
 
-    def load_vectorstore(self) -> Tuple[QdrantVectorStore, LocalFileStore]:
+    def load_vectorstore(self) -> tuple[QdrantVectorStore, LocalFileStore]:
         """
         Load existing vectorstore and docstore for retrieval operations without ingesting new documents.
 
@@ -129,9 +129,9 @@ class VectorStore:
 
     def create_vectorstore(
         self,
-        document_chunks: List[str],
+        document_chunks: list[str],
         document_path: str,
-    ) -> Tuple[QdrantVectorStore, LocalFileStore, List[str]]:
+    ) -> tuple[QdrantVectorStore, LocalFileStore, list[str]]:
         """
         Create a vector store from document chunks or upsert documents to existing store.
 
@@ -191,14 +191,14 @@ class VectorStore:
 
         # Encode string chunks to bytes before storing
         encoded_chunks = [chunk.encode("utf-8") for chunk in document_chunks]
-        docstore.mset(list(zip(doc_ids, encoded_chunks)))
+        docstore.mset(list(zip(doc_ids, encoded_chunks, strict=False)))
 
     def retrieve_relevant_chunks(
         self,
         query: str,
         vectorstore: QdrantVectorStore,
         docstore: LocalFileStore,
-    ) -> Tuple[List[Dict[str, Any]], List[str]]:
+    ) -> tuple[list[dict[str, Any]], list[str]]:
         """
         Retrieve relevant chunks based on a query.
 

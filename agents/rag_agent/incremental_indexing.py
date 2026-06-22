@@ -19,8 +19,9 @@ import logging
 import os
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from watchdog.events import (
     FileCreatedEvent,
@@ -43,7 +44,7 @@ class IndexingEventHandler(FileSystemEventHandler):
     def __init__(
         self,
         callback: Callable[[str, str], None],
-        extensions: Set[str] = None,
+        extensions: set[str] | None = None,
         debounce_seconds: float = 5.0,
     ):
         """
@@ -56,9 +57,9 @@ class IndexingEventHandler(FileSystemEventHandler):
         self.callback = callback
         self.extensions = extensions or {".pdf"}
         self.debounce_seconds = debounce_seconds
-        self._pending: Dict[str, float] = {}  # path -> last_event_time
+        self._pending: dict[str, float] = {}  # path -> last_event_time
         self._lock = threading.Lock()
-        self._debounce_timer: Optional[threading.Timer] = None
+        self._debounce_timer: threading.Timer | None = None
         self.logger = logging.getLogger(__name__)
 
     def _should_process(self, path: str) -> bool:
@@ -135,14 +136,14 @@ class IncrementalIndexer:
 
     def __init__(
         self,
-        watch_paths: List[str],
+        watch_paths: list[str],
         content_processor=None,
         vectorstore_manager=None,
         hybrid_search=None,
-        extensions: Set[str] = None,
+        extensions: set[str] | None = None,
         debounce_seconds: float = 5.0,
         recursive: bool = True,
-        on_index_complete: Optional[Callable[[str, bool], None]] = None,
+        on_index_complete: Callable[[str, bool], None] | None = None,
     ):
         """
         Args:
@@ -165,7 +166,7 @@ class IncrementalIndexer:
         self.recursive = recursive
         self.on_index_complete = on_index_complete
 
-        self._observer: Optional[Observer] = None
+        self._observer: Observer | None = None
         self._running = False
         self._index_lock = threading.Lock()
         self._stats = {
@@ -279,7 +280,7 @@ class IncrementalIndexer:
         return self._running
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         return dict(self._stats)
 
     def __enter__(self):

@@ -20,7 +20,7 @@ class QueryRequest(BaseModel):
     model_config = {"json_schema_extra": {"examples": [{"query": "What is hypertension?"}]}}
 
     query: str = Field(..., min_length=1, max_length=4096, description="User query text")
-    conversation_history: List = Field(default=[], description="Previous conversation messages")
+    conversation_history: list = Field(default=[], description="Previous conversation messages")
 
     @field_validator("query")
     @classmethod
@@ -51,9 +51,9 @@ class ChatResponse(BaseModel):
     status: str = "success"
     response: str = ""
     agent: str = "unknown"
-    cached: Optional[bool] = None
-    result_image: Optional[str] = None
-    request_id: Optional[str] = None
+    cached: bool | None = None
+    result_image: str | None = None
+    request_id: str | None = None
 
 
 class ErrorResponse(BaseModel):
@@ -64,7 +64,7 @@ class ErrorResponse(BaseModel):
     status: str = "error"
     detail: str
     agent: str = "System"
-    request_id: Optional[str] = None
+    request_id: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -76,7 +76,7 @@ class HealthResponse(BaseModel):
 
     status: str  # "healthy" | "degraded"
     version: str = "3.3.0"
-    checks: Dict[str, str] = Field(default_factory=dict)
+    checks: dict[str, str] = Field(default_factory=dict)
     timestamp: int = Field(default_factory=lambda: int(time.time()))
 
     @field_validator("status")
@@ -90,7 +90,7 @@ class HealthResponse(BaseModel):
 class MetricsResponse(BaseModel):
     """Prometheus-compatible metrics (rendered as text/plain)."""
 
-    pass  # Rendered by observability module directly
+    # Rendered by observability module directly
 
 
 # ─── Agent Routing Models ───────────────────────────────────────────
@@ -101,7 +101,7 @@ class AgentRouteInfo(BaseModel):
 
     agent_name: str = Field(..., description="Target agent identifier")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Routing confidence score")
-    reasoning: Optional[str] = Field(default=None, description="Why this agent was selected")
+    reasoning: str | None = Field(default=None, description="Why this agent was selected")
 
 
 class ConversationMessage(BaseModel):
@@ -126,9 +126,9 @@ def api_success(
     response: str,
     agent: str = "unknown",
     cached: bool = False,
-    result_image: Optional[str] = None,
-    request_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    result_image: str | None = None,
+    request_id: str | None = None,
+) -> dict[str, Any]:
     """Build a standardized success response dict.
 
     Uses ChatResponse model for validation, then returns dict for backward compat.
@@ -147,8 +147,8 @@ def api_success(
 def api_error(
     detail: str,
     agent: str = "System",
-    request_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    request_id: str | None = None,
+) -> dict[str, Any]:
     """Build a standardized error response dict.
 
     Uses ErrorResponse model for validation, then returns dict for backward compat.
@@ -188,10 +188,10 @@ class MedicalDiagnosis(BaseModel):
 
     condition: str = Field(..., description="Suspected condition or diagnosis")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0-1")
-    symptoms: List[str] = Field(default_factory=list, description="Identified symptoms")
-    recommendations: List[str] = Field(default_factory=list, description="Recommended actions")
+    symptoms: list[str] = Field(default_factory=list, description="Identified symptoms")
+    recommendations: list[str] = Field(default_factory=list, description="Recommended actions")
     urgency: str = Field(default="medium", description="Urgency level: low/medium/high/critical")
-    differential: List[str] = Field(default_factory=list, description="Differential diagnoses to consider")
+    differential: list[str] = Field(default_factory=list, description="Differential diagnoses to consider")
     disclaimer: str = Field(
         default="This is AI-generated guidance, not a medical diagnosis. Please consult a healthcare professional.",
         description="Medical disclaimer",
@@ -217,9 +217,9 @@ class MedicalReport(BaseModel):
 
     title: str = Field(..., description="Report title")
     summary: str = Field(..., description="Executive summary")
-    sections: List[Dict[str, str]] = Field(default_factory=list, description="Report sections [{title, content}]")
-    key_findings: List[str] = Field(default_factory=list, description="Key findings")
-    recommendations: List[str] = Field(default_factory=list, description="Recommendations")
+    sections: list[dict[str, str]] = Field(default_factory=list, description="Report sections [{title, content}]")
+    key_findings: list[str] = Field(default_factory=list, description="Key findings")
+    recommendations: list[str] = Field(default_factory=list, description="Recommendations")
     disclaimer: str = Field(
         default="This report is AI-generated and should be reviewed by a medical professional.",
     )

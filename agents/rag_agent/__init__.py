@@ -60,7 +60,7 @@ class MedicalRAG:
             hybrid_search=self.hybrid_search,
         )
 
-    def ingest_directory(self, directory_path: str) -> Dict[str, Any]:
+    def ingest_directory(self, directory_path: str) -> dict[str, Any]:
         """
         Ingest all files in a directory into the RAG system.
 
@@ -132,7 +132,7 @@ class MedicalRAG:
             self.logger.error(f"Error ingesting directory: {e}")
             return {"success": False, "error": str(e), "processing_time": time.time() - start_time}
 
-    def ingest_file(self, document_path: str) -> Dict[str, Any]:
+    def ingest_file(self, document_path: str) -> dict[str, Any]:
         """
         Ingest a single file into the RAG system.
 
@@ -180,7 +180,7 @@ class MedicalRAG:
             self.logger.error(f"Error ingesting file: {e}")
             return {"success": False, "error": str(e), "processing_time": time.time() - start_time}
 
-    def process_query(self, query: str, chat_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+    def process_query(self, query: str, chat_history: list[dict[str, str]] | None = None) -> dict[str, Any]:
         """
         Process a query with the RAG system.
 
@@ -247,7 +247,7 @@ class MedicalRAG:
             self.logger.error(traceback.format_exc())
             # Return error response
             return {
-                "response": f"I encountered an error while processing your query: {str(e)}",
+                "response": f"I encountered an error while processing your query: {e!s}",
                 "sources": [],
                 "confidence": 0.0,
                 "processing_time": time.time() - start_time,
@@ -255,7 +255,7 @@ class MedicalRAG:
 
     def hybrid_retrieve(
         self, query: str, top_k: int = 5, use_bm25: bool = True, use_vector: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Hybrid retrieval combining BM25 keyword search and Qdrant vector search
         with Reciprocal Rank Fusion (RRF).
@@ -331,6 +331,6 @@ class MedicalRAG:
         self.incremental_indexer.stop()
 
     @property
-    def indexing_stats(self) -> Dict[str, Any]:
+    def indexing_stats(self) -> dict[str, Any]:
         """Get incremental indexing statistics."""
         return self.incremental_indexer.stats

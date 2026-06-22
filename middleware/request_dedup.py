@@ -25,7 +25,7 @@ from starlette.responses import Response
 logger = logging.getLogger("medical_chatbot.dedup")
 
 # In-flight request registry: key → _InFlightEntry
-_inflight: dict[str, "_InFlightEntry"] = {}
+_inflight: dict[str, _InFlightEntry] = {}
 _inflight_lock = asyncio.Lock()
 
 # Stats
@@ -36,14 +36,14 @@ _dedup_misses: int = 0  # requests that proceeded normally
 class _InFlightEntry:
     """Tracks an in-flight request."""
 
-    __slots__ = ("event", "result", "result_headers", "result_status", "error", "started_at", "waiters")
+    __slots__ = ("error", "event", "result", "result_headers", "result_status", "started_at", "waiters")
 
     def __init__(self):
         self.event: asyncio.Event = asyncio.Event()
-        self.result: Optional[bytes] = None
+        self.result: bytes | None = None
         self.result_headers: dict = {}
         self.result_status: int = 200
-        self.error: Optional[Exception] = None
+        self.error: Exception | None = None
         self.started_at: float = time.monotonic()
         self.waiters: int = 0
 
@@ -107,7 +107,7 @@ class RequestDedupMiddleware(BaseHTTPMiddleware):
                         headers={**entry.result_headers, "X-Dedup": "hit"},
                         status_code=entry.result_status,
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning("[Dedup] Timeout waiting for key=%s, falling through", key)
                 except Exception:
                     pass

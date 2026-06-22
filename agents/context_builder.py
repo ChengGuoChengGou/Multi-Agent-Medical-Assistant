@@ -330,7 +330,7 @@ class ContextBuilder:
             elif isinstance(item, str):
                 lines.append(f"{i}. {item}")
             else:
-                lines.append(f"{i}. {str(item)}")
+                lines.append(f"{i}. {item!s}")
 
         return "\n".join(lines)
 

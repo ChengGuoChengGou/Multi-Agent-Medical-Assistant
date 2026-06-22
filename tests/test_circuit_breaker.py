@@ -99,7 +99,7 @@ class TestCircuitBreakerClosed:
 
     def test_failure_accumulates(self):
         cb = _make_breaker(threshold=3)
-        for i in range(2):
+        for _i in range(2):
             with pytest.raises(ValueError):
                 cb.call(self._fail)
         # Still closed after 2 failures (threshold=3)
@@ -107,7 +107,7 @@ class TestCircuitBreakerClosed:
 
     def test_failure_opens_at_threshold(self):
         cb = _make_breaker(threshold=3)
-        for i in range(3):
+        for _i in range(3):
             with pytest.raises(ValueError):
                 cb.call(self._fail)
         assert cb.state == CircuitState.OPEN

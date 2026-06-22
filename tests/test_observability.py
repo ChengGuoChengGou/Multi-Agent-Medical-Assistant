@@ -114,9 +114,8 @@ class TestAgentMetrics:
 
     def test_track_failure(self):
         am = AgentMetrics()
-        with pytest.raises(ValueError):
-            with am.track("RAG"):
-                raise ValueError("boom")
+        with pytest.raises(ValueError), am.track("RAG"):
+            raise ValueError("boom")
         stats = am.get_stats("RAG")
         assert stats["calls"] == 1
         assert stats["failures"] == 1
@@ -128,9 +127,8 @@ class TestAgentMetrics:
             pass
         with am.track("RAG"):
             pass
-        with pytest.raises(RuntimeError):
-            with am.track("RAG"):
-                raise RuntimeError("fail")
+        with pytest.raises(RuntimeError), am.track("RAG"):
+            raise RuntimeError("fail")
         stats = am.get_stats("RAG")
         assert stats["calls"] == 3
         assert stats["failures"] == 1

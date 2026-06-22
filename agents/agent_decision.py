@@ -115,7 +115,7 @@ stop_hook = StopHookValidator()  # Post-agent output validation
 
 # Specify a thread
 # Dynamic thread config - each session gets unique thread_id
-def _make_thread_config(session_id: str = None) -> dict:
+def _make_thread_config(session_id: str | None = None) -> dict:
     """Generate thread config with unique session_id for multi-user support."""
     tid = session_id or str(uuid.uuid4())
     return {"configurable": {"thread_id": tid}}
@@ -180,18 +180,18 @@ class AgentState(MessagesState):
     """State maintained across the workflow."""
 
     # messages: List[BaseMessage]  # Conversation history
-    agent_name: Optional[str]  # Current active agent
-    current_input: Optional[Union[str, Dict]]  # Input to be processed
+    agent_name: str | None  # Current active agent
+    current_input: str | dict | None  # Input to be processed
     has_image: bool  # Whether the current input contains an image
-    image_type: Optional[str]  # Type of medical image if present
-    output: Optional[str]  # Final output to user
+    image_type: str | None  # Type of medical image if present
+    output: str | None  # Final output to user
     needs_human_validation: bool  # Whether human validation is required
     retrieval_confidence: float  # Confidence in retrieval (for RAG agent)
     bypass_routing: bool  # Flag to bypass agent routing for guardrails
     insufficient_info: bool  # Flag indicating RAG response has insufficient information
     # Phase 5: Planning & Reflection
-    diagnostic_plan: Optional[Dict]  # Serialized DiagnosticPlan (JSON-safe)
-    plan_hints: Optional[Dict]  # Routing hints from planner for route_to_agent
+    diagnostic_plan: dict | None  # Serialized DiagnosticPlan (JSON-safe)
+    plan_hints: dict | None  # Routing hints from planner for route_to_agent
 
 
 class AgentDecision(BaseModel):
@@ -397,7 +397,7 @@ def create_agent_graph():
             logger.warning(f"[PLANNER] Planning failed (non-fatal): {e}")
             return {**state, "diagnostic_plan": None, "plan_hints": None}
 
-    def route_to_agent(state: AgentState) -> Dict:
+    def route_to_agent(state: AgentState) -> dict:
         """Make decision about which agent should handle the query."""
         messages = state["messages"]
         current_input = state["current_input"]
@@ -744,7 +744,7 @@ def create_agent_graph():
         }
 
     # Define Routing Logic
-    def confidence_based_routing(state: AgentState) -> Dict[str, str]:
+    def confidence_based_routing(state: AgentState) -> dict[str, str]:
         """Route based on RAG confidence score and response content."""
         # Debug prints
         logger.debug(f"Routing check - Retrieval confidence: {state.get('retrieval_confidence', 0.0)}")
@@ -993,7 +993,7 @@ def create_agent_graph():
             "agent_name": "SKIN_LESION_AGENT",
         }
 
-    def handle_human_validation(state: AgentState) -> Dict:
+    def handle_human_validation(state: AgentState) -> dict:
         """Prepare for human validation if needed, with stopHook check."""
         # ── StopHook: post-agent validation (confidence + safety + completeness) ──
         agent_name = state.get("agent", "unknown")
@@ -1178,7 +1178,7 @@ def init_agent_state() -> AgentState:
     }
 
 
-def process_query(query: Union[str, Dict], conversation_history: List[BaseMessage] = None) -> str:
+def process_query(query: str | dict, conversation_history: list[BaseMessage] | None = None) -> str:
     """
     Process a user query through the agent decision system.
 
@@ -1265,7 +1265,7 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
                     from langchain_core.messages import SystemMessage
 
                     summary_msg = SystemMessage(content=f"[Conversation Summary]\n{summary_text}")
-                    result["messages"] = [summary_msg] + recent_messages
+                    result["messages"] = [summary_msg, *recent_messages]
                     logger.info(
                         f"[Phase51] Compressed + summarized {len(old_messages)} messages → summary + {keep} recent"
                     )
@@ -1350,7 +1350,7 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     return result
 
 
-def process_query_streaming(query: Union[str, Dict], conversation_history: List[BaseMessage] = None):
+def process_query_streaming(query: str | dict, conversation_history: list[BaseMessage] | None = None):
     """
     Generator-based streaming version of process_query.
     Uses graph.stream() to yield intermediate node results as each agent completes,
@@ -1469,7 +1469,7 @@ def process_query_streaming(query: Union[str, Dict], conversation_history: List[
                         from langchain_core.messages import SystemMessage
 
                         summary_msg = SystemMessage(content=f"[Conversation Summary]\n{summary_text}")
-                        result["messages"] = [summary_msg] + recent_messages
+                        result["messages"] = [summary_msg, *recent_messages]
                         logger.info(f"[Phase51/Streaming] Compressed + summarized {len(old_messages)} messages")
                     else:
                         result["messages"] = recent_messages

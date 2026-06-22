@@ -287,7 +287,7 @@ class TestAgentDecision:
             "SKIN_LESION_AGENT",
             "MCP_AGENT",
         ]
-        assert self.AgentDecision.VALID_AGENTS == expected
+        assert expected == self.AgentDecision.VALID_AGENTS
 
     # ── Serialization ──
 
@@ -339,7 +339,7 @@ Available agents:
 - MCP_AGENT: Tool-based queries requiring MCP server capabilities"""
 
         self.config = AgentConfig
-        yield
+        return
 
     def test_decision_model(self):
         assert self.config.DECISION_MODEL == "gpt-4o"
@@ -397,7 +397,7 @@ class TestInitAgentState:
             }
 
         self.fn = init_agent_state
-        yield
+        return
 
     def test_returns_dict(self):
         state = self.fn()
@@ -487,7 +487,7 @@ class TestCreateAgentGraph:
 
         self.mock_config = mock_config
         self.mock_llm = mock_llm
-        yield
+        return
 
     def test_graph_has_expected_nodes(self):
         """Verify that create_agent_graph returns a graph with all expected nodes."""
@@ -591,9 +591,9 @@ class TestImageDetectionLogic:
             query_lower = query_str.lower()
             if any(kw in query_lower for kw in ["brain", "mri", "脑", "颅脑"]):
                 return "brain_mri"
-            elif any(kw in query_lower for kw in ["chest", "x-ray", "xray", "胸片", "肺"]):
+            if any(kw in query_lower for kw in ["chest", "x-ray", "xray", "胸片", "肺"]):
                 return "chest_xray"
-            elif any(kw in query_lower for kw in ["skin", "lesion", "derma", "皮肤", "皮损"]):
+            if any(kw in query_lower for kw in ["skin", "lesion", "derma", "皮肤", "皮损"]):
                 return "skin_lesion"
             return "unknown"
 
@@ -680,13 +680,13 @@ class TestMedicalCategoryDetection:
         combined = text.lower()
         if any(kw in combined for kw in ["过敏", "allerg", "不良反应"]):
             return "allergy"
-        elif any(kw in combined for kw in ["药", "用药", "medication", "处方", "剂量"]):
+        if any(kw in combined for kw in ["药", "用药", "medication", "处方", "剂量"]):
             return "medication"
-        elif any(kw in combined for kw in ["诊断", "diagnos", "检查", "化验"]):
+        if any(kw in combined for kw in ["诊断", "diagnos", "检查", "化验"]):
             return "diagnosis"
-        elif any(kw in combined for kw in ["症状", "symptom", "头痛", "发热", "咳嗽", "疼痛"]):
+        if any(kw in combined for kw in ["症状", "symptom", "头痛", "发热", "咳嗽", "疼痛"]):
             return "symptom"
-        elif any(kw in combined for kw in ["病史", "history", "既往", "慢性"]):
+        if any(kw in combined for kw in ["病史", "history", "既往", "慢性"]):
             return "history"
         return "general"
 
@@ -833,7 +833,7 @@ class TestStopHookIntegration:
             "run_conversation_agent": 2,
             "run_web_search_processor_agent": 1,
         }
-        for agent, max_retries in retry_config.items():
+        for _agent, max_retries in retry_config.items():
             assert max_retries >= 1
             assert max_retries <= 5
 

@@ -28,7 +28,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.rpm = requests_per_minute
         self.rph = requests_per_hour
-        self._requests: Dict[str, List[float]] = defaultdict(list)
+        self._requests: dict[str, list[float]] = defaultdict(list)
         self._lock = asyncio.Lock()
 
     def _get_client_ip(self, request: Request) -> str:

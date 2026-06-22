@@ -79,7 +79,7 @@ class ChestXRayClassification:
 
             return pred_class
         except Exception as e:
-            self.logger.error(f"Error during prediction Covid Chest X-ray: {str(e)}")
+            self.logger.error(f"Error during prediction Covid Chest X-ray: {e!s}")
             return None
 
 

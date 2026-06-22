@@ -24,10 +24,8 @@ if project_root not in sys.path:
 
 # Remove conftest-injected mock if present (conftest mocks agents.mcp_client)
 for mod_key in list(sys.modules.keys()):
-    if (
-        mod_key in ("agents.mcp_client", "agents.mcp_connection_manager")
-        or mod_key.startswith("agents.mcp_client.")
-        or mod_key.startswith("agents.mcp_connection_manager.")
+    if mod_key in ("agents.mcp_client", "agents.mcp_connection_manager") or mod_key.startswith(
+        ("agents.mcp_client.", "agents.mcp_connection_manager.")
     ):
         del sys.modules[mod_key]
 

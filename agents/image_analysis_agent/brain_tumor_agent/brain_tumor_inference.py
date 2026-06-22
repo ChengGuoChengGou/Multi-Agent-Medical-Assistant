@@ -152,5 +152,5 @@ class BrainTumorClassification:
             return result
 
         except Exception as e:
-            logger.error(f"Error during brain tumor prediction: {str(e)}")
+            logger.error(f"Error during brain tumor prediction: {e!s}")
             return {"prediction": "error", "confidence": 0.0, "all_probabilities": {}, "error": str(e)}

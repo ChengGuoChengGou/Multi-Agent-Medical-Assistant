@@ -38,7 +38,7 @@ def _is_browser(request: Request) -> bool:
     return "text/html" in accept and "application/json" not in accept
 
 
-def _error_body(code: int, message: str, request_id: str = None, details: dict = None) -> dict:
+def _error_body(code: int, message: str, request_id: str | None = None, details: dict | None = None) -> dict:
     """Build standardized error response body."""
     body = {
         "error": {

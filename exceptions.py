@@ -15,7 +15,7 @@ class MedicalAssistantError(Exception):
         message: str,
         status_code: int = 500,
         error_type: str = "internal_error",
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ):
         self.message = message
         self.status_code = status_code
@@ -23,7 +23,7 @@ class MedicalAssistantError(Exception):
         self.details = details or {}
         super().__init__(message)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {"error": self.error_type, "message": self.message}
         if self.details:
             result["details"] = self.details
@@ -33,7 +33,7 @@ class MedicalAssistantError(Exception):
 class AgentError(MedicalAssistantError):
     """Errors from agent processing (router, LLM calls, etc.)."""
 
-    def __init__(self, message: str, agent_name: str = "unknown", details: Optional[Dict] = None):
+    def __init__(self, message: str, agent_name: str = "unknown", details: dict | None = None):
         super().__init__(
             message=message,
             status_code=500,
@@ -45,7 +45,7 @@ class AgentError(MedicalAssistantError):
 class ValidationError(MedicalAssistantError):
     """Input validation errors."""
 
-    def __init__(self, message: str, field: Optional[str] = None):
+    def __init__(self, message: str, field: str | None = None):
         super().__init__(
             message=message,
             status_code=400,
@@ -69,7 +69,7 @@ class RateLimitError(MedicalAssistantError):
 class FileUploadError(MedicalAssistantError):
     """File upload validation errors."""
 
-    def __init__(self, message: str, filename: Optional[str] = None):
+    def __init__(self, message: str, filename: str | None = None):
         super().__init__(
             message=message,
             status_code=400,
@@ -93,7 +93,7 @@ class TTSError(MedicalAssistantError):
 class MCPError(MedicalAssistantError):
     """MCP client/server errors."""
 
-    def __init__(self, message: str, server: Optional[str] = None):
+    def __init__(self, message: str, server: str | None = None):
         super().__init__(
             message=message,
             status_code=503,

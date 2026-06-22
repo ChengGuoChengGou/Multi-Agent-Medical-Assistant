@@ -11,7 +11,8 @@ import os
 import re
 import secrets
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
+from typing import Optional
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -187,12 +188,10 @@ def validate_mime_type(content: bytes, filename: str) -> bool:
         return True
 
     # For other image types (tiff), check extension
-    for mime, extensions in ALLOWED_MIME_TYPES.items():
+    for _mime, extensions in ALLOWED_MIME_TYPES.items():
         if ext in extensions:
             # Known image formats without matching magic bytes → reject
-            if ext in (".png", ".jpg", ".jpeg", ".gif", ".bmp"):
-                return False
-            return True
+            return ext not in (".png", ".jpg", ".jpeg", ".gif", ".bmp")
 
     return False
 
@@ -212,7 +211,7 @@ ERROR_MESSAGES = {
 }
 
 
-def secure_error_response(status_code: int, detail: str = None, log_error: bool = True) -> JSONResponse:
+def secure_error_response(status_code: int, detail: str | None = None, log_error: bool = True) -> JSONResponse:
     """Return a secure error response that doesn't leak internal details."""
     safe_message = ERROR_MESSAGES.get(status_code, ERROR_MESSAGES[500])
 
@@ -248,12 +247,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 # ============================================================
 __all__ = [
     "CSP_POLICY",
-    "build_csp_header",
     "CSRFProtection",
-    "SecurityHeadersMiddleware",
     "RequestLoggingMiddleware",
-    "sanitize_input",
+    "SecurityHeadersMiddleware",
+    "build_csp_header",
     "sanitize_filename",
-    "validate_mime_type",
+    "sanitize_input",
     "secure_error_response",
+    "validate_mime_type",
 ]

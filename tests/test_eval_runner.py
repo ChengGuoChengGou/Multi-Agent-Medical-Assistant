@@ -69,9 +69,8 @@ class TestLoadBenchmark:
 
     def test_default_path(self):
         """Default path should point to evaluation/medical_qa_benchmark.json."""
-        with patch("builtins.open", side_effect=FileNotFoundError):
-            with pytest.raises(FileNotFoundError):
-                load_benchmark()
+        with patch("builtins.open", side_effect=FileNotFoundError), pytest.raises(FileNotFoundError):
+            load_benchmark()
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +151,7 @@ class TestGenerateReport:
         assert report["report_path"].endswith(".json")
 
         # Verify saved file content
-        with open(report["report_path"], "r", encoding="utf-8") as f:
+        with open(report["report_path"], encoding="utf-8") as f:
             saved = json.load(f)
         assert saved["num_test_cases"] == 2
 

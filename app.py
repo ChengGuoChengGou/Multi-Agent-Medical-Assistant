@@ -217,7 +217,7 @@ cleanup_thread.start()
 
 class QueryRequest(BaseModel):
     query: str
-    conversation_history: List = []
+    conversation_history: list = []
 
 
 class SpeechRequest(BaseModel):
@@ -282,7 +282,7 @@ def metrics():
 
 
 @app.post("/chat", response_model=ChatResponse, responses={500: {"model": ErrorResponse}}, tags=["Chat"])
-def chat(request: QueryRequest, response: Response, session_id: Optional[str] = Cookie(None)):
+def chat(request: QueryRequest, response: Response, session_id: str | None = Cookie(None)):
     """Process user text query through the multi-agent system.
 
     Routes the query to specialized medical agents (cardiology, brain tumor, chest X-ray,
@@ -330,7 +330,7 @@ def chat(request: QueryRequest, response: Response, session_id: Optional[str] = 
 
 
 @app.post("/chat/stream", responses={500: {"model": ErrorResponse}}, tags=["Chat"])
-async def chat_stream(request: QueryRequest, session_id: Optional[str] = Cookie(None)):
+async def chat_stream(request: QueryRequest, session_id: str | None = Cookie(None)):
     """Process user query with SSE streaming for real-time agent interaction.
 
     Returns a Server-Sent Events (SSE) stream with two event types:
@@ -390,7 +390,7 @@ async def chat_stream(request: QueryRequest, session_id: Optional[str] = Cookie(
     tags=["Document"],
 )
 async def upload_image(
-    response: Response, image: UploadFile = File(...), text: str = Form(""), session_id: Optional[str] = Cookie(None)
+    response: Response, image: UploadFile = File(...), text: str = Form(""), session_id: str | None = Cookie(None)
 ):
     """Process medical image uploads with optional text input.
 
@@ -459,7 +459,7 @@ async def upload_image(
         try:
             os.remove(file_path)
         except Exception as e:
-            print(f"Failed to remove temporary file: {str(e)}")
+            print(f"Failed to remove temporary file: {e!s}")
 
         return result
     except Exception as e:
@@ -470,8 +470,8 @@ async def upload_image(
 def validate_medical_output(
     response: Response,
     validation_result: str = Form(...),
-    comments: Optional[str] = Form(None),
-    session_id: Optional[str] = Cookie(None),
+    comments: str | None = Form(None),
+    session_id: str | None = Cookie(None),
 ):
     """Handle human validation for medical AI outputs.
 
@@ -500,13 +500,12 @@ def validate_medical_output(
                 "message": "**Output confirmed by human validator:**",
                 "response": response_data["messages"][-1].content,
             }
-        else:
-            return {
-                "status": "rejected",
-                "comments": comments,
-                "message": "**Output requires further review:**",
-                "response": response_data["messages"][-1].content,
-            }
+        return {
+            "status": "rejected",
+            "comments": comments,
+            "message": "**Output requires further review:**",
+            "response": response_data["messages"][-1].content,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -573,17 +572,16 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 
             if transcription.text:
                 return {"transcript": transcription.text}
-            else:
-                return JSONResponse(
-                    status_code=500, content={"error": f"API error: {transcription}", "details": transcription.text}
-                )
+            return JSONResponse(
+                status_code=500, content={"error": f"API error: {transcription}", "details": transcription.text}
+            )
 
         except Exception as e:
-            print(f"Error processing audio: {str(e)}")
-            return JSONResponse(status_code=500, content={"error": f"Error processing audio: {str(e)}"})
+            print(f"Error processing audio: {e!s}")
+            return JSONResponse(status_code=500, content={"error": f"Error processing audio: {e!s}"})
 
     except Exception as e:
-        print(f"Transcription error: {str(e)}")
+        print(f"Transcription error: {e!s}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 

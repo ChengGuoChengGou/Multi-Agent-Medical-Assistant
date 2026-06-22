@@ -147,7 +147,7 @@ def _make_llm(temperature: float, role: str = "conversation") -> BaseChatModel:
             )
             for fm in fallback_names
         ]
-        all_models = [primary] + fallback_models
+        all_models = [primary, *fallback_models]
         if len(all_models) > 1 and role != "conversation":
             logger.info(f"[ModelRegistry] role={role}, primary={model}, fallbacks={fallback_names}")
         return LLMFallbackChain(models=all_models)

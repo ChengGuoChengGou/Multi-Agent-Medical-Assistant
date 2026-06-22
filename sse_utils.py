@@ -7,7 +7,8 @@ as they're generated instead of waiting for the full response.
 import asyncio
 import json
 import logging
-from typing import Any, AsyncGenerator, Dict, Optional
+from collections.abc import AsyncGenerator
+from typing import Any, Dict, Optional
 
 from fastapi.responses import StreamingResponse
 
@@ -15,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 async def sse_generator(
-    data: Dict[str, Any],
-    event: Optional[str] = None,
+    data: dict[str, Any],
+    event: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """Generate a single SSE event.
 

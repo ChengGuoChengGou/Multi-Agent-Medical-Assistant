@@ -51,11 +51,11 @@ class MemoryCleanup:
         logger.info("[MEMORY_CLEANUP] Cleanup engine initialized")
 
     @property
-    def stats(self) -> Dict[str, int]:
+    def stats(self) -> dict[str, int]:
         """Get cleanup statistics."""
         return self._stats.copy()
 
-    def should_keep(self, memory: Dict[str, Any]) -> bool:
+    def should_keep(self, memory: dict[str, Any]) -> bool:
         """
         Determine if a memory should be kept.
 
@@ -91,12 +91,9 @@ class MemoryCleanup:
 
         # Check relevance
         score = memory.get("score") or memory.get("relevance", 1.0)
-        if score < self.min_relevance_score:
-            return False
+        return not score < self.min_relevance_score
 
-        return True
-
-    def cleanup_user(self, user_id: str) -> Dict[str, int]:
+    def cleanup_user(self, user_id: str) -> dict[str, int]:
         """
         Run cleanup for a specific user's memories.
 
@@ -130,7 +127,7 @@ class MemoryCleanup:
 
         return result
 
-    def get_stale_memories(self, user_id: str) -> List[Dict]:
+    def get_stale_memories(self, user_id: str) -> list[dict]:
         """
         Get list of stale memories that should be cleaned.
 
@@ -160,7 +157,7 @@ class MemoryCleanup:
 
 
 # Singleton
-_cleanup_instance: Optional[MemoryCleanup] = None
+_cleanup_instance: MemoryCleanup | None = None
 
 
 def get_cleanup_engine(policy: MemoryCleanupPolicy = None) -> MemoryCleanup:
