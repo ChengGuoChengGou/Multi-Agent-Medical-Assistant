@@ -40,6 +40,9 @@ from startup_validator import validate_startup_config, ConfigValidationError
 # [Phase 7] API versioning with dependency health checks
 from api.health import router as health_v1_router
 
+
+# [Phase 9] System monitoring aggregation endpoint
+from api.monitoring import router as monitoring_v1_router, set_app_start_time
 # [Phase 6.5] Incremental indexing support
 try:
     from agents.rag_agent import MedicalRAG, RAG_AVAILABLE
@@ -111,6 +114,10 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # [Phase 7] Register API v1 routers
 app.include_router(health_v1_router)
+app.include_router(monitoring_v1_router)
+
+# [Phase 9] Set app start time for monitoring uptime metric
+set_app_start_time(_app_start_time)
 
 # Set up templates
 templates = Jinja2Templates(directory="templates")
