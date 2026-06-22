@@ -31,9 +31,13 @@ from middleware import (
     RequestDedupMiddleware,
     get_dedup_stats,
 )
+from utils.logging_config import setup_logging, get_logger
 
 # Load configuration
 config = Config()
+
+# Initialize structured logging (JSON in production, human-readable in dev)
+setup_logging()
 
 # Initialize FastAPI app
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
