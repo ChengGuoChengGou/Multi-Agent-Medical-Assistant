@@ -90,7 +90,7 @@ class MemoryCleanup:
 
         # Check relevance
         score = memory.get("score") or memory.get("relevance", 1.0)
-        return not score < self.min_relevance_score
+        return not score < self.policy.min_relevance_score
 
     def cleanup_user(self, user_id: str) -> dict[str, int]:
         """
