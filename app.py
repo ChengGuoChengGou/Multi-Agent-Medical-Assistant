@@ -143,7 +143,12 @@ async def index(request: Request):
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 def health_check():
-    """Health check endpoint for Docker / load balancer probes."""
+    """Health check endpoint for Docker / load balancer probes.
+
+    Returns the status of the application and all active middleware components.
+    Used by Docker HEALTHCHECK, Kubernetes liveness/readiness probes, and load balancers.
+    No authentication required.
+    """
     return {
         "status": "healthy",
         "middleware": {
@@ -186,7 +191,15 @@ def chat(
     response: Response, 
     session_id: Optional[str] = Cookie(None)
 ):
-    """Process user text query through the multi-agent system."""
+    """Process user text query through the multi-agent system.
+
+    Routes the query to specialized medical agents (cardiology, brain tumor, chest X-ray,
+    medical image analysis) based on content analysis. Returns the agent's response along
+    with metadata about which agent handled the request.
+
+    Supports multi-turn conversation via conversation_history parameter. A session cookie
+    is automatically set for conversation continuity.
+    """
     # Generate session ID for cookie if it doesn't exist
     if not session_id:
         session_id = str(uuid.uuid4())
@@ -239,7 +252,17 @@ async def upload_image(
     text: str = Form(""),
     session_id: Optional[str] = Cookie(None)
 ):
-    """Process medical image uploads with optional text input."""
+    """Process medical image uploads with optional text input.
+
+    Accepts image files (PNG, JPG, JPEG, DICOM) for analysis by specialized medical AI agents.
+    An optional text query can be included to guide the analysis. Supported analysis types:
+    - Brain tumor detection from MRI/CT images
+    - Chest X-ray interpretation
+    - General medical image analysis
+
+    Returns the analysis result from the most appropriate agent. Files larger than
+    max_image_upload_size (configurable) are rejected with HTTP 413.
+    """
     # Validate file type
     if not allowed_file(image.filename):
         return JSONResponse(
@@ -313,7 +336,12 @@ def validate_medical_output(
     comments: Optional[str] = Form(None),
     session_id: Optional[str] = Cookie(None)
 ):
-    """Handle human validation for medical AI outputs."""
+    """Handle human validation for medical AI outputs.
+
+    Allows human reviewers to approve or reject AI-generated medical responses.
+    Validation results are logged for quality assurance and model improvement tracking.
+    Used in the human-in-the-loop workflow for critical medical decisions.
+    """
     # Generate session ID for cookie if it doesn't exist
     if not session_id:
         session_id = str(uuid.uuid4())
@@ -347,7 +375,12 @@ def validate_medical_output(
 
 @app.post("/transcribe", response_model=TranscribeResponse, tags=["Voice"])
 async def transcribe_audio(audio: UploadFile = File(...)):
-    """Endpoint to transcribe speech using ElevenLabs API"""
+    """Transcribe audio to text using ElevenLabs speech-to-text API.
+
+    Accepts audio files in common formats (WAV, MP3, M4A, WebM, OGG) and returns
+    the transcribed text using ElevenLabs' STT model. Useful for voice-based
+    medical queries and dictation workflows.
+    """
     if not audio.filename:
         return JSONResponse(
             status_code=400,
