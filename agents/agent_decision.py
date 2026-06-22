@@ -124,7 +124,7 @@ class AgentConfig:
     VISION_MODEL = "gpt-4o"
     
     # Confidence threshold for responses
-    CONFIDENCE_THRESHOLD = 0.85
+    CONFIDENCE_THRESHOLD = 0.75
     
     # System instructions for the decision agent (loaded from prompts/decision_system.md via PromptManager)
     _decision_prompt_tmpl = get_prompt_manager().get("decision_system") if PROMPT_MANAGER_AVAILABLE else None
@@ -280,6 +280,13 @@ def create_agent_graph():
         Lightweight LLM call to critique diagnosis and suggest follow-ups.
         """
         if not PLANNING_AVAILABLE:
+            return state
+        
+        # Optimization: skip reflection when RAG already returned with high confidence
+        # This saves ~12s of xiaomi-mimo API latency per request
+        rag_confidence = state.get("rag_confidence", 0.0)
+        if rag_confidence >= 0.75:
+            logger.info(f"[REFLECT] Skipping reflection - RAG confidence {rag_confidence:.2f} >= 0.75")
             return state
         
         messages = state.get("messages", [])
@@ -588,7 +595,6 @@ def create_agent_graph():
                     lambda: llm_breaker.call(
                         lambda: rag_agent.process_query(query, chat_history=recent_context)
                     ),
-                    max_context_retries=1,
                 )
         except (RetryExhausted, Exception) as e:
             logger.error(f"[RAG_AGENT] RAG query failed: {e}", exc_info=True)
@@ -1082,7 +1088,7 @@ def create_agent_graph():
         check_if_bypassing,
         {
             "apply_guardrails": "apply_guardrails",
-            "plan_diagnosis": "plan_diagnosis"  # Phase 5: routing goes through planner first
+            "plan_diagnosis": "route_to_agent"  # Phase 5: skip planner, go directly to router (planner always fails ~5s)
         }
     )
     
@@ -1379,25 +1385,27 @@ def process_query_streaming(query: Union[str, Dict], conversation_history: List[
         state["messages"].append(HumanMessage(content=str(query)))
         state["current_input"] = str(query)
 
-    config = {"configurable": {"thread_id": "default"}}
+    runnable_config = {"configurable": {"thread_id": "default"}}
     callbacks = [langfuse_handler] if LANGFUSE_ENABLED and langfuse_handler else []
 
     # Stream node-by-node progress
     final_result = None
     try:
-        for node_name, node_output in graph.stream(state, config, callbacks=callbacks):
-            # Yield node completion event
-            output_preview = ""
-            if node_output and "output" in node_output and node_output["output"]:
-                preview = str(node_output["output"])
-                output_preview = preview[:100] + "..." if len(preview) > 100 else preview
-            yield {
-                "type": "node_end",
-                "node": node_name,
-                "output_preview": output_preview,
-                "needs_human_validation": node_output.get("needs_human_validation", False) if node_output else False,
-            }
-            final_result = node_output
+        for chunk in graph.stream(state, runnable_config, callbacks=callbacks):
+            # graph.stream() returns dicts like {node_name: output} per step
+            for node_name, node_output in chunk.items():
+                # Yield node completion event
+                output_preview = ""
+                if node_output and "output" in node_output and node_output["output"]:
+                    preview = str(node_output["output"])
+                    output_preview = preview[:100] + "..." if len(preview) > 100 else preview
+                yield {
+                    "type": "node_end",
+                    "node": node_name,
+                    "output_preview": output_preview,
+                    "needs_human_validation": node_output.get("needs_human_validation", False) if node_output else False,
+                }
+                final_result = node_output
     except Exception as e:
         logger.error(f"[STREAMING] Graph stream error: {e}")
         yield {"type": "error", "message": str(e)}
@@ -1406,12 +1414,12 @@ def process_query_streaming(query: Union[str, Dict], conversation_history: List[
     # Post-processing: compress + summarize (same as process_query)
     if final_result and "messages" in final_result:
         result = final_result
-        if len(result["messages"]) > config_default.max_conversation_history:
+        if len(result["messages"]) > config.max_conversation_history:
             try:
                 messages = result["messages"]
                 messages = compress_history_tags(messages)
-                if config_default.summarize_conversation_history and len(messages) > config_default.max_conversation_history:
-                    keep = config_default.summary_keep_recent
+                if config.summarize_conversation_history and len(messages) > config.max_conversation_history:
+                    keep = config.summary_keep_recent
                     old_messages = messages[:-keep]
                     recent_messages = messages[-keep:]
                     summary_parts = []
@@ -1427,7 +1435,7 @@ def process_query_streaming(query: Union[str, Dict], conversation_history: List[
                             + "\n".join(summary_parts)
                         )
                         summary_response = llm_call_with_recovery(
-                            lambda: config_default.conversation.llm.invoke(summary_prompt),
+                            lambda: config.conversation.llm.invoke(summary_prompt),
                             max_retries=1,
                         )
                         summary_text = getattr(summary_response, "content", str(summary_response))
@@ -1441,8 +1449,8 @@ def process_query_streaming(query: Union[str, Dict], conversation_history: List[
                     result["messages"] = messages
             except Exception as e:
                 logger.warning(f"[Phase51/Streaming] Summarization failed: {e}")
-                result["messages"] = result["messages"][-config_default.max_conversation_history:]
-        elif len(result["messages"]) > config_default.max_conversation_history:
-            result["messages"] = result["messages"][-config_default.max_conversation_history:]
+                result["messages"] = result["messages"][-config.max_conversation_history:]
+        elif len(result["messages"]) > config.max_conversation_history:
+            result["messages"] = result["messages"][-config.max_conversation_history:]
 
         yield {"type": "final", "result": result}

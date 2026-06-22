@@ -44,9 +44,13 @@ class MedicalRAG:
         self.query_expander = QueryExpander(config)
         self.response_generator = ResponseGenerator(config)
         self.parsed_content_dir = self.config.rag.parsed_content_dir
+        try:
+            _docstore = LocalFileStore(self.vector_store.docstore_local_path)
+        except (TypeError, Exception):
+            _docstore = InMemoryStore()
         self.hybrid_search = HybridSearch(
             vectorstore=self.vector_store,
-            docstore=LocalFileStore(self.vector_store.docstore_local_path),
+            docstore=_docstore,
             rrf_k=60
         )
         self.incremental_indexer = IncrementalIndexer(
@@ -271,18 +275,49 @@ class MedicalRAG:
             self.logger.info("[HYBRID] Building BM25 index from docstore...")
             self.hybrid_search.build_bm25_from_docstore()
         
-        results = self.hybrid_search.search(
-            query=query,
-            top_k=top_k,
-            use_bm25=use_bm25,
-            use_vector=use_vector,
-        )
-        
-        self.logger.info(f"[HYBRID] Retrieved {len(results)} documents")
+        # Direct sync search bypass (avoids async HybridSearch.search() issues)
+        bm25_results = []
+        vector_results = []
+
+        if use_bm25 and self.hybrid_search.bm25_index.is_built:
+            bm25_results = self.hybrid_search.bm25_index.search(query, top_k=20)
+            self.logger.info(f"[HYBRID] BM25 returned {len(bm25_results)} results")
+
+        if use_vector and self.hybrid_search.vectorstore is not None:
+            try:
+                vector_results = self.hybrid_search.vectorstore.similarity_search_with_relevance_scores(query, k=20)
+                self.logger.info(f"[HYBRID] Vector returned {len(vector_results)} results")
+            except Exception as e:
+                self.logger.warning(f"[HYBRID] Vector search failed: {e}")
+
+        if bm25_results and vector_results:
+            fused = self.hybrid_search.fuse_with_rrf(vector_results, bm25_results, top_k=top_k)
+            results = [
+                {"content": doc.page_content, "score": score, "source": doc.metadata.get("source", ""), "debug": debug}
+                for doc, score, debug in fused
+            ]
+            method = "hybrid_rrf"
+        elif bm25_results:
+            results = [
+                {"content": doc.page_content, "score": score, "source": doc.metadata.get("source", "")}
+                for doc, score in bm25_results[:top_k]
+            ]
+            method = "bm25"
+        elif vector_results:
+            results = [
+                {"content": doc.page_content, "score": score, "source": doc.metadata.get("source", "")}
+                for doc, score in vector_results[:top_k]
+            ]
+            method = "vector"
+        else:
+            results = []
+            method = "none"
+
+        self.logger.info(f"[HYBRID] Retrieved {len(results)} documents via {method}")
         return {
             "documents": results,
             "count": len(results),
-            "method": "hybrid_rrf" if (use_bm25 and use_vector) else ("bm25" if use_bm25 else "vector"),
+            "method": method,
         }
 
     def start_incremental_indexing(self):

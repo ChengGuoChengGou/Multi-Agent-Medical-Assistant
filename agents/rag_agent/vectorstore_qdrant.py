@@ -9,11 +9,42 @@ from langchain_core.documents import Document
 from langchain_core.stores import InMemoryStore
 try:
     from langchain_community.storage import LocalFileStore
-except ImportError:
-    LocalFileStore = InMemoryStore  # fallback if langchain-community sunset
+    # Verify LocalFileStore can actually be instantiated with a path
+    # (some langchain versions: LocalFileStore.__init__ calls super().__init__() 
+    #  which is InMemoryBaseStore that rejects positional args)
+    import tempfile, shutil
+    _tmp_dir = tempfile.mkdtemp(prefix="_lc_test_")
+    try:
+        _test = LocalFileStore(_tmp_dir)
+        del _test
+    except TypeError:
+        LocalFileStore = None
+    finally:
+        shutil.rmtree(_tmp_dir, ignore_errors=True)
+except (ImportError, Exception):
+    LocalFileStore = None  # will use InMemoryStore below
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, SparseVectorParams, VectorParams, OptimizersConfigDiff
+
+class _QdrantClientSingleton:
+    """Singleton to avoid file-lock conflicts when multiple VectorStore instances use the same path."""
+    _instance = None
+    _path = None
+
+    @classmethod
+    def get_client(cls, path: str) -> QdrantClient:
+        if cls._instance is None or cls._path != path:
+            # Close previous if path changed
+            if cls._instance is not None:
+                try:
+                    cls._instance.close()
+                except Exception:
+                    pass
+            cls._instance = QdrantClient(path=path)
+            cls._path = path
+        return cls._instance
+
 
 class VectorStore:
     """
@@ -30,9 +61,8 @@ class VectorStore:
         self.vectorstore_local_path = config.rag.vector_local_path
         self.docstore_local_path = config.rag.doc_local_path
 
-        # Use the singleton client instead of creating a new one
-        # self.client = QdrantClientManager.get_client(config)
-        self.client = QdrantClient(path=self.vectorstore_local_path)
+        # Singleton client to avoid file-lock conflicts
+        self.client = _QdrantClientSingleton.get_client(self.vectorstore_local_path)
 
     def _does_collection_exist(self) -> bool:
         """Check if the collection already exists in Qdrant."""
@@ -85,8 +115,8 @@ class VectorStore:
             sparse_vector_name="sparse",
         )
         
-        # Document storage
-        docstore = LocalFileStore(self.docstore_local_path)
+        # Document storage - use LocalFileStore if available, else InMemoryStore
+        docstore = LocalFileStore(self.docstore_local_path) if LocalFileStore else InMemoryStore()
         
         self.logger.info(f"Successfully loaded existing vectorstore and docstore")
         return qdrant_vectorstore, docstore
@@ -148,7 +178,7 @@ class VectorStore:
         )
         
         # Document storage for parent documents
-        docstore = LocalFileStore(self.docstore_local_path)
+        docstore = LocalFileStore(self.docstore_local_path) if LocalFileStore else InMemoryStore()
         
         # Ingest documents into vector and doc stores
         qdrant_vectorstore.add_documents(documents=langchain_documents, ids=doc_ids)
