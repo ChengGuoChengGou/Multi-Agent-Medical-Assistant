@@ -744,11 +744,13 @@ def create_agent_graph():
         rag_state = None
         web_state = None
         
-        # Smart strategy: try RAG first with short timeout, only run WebSearch if RAG fails
+        # Smart strategy: try RAG first, only run WebSearch if RAG fails/low confidence
         rag_state = None
         web_state = None
         
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        # Use executor without 'with' to avoid __exit__ hanging on abandoned threads
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        try:
             rag_future = executor.submit(run_rag_agent, state)
             try:
                 rag_state = rag_future.result(timeout=30)
@@ -756,6 +758,9 @@ def create_agent_graph():
                 if rag_conf >= config.rag.min_retrieval_confidence:
                     logger.info(f"[PARALLEL] RAG succeeded with confidence={rag_conf:.2f}, skipping WebSearch")
                     return {**rag_state, "agent_name": "RAG_AGENT"}
+            except concurrent.futures.TimeoutError:
+                logger.warning("RAG agent timed out (30s), falling back to WebSearch")
+                rag_future.cancel()
             except Exception as e:
                 logger.warning(f"RAG agent failed in parallel: {e}")
             
@@ -763,8 +768,13 @@ def create_agent_graph():
             web_future = executor.submit(run_web_search_processor_agent, state)
             try:
                 web_state = web_future.result(timeout=45)
+            except concurrent.futures.TimeoutError:
+                logger.warning("WebSearch agent timed out (45s)")
+                web_future.cancel()
             except Exception as e:
                 logger.warning(f"WebSearch agent failed in parallel: {e}")
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
         
         # Merge strategy: prefer RAG if high confidence, else WebSearch, else combine
         rag_conf = (rag_state or {}).get("retrieval_confidence", 0.0)
