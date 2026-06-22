@@ -689,7 +689,7 @@ def create_agent_graph():
             with agent_metrics.track("WEB_SEARCH_PROCESSOR_AGENT"):
                 processed_response = llm_call_with_recovery(
                     lambda: web_search_breaker.call(
-                        lambda: web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
+                        lambda: web_search_processor.process_web_results(query=state["current_input"], chat_history=recent_context)
                     ),
                     max_retries=1,
                 )
