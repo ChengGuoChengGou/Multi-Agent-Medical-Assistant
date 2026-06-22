@@ -15,10 +15,9 @@ Usage:
 import hmac
 import logging
 import os
-import time
-from typing import Optional, Set
+from typing import Optional
 
-from fastapi import Request, Response
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 

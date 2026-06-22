@@ -14,7 +14,6 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 from agents.mcp_agent import (
-    MCP_ROUTING_PROMPT,
     _determine_mcp_tools_keyword,
     _determine_mcp_tools_llm,
     _format_tool_results_raw,

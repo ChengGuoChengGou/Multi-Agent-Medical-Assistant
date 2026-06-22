@@ -7,9 +7,9 @@ Phase 54: Pydantic V2 modernization (model_config, field_validator, model_dump).
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ─── Request Models ─────────────────────────────────────────────────
 

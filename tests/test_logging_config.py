@@ -8,8 +8,6 @@ import logging
 import os
 import sys
 
-import pytest
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.logging_config import (
@@ -151,7 +149,7 @@ class TestHumanFormatter:
 class TestSetupLogging:
     def test_setup_replaces_handlers(self):
         root = logging.getLogger()
-        initial_count = len(root.handlers)
+        _initial_count = len(root.handlers)
         setup_logging(level="WARNING", json_format=True)
         # Should have exactly 1 handler after setup
         assert len(root.handlers) == 1

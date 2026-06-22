@@ -1,7 +1,5 @@
 """Tests for prompts/manager.py — prompt template management."""
 
-import os
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 

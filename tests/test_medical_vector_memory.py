@@ -1,6 +1,5 @@
 """Tests for agents/medical_vector_memory.py - Medical Vector Memory module."""
 
-import os
 import sys
 from unittest.mock import MagicMock, mock_open, patch
 

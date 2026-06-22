@@ -10,8 +10,6 @@ Tests cover pure functions (no LLM/network calls):
   - Refresh scheduler: RefreshConfig, check_refresh_needed, mark_refreshed
 """
 
-import pytest
-
 from agents.medical_planner import (
     DiagnosisReflection,
     DiagnosticPlan,
@@ -146,8 +144,6 @@ class TestDiagnosticPlan:
         assert len(pending) == 1
 
     def test_is_complete_true(self):
-        from dataclasses import replace
-
         step = PlanStep(step_id="s1", step_type=StepType.RAG_SEARCH, description="d", status="done")
         plan = DiagnosticPlan(plan_id="t", patient_query="q", steps=[step])
         assert plan.is_complete() is True

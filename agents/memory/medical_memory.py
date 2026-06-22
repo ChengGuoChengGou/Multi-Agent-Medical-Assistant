@@ -9,7 +9,7 @@ Provides specialized memory operations for medical context:
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

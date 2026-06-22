@@ -9,7 +9,6 @@ Covers:
 Run: python -m pytest tests/test_sse_utils.py -v
 """
 
-import asyncio
 import json
 import os
 import sys

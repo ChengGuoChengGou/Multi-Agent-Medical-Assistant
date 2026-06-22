@@ -7,16 +7,10 @@ Run: python -m pytest tests/test_error_handlers.py -v
 import os
 import sys
 
-import pytest
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from starlette.applications import Starlette
-from starlette.routing import Route
 from starlette.testclient import TestClient
 
 # ── Test helpers ──

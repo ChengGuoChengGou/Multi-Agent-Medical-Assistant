@@ -20,7 +20,7 @@ print("  ✅ MCPConfig loaded")
 
 # 2. Load MCPClientManager
 print("\n[2/4] Loading MCPClientManager...")
-from agents.mcp_client import MCPClientManager, get_mcp_client
+from agents.mcp_client import MCPClientManager
 
 client = MCPClientManager(cfg)
 print(f"  Client class: {type(client).__name__}")

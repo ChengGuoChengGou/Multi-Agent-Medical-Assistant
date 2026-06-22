@@ -1,15 +1,12 @@
 """Tests for middleware/request_dedup.py — request deduplication middleware."""
 
 import asyncio
-import hashlib
-import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.requests import Request
-from starlette.responses import Response
 
 from middleware.request_dedup import (
     RequestDedupMiddleware,

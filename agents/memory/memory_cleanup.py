@@ -9,9 +9,8 @@ Provides cleanup policies for medical memory:
 """
 
 import logging
-import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

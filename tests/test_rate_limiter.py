@@ -1,14 +1,11 @@
 """Tests for middleware/rate_limiter.py — sliding window rate limiting."""
 
-import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from middleware.rate_limiter import RateLimitMiddleware, get_rate_limit_stats
@@ -149,7 +146,7 @@ class TestHourlyLimit:
         request.client.host = "test_ip"
         request.url.path = "/api/test"
 
-        call_next = AsyncMock()
+        _call_next = AsyncMock()
 
         # We can't easily call dispatch in isolation with async, so test via count
         assert len(middleware._requests["test_ip"]) >= middleware.rph

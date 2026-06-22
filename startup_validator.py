@@ -80,7 +80,7 @@ def _check_qdrant_config(result: ValidationResult):
             result.add_warning("QDRANT_URL set but QDRANT_API_KEY missing (may fail for remote instances)")
     else:
         # Local Qdrant: check data directory exists or can be created
-        qdrant_path = os.path.join(".", "data", "qdrant_db")
+        _qdrant_path = os.path.join(".", "data", "qdrant_db")
         data_dir = os.path.join(".", "data")
         if not os.path.exists(data_dir):
             result.add_warning(f"Data directory '{data_dir}' not found. Qdrant local storage may fail.")

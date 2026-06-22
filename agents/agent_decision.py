@@ -5,21 +5,18 @@ This module handles the orchestration of different agents using LangGraph.
 It dynamically routes user queries to the appropriate agent based on content and context.
 """
 
-import json
 import logging
-from typing import Annotated, Any, ClassVar, Dict, List, Literal, Optional, TypedDict, Union
+from typing import ClassVar
 
 logger = logging.getLogger(__name__)
 import concurrent.futures
-import getpass
 import os
 import uuid
 
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, MessagesState, StateGraph
 from pydantic import BaseModel, Field, field_validator
@@ -35,7 +32,7 @@ from request_context import request_id_var
 
 # Vector memory integration (Phase 1: Memory System Upgrade)
 try:
-    from agents.medical_vector_memory import add_memory, collection_stats, search_memory
+    from agents.medical_vector_memory import add_memory, search_memory
 
     VECTOR_MEMORY_AVAILABLE = True
     logger.info("Medical vector memory loaded successfully")
@@ -81,11 +78,9 @@ except (ImportError, Exception):
     LANGFUSE_ENABLED = False
     logger.warning("[Langfuse] Not installed or misconfigured. Install: pip install langfuse")
 
-import cv2
-import numpy as np
 
-from agents.error_handler import LLMErrorType, RetryExhausted, classify_error
-from circuit_breaker import get_all_breaker_stats, llm_breaker, mcp_breaker, web_search_breaker
+from agents.error_handler import RetryExhausted
+from circuit_breaker import llm_breaker, web_search_breaker
 from config import Config
 from observability import agent_metrics
 
@@ -93,8 +88,6 @@ from observability import agent_metrics
 try:
     from agents.medical_planner import (
         PLANNING_AVAILABLE,
-        DiagnosisReflection,
-        DiagnosticPlan,
         create_diagnostic_plan,
         get_plan_routing_hints,
         reflect_on_diagnosis,
@@ -462,12 +455,11 @@ def create_agent_graph():
             # Validate through Pydantic model
             validated = AgentDecision(**decision)
             agent_name = validated.agent
-            reasoning = validated.reasoning
+            _reasoning = validated.reasoning
             confidence = validated.confidence
         except (RetryExhausted, Exception) as e:
             logger.warning(f"Decision chain parse/validation failed: {e}. Falling back to CONVERSATION_AGENT")
             agent_name = "CONVERSATION_AGENT"
-            reasoning = f"Fallback due to parse error: {str(e)[:200]}"
             confidence = 0.5
 
         # Decided agent
@@ -1221,7 +1213,6 @@ def process_query(query: str | dict, conversation_history: list[BaseMessage] | N
 
     # Invoke with Langfuse callbacks if available
     runnable_config = {"configurable": {"thread_id": "default"}}
-    invoke_kwargs = {"state": state, "config": runnable_config}
     if LANGFUSE_ENABLED and langfuse_handler:
         result = graph.invoke(state, runnable_config, callbacks=[langfuse_handler])
     else:

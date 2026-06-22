@@ -17,7 +17,7 @@ import logging
 import re
 import time
 from collections.abc import Callable
-from typing import Any, Optional, TypeVar
+from typing import TypeVar
 
 logger = logging.getLogger(__name__)
 

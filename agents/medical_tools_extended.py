@@ -7,12 +7,8 @@ but don't depend on MCP servers. Useful as fallbacks when MCP is down.
 Phase 4.5: 新增工具 (PubMed API, 药物交互检查)
 """
 
-import asyncio
-import json
 import logging
-import re
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 

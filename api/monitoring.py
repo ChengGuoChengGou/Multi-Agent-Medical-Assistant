@@ -14,7 +14,7 @@ import time
 from fastapi import APIRouter
 
 from circuit_breaker import get_all_breaker_stats
-from observability import agent_metrics, metrics
+from observability import agent_metrics
 from utils.logging_config import get_logger
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])

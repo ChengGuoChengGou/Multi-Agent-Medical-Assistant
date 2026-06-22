@@ -10,7 +10,7 @@ import threading
 import time
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Any
 
 # ─── Prometheus-style Metrics ───────────────────────────────────────
 

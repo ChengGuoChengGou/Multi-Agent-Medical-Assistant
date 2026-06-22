@@ -1,16 +1,13 @@
 import glob
 import os
-import tempfile
 import threading
 import time
 import uuid
-from io import BytesIO
-from typing import Dict, List, Optional, Union
 
 import requests
 import uvicorn
 from elevenlabs.client import ElevenLabs
-from fastapi import Cookie, Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles

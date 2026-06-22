@@ -7,7 +7,6 @@ Covers:
   - register_extended_tools: registry integration
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -603,8 +602,6 @@ class TestMedicalToolResultSource:
 
     @pytest.mark.asyncio
     async def test_drug_error_result_has_source(self, drug):
-        import httpx
-
         with patch("agents.medical_tools_extended.httpx.AsyncClient") as MockClient:
             instance = AsyncMock()
             instance.get = AsyncMock(side_effect=Exception("unexpected"))

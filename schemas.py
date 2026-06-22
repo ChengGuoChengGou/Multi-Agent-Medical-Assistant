@@ -3,7 +3,7 @@
 All models use Field(examples=...) for rich OpenAPI schema rendering.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 

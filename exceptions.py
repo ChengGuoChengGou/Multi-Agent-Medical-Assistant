@@ -4,7 +4,7 @@ Provides consistent error responses across all endpoints with proper
 HTTP status codes and machine-readable error types.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class MedicalAssistantError(Exception):

@@ -16,7 +16,6 @@ import asyncio
 import hashlib
 import logging
 import time
-from typing import Any, Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request

@@ -342,7 +342,7 @@ class TestCheckOutput:
 
     def test_output_with_llm_calls_llm(self, gr_with_llm):
         gr_with_llm._mock_output_chain.invoke.return_value = "Safe response. ⚠️ Disclaimer: consult doctor."
-        result = gr_with_llm.check_output("Aspirin is safe.", user_input="Is aspirin safe?")
+        _result = gr_with_llm.check_output("Aspirin is safe.", user_input="Is aspirin safe?")
         gr_with_llm._mock_output_chain.invoke.assert_called_once()
 
     def test_user_input_passed_to_llm_chain(self, gr_with_llm):

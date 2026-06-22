@@ -5,7 +5,6 @@ Run: python -m pytest tests/test_models.py -v
 
 import os
 import sys
-from typing import Dict, List, Optional
 
 import pytest
 

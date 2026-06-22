@@ -16,12 +16,11 @@ Features:
 """
 
 import logging
-import os
 import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 from watchdog.events import (
     FileCreatedEvent,

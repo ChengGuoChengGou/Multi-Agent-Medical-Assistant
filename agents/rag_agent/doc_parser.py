@@ -1,15 +1,12 @@
 import logging
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 try:
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import (
         PdfPipelineOptions,
-        RapidOcrOptions,
         TableFormerMode,
-        smolvlm_picture_description,
     )
     from docling.document_converter import DocumentConverter, PdfFormatOption
     from docling_core.types.doc import PictureItem, TableItem
@@ -152,7 +149,7 @@ class MedicalDocParser:
         # Extract images for summarization
         images = []
         for picture in conversion_res.document.pictures:
-            ref = picture.get_ref().cref
+            _ref = picture.get_ref().cref
             image = picture.image
             if image:
                 images.append(str(image.uri))

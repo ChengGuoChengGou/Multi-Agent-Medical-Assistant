@@ -4,11 +4,8 @@ Phase 7: Dependency health checks for LLM, Qdrant, Embeddings.
 Phase 54: Enriched /health with uptime, api_auth stats, middleware completeness.
 """
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
 from fastapi.testclient import TestClient
-from httpx import ASGITransport, AsyncClient
 
 from app import app
 

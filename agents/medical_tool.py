@@ -7,14 +7,11 @@ that wraps existing MCP tools with validation, error handling, and caching.
 Inspired by CCS's buildTool pattern for consistent tool contracts.
 """
 
-import asyncio
-import json
 import logging
-import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

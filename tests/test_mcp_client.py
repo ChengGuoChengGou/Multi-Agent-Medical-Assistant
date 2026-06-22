@@ -11,7 +11,6 @@ Covers:
 - get_mcp_client / shutdown_mcp_client: singleton lifecycle
 """
 
-import asyncio
 import json
 import os
 import sys

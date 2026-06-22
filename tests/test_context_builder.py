@@ -10,9 +10,6 @@ Covers:
 """
 
 import sys
-import types
-
-import pytest
 
 # Remove conftest-injected mock if present
 for mod_key in list(sys.modules.keys()):

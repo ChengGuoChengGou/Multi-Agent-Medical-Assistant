@@ -51,7 +51,7 @@ class TestQueryRequest:
         assert r.query == "  hello  " or r.query == "hello"  # depends on config
 
     def test_openapi_example(self):
-        schema = QueryRequest.model_config.get("json_schema_extra", {})
+        _schema = QueryRequest.model_config.get("json_schema_extra", {})
         # QueryRequest has no model_config override in schemas.py
         # Just verify it's instantiable
         r = QueryRequest(query="test")

@@ -1,13 +1,13 @@
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 RAG_AVAILABLE = False
 try:
     from .content_processor import ContentProcessor
     from .doc_parser import MedicalDocParser
-    from .hybrid_search import BM25Index, HybridSearch
+    from .hybrid_search import HybridSearch
     from .incremental_indexing import IncrementalIndexer
     from .query_expander import QueryExpander
     from .reranker import Reranker

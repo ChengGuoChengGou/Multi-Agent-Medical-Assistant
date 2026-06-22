@@ -22,12 +22,9 @@ Model Registry:
 
 import logging
 import os
-import time
-from typing import Optional
 
 from dotenv import load_dotenv
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 logger = logging.getLogger(__name__)

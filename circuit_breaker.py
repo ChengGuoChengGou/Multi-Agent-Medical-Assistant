@@ -13,8 +13,7 @@ import threading
 import time
 from collections.abc import Callable
 from enum import Enum
-from functools import wraps
-from typing import Any, Optional, TypeVar
+from typing import TypeVar
 
 logger = logging.getLogger("medical_chatbot.circuit_breaker")
 
@@ -92,7 +91,7 @@ class CircuitBreaker:
             result = func(*args, **kwargs)
             self._on_success()
             return result
-        except self.expected_exceptions as e:
+        except self.expected_exceptions:
             self._on_failure()
             raise
 
@@ -110,7 +109,7 @@ class CircuitBreaker:
             result = await func(*args, **kwargs)
             self._on_success()
             return result
-        except self.expected_exceptions as e:
+        except self.expected_exceptions:
             self._on_failure()
             raise
 

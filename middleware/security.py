@@ -9,10 +9,8 @@ import html
 import logging
 import os
 import re
-import secrets
 import time
 from collections.abc import Callable
-from typing import Optional
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse

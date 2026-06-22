@@ -2,7 +2,6 @@
 
 import time
 
-import pytest
 from fastapi.testclient import TestClient
 
 from api.monitoring import set_app_start_time

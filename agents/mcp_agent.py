@@ -9,11 +9,9 @@ This agent handles medical queries that require external tool access:
 Integrated into the LangGraph as a new agent node alongside the existing 6 agents.
 """
 
-import asyncio
 import json
 import logging
-import os
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 

@@ -8,7 +8,7 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi.responses import StreamingResponse
 

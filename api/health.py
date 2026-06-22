@@ -9,7 +9,6 @@ Provides /api/v1/health/detailed with status of all dependencies:
 
 import logging
 import time
-from typing import Dict, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -119,7 +118,6 @@ def _check_file_storage() -> DependencyStatus:
     """Check file storage directories exist and are writable."""
     try:
         import os
-        import tempfile
 
         dirs_to_check = ["uploads/backend", "uploads/frontend", "data"]
         missing = []
@@ -146,7 +144,7 @@ async def detailed_health():
     """Comprehensive health check of all dependencies."""
     import time as _time
 
-    start = _time.time()
+    _start = _time.time()
 
     deps = [
         _check_llm_primary(),

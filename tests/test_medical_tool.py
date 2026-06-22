@@ -10,7 +10,7 @@ import os
 
 # Add project root to path
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -254,8 +254,6 @@ class TestMedicalToolQuery:
 
     @pytest.mark.asyncio
     async def test_query_execution_time_recorded(self):
-        import time
-
         async def slow(**kwargs):
             await asyncio.sleep(0.05)
             return MedicalToolResult(success=True, content="done", tool_name="t", source="built_in")

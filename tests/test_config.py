@@ -61,7 +61,7 @@ class TestLLMFallbackChain:
         m2 = _make_mock_model("model-b")
         chain = Chain(models=[m1, m2])
 
-        result = chain._generate(["test message"])
+        _result = chain._generate(["test message"])
 
         m1._generate.assert_called_once()
         m2._generate.assert_not_called()
@@ -103,7 +103,7 @@ class TestLLMFallbackChain:
         # Call 3: starts at active_index=1, m2 succeeds -> returned
         # (recovery happens when loop iterates from active_index and primary succeeds
         #  but since loop starts at 1, it only tries m2)
-        result = chain._generate(["test3"])
+        _result = chain._generate(["test3"])
         assert m2._generate.call_count == 1
 
     def test_all_models_fail_raises(self):
@@ -142,7 +142,7 @@ class TestLLMFallbackChain:
         m1 = _make_mock_model("model-a")
         chain = Chain(models=[m1])
 
-        result = chain._generate(["test"])
+        _result = chain._generate(["test"])
         m1._generate.assert_called_once()
         assert chain.active_index == 0
 
@@ -175,7 +175,7 @@ class TestMakeLlm:
 
     def test_make_llm_uses_role_model(self):
         """_make_llm picks model from _MODEL_ROLES by role."""
-        from config import _MODEL_ROLES, _make_llm
+        from config import _MODEL_ROLES
 
         # The role 'decision' should use DECISION_MODEL or default
         decision_model = _MODEL_ROLES.get("decision")

@@ -5,9 +5,7 @@ Run: python -m pytest tests/test_agents_error_handler.py -v
 
 import os
 import sys
-import time
-from dataclasses import dataclass
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

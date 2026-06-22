@@ -13,10 +13,8 @@ Usage:
     audio_bytes = await edge_tts_generate("你好", voice="zh-CN-XiaoxiaoNeural")
 """
 
-import asyncio
 import io
 import logging
-from typing import Optional
 
 import edge_tts
 

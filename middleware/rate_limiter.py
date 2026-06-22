@@ -7,7 +7,6 @@ import asyncio
 import logging
 import time
 from collections import defaultdict
-from typing import Dict, List
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse

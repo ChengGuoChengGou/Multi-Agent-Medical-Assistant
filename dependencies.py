@@ -2,9 +2,6 @@
 Phase 30: Centralized service access for testability.
 """
 
-from functools import lru_cache
-from typing import Optional
-
 # Forward references to avoid circular imports
 _llm_service = None
 _mcp_client = None

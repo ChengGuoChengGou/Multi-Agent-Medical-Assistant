@@ -1,6 +1,3 @@
-import os
-from typing import Dict, List, Optional
-
 from dotenv import load_dotenv
 
 from .web_search_agent import WebSearchAgent

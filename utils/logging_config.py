@@ -19,7 +19,7 @@ import logging
 import os
 import sys
 from contextvars import ContextVar
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 # ── request_id context (injected by middleware, read by logger) ──
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")

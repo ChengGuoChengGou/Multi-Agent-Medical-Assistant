@@ -2,14 +2,11 @@
 Tests for middleware/api_key_auth.py — Phase 53: API Key authentication.
 """
 
-import asyncio
 import importlib.util
 import os
-import sys
 
 import pytest
 from starlette.applications import Starlette
-from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient

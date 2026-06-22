@@ -5,8 +5,7 @@ Run: python -m pytest tests/test_agent_decision.py -v
 
 import os
 import sys
-from typing import Any, Dict
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -73,7 +72,7 @@ class TestAgentDecision:
             saved[mod] = sys.modules.get(mod)
             sys.modules[mod] = MagicMock()
 
-        from typing import ClassVar, Literal
+        from typing import ClassVar
 
         from pydantic import BaseModel, Field, field_validator
 
@@ -301,8 +300,6 @@ class TestAgentDecision:
         assert set(dumped.keys()) == {"query_type", "confidence", "reasoning", "agent"}
 
     def test_model_json_roundtrip(self):
-        import json
-
         d = self.AgentDecision(query_type="medical", confidence=0.9, reasoning="r", agent="MCP_AGENT")
         j = d.model_dump_json()
         loaded = self.AgentDecision.model_validate_json(j)

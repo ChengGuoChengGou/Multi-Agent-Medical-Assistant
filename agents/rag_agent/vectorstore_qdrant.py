@@ -1,8 +1,6 @@
 import logging
 import os
-import re
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from uuid import uuid4
 
 from langchain_core.documents import Document
@@ -30,7 +28,7 @@ except (ImportError, Exception):
     LocalFileStore = None  # will use InMemoryStore below
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient, models
-from qdrant_client.http.models import Distance, OptimizersConfigDiff, SparseVectorParams, VectorParams
+from qdrant_client.http.models import Distance, SparseVectorParams, VectorParams
 
 
 class _QdrantClientSingleton:

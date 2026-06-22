@@ -1,6 +1,5 @@
 import base64
 import json
-import os
 from mimetypes import guess_type
 from typing import TypedDict
 

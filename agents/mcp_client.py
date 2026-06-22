@@ -14,9 +14,8 @@ import json
 import logging
 import os
 import subprocess
-import sys
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -385,8 +384,6 @@ async def get_mcp_client() -> Any:
         try:
             from agents.mcp_connection_manager import (
                 ResilientMCPClientManager,
-                RetryConfig,
-                TimeoutConfig,
             )
 
             resilient = ResilientMCPClientManager()
