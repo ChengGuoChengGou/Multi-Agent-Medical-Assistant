@@ -177,7 +177,7 @@ def _build_idf() -> dict[str, float]:
     return {t: math.log((n_docs + 1) / (df + 1)) + 1 for t, df in doc_freq.items()}
 
 
-async def semantic_get(query: str) -> Optional[dict]:
+def semantic_get(query: str) -> Optional[dict]:
     """Find a cached response for a semantically similar query."""
     global _semantic_hits, _semantic_misses
     if not _semantic_cache:
@@ -214,7 +214,7 @@ async def semantic_get(query: str) -> Optional[dict]:
     return None
 
 
-async def semantic_set(query: str, response: dict, ttl: int = 3600) -> None:
+def semantic_set(query: str, response: dict, ttl: int = 3600) -> None:
     """Store a query-response pair in the semantic cache."""
     global _semantic_cache
     tokens = _tokenize(query)
@@ -246,7 +246,7 @@ async def semantic_set(query: str, response: dict, ttl: int = 3600) -> None:
     logger.debug("[SemanticCache] Stored (total=%d): %s", len(_semantic_cache), query[:50])
 
 
-async def semantic_stats() -> dict:
+def semantic_stats() -> dict:
     """Return semantic cache statistics."""
     return {
         "entries": len(_semantic_cache),

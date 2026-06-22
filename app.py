@@ -9,7 +9,7 @@ from io import BytesIO
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ from config import Config
 from schemas import HealthResponse, ChatResponse, ValidateResponse, TranscribeResponse, ErrorResponse
 from agents.agent_decision import process_query
 from agents.agent_decision import process_query_streaming  # [Phase 3.1] streaming support
-from sse_utils import sse_stream_chat_streaming  # [Phase 3.1] SSE streaming response
+from sse_utils import sse_stream_chat_streaming, sse_generator  # [Phase 3.1] SSE streaming response
 from middleware import (
     SecurityHeadersMiddleware,
     RequestLoggingMiddleware,
@@ -33,6 +33,7 @@ from middleware import (
     get_dedup_stats,
 )
 from utils.logging_config import setup_logging, get_logger
+from cache import semantic_get, semantic_set, semantic_stats  # [Phase 51] Semantic cache
 
 # [Phase 8] Startup configuration validation
 from startup_validator import validate_startup_config, ConfigValidationError
@@ -278,6 +279,13 @@ def chat(
         session_id = str(uuid.uuid4())
     
     try:
+        # [SemanticCache] Check cache before expensive LLM call
+        cached = semantic_get(request.query)
+        if cached:
+            logger.info("[SemanticCache] HIT for: %s", request.query[:50])
+            response.set_cookie(key="session_id", value=session_id)
+            return cached
+
         response_data = process_query(request.query)
         response_text = response_data['messages'][-1].content
         
@@ -299,6 +307,9 @@ def chat(
             else:
                 print("Skin Lesion Output path does not exist.")
         
+        # [SemanticCache] Store result for future similar queries
+        semantic_set(request.query, result)
+        
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -319,7 +330,31 @@ async def chat_stream(
     """
     if not session_id:
         session_id = str(uuid.uuid4())
-    
+
+    # [Phase 51] Semantic cache check - skip streaming on cache hit
+    cached = semantic_get(request.query)
+    if cached:
+        logger.info("[SemanticCache] HIT on /chat/stream for: %s", request.query[:50])
+        async def cached_sse():
+            async for chunk in sse_generator(
+                {"session_id": session_id, "query": request.query[:100]}, event="start",
+            ):
+                yield chunk
+            async for chunk in sse_generator(
+                {"agent": cached.get("agent", "cache")}, event="agent",
+            ):
+                yield chunk
+            async for chunk in sse_generator(
+                {"text": cached.get("response", "")}, event="content",
+            ):
+                yield chunk
+            async for chunk in sse_generator(
+                {"total_length": len(cached.get("response", "")), "agent": cached.get("agent", "cache"),
+                 "cached": True}, event="done",
+            ):
+                yield chunk
+        return StreamingResponse(cached_sse(), media_type="text/event-stream")
+
     return await sse_stream_chat_streaming(
         query=request.query,
         session_id=session_id,
@@ -615,6 +650,13 @@ async def request_entity_too_large(request, exc):
             "response": f"File too large. Maximum size allowed: {config.api.max_image_upload_size}MB"
         }
     )
+
+# [Phase 51] Cache monitoring endpoint
+@app.get("/cache/stats", tags=["Monitoring"])
+def cache_statistics():
+    """Return semantic cache hit/miss statistics and health info."""
+    return semantic_stats()
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host=config.api.host, port=config.api.port)
