@@ -25,8 +25,8 @@ define user express self-harm intent
 
 # Dangerous medical advice requests
 define user request dangerous medication dosage
-  "What happens if I take [0-9]+ pills of"
-  "How many [a-z]+ can I overdose on"
+  "What happens if I take too many pills of"
+  "How many pills can I overdose on"
   "Lethal dose of"
   "Overdose on"
   "Can I die from taking too much"
@@ -70,22 +70,22 @@ define bot require professional consultation
 
 # ─── Input Rails ─────────────────────────────────────────────────
 
-define flow self check medical input
+define flow self check medical input suicidal
   user express suicidal intent
   bot express crisis resources
   stop
 
-define flow self check medical input
+define flow self check medical input self-harm
   user express self-harm intent
   bot express crisis resources
   stop
 
-define flow self check medical input
+define flow self check medical input dangerous dosage
   user request dangerous medication dosage
   bot decline dangerous dosage request
   stop
 
-define flow self check medical input
+define flow self check medical input drug abuse
   user request prescription drug abuse
   bot decline prescription abuse
   stop
@@ -103,7 +103,6 @@ define flow self check medical output
 
 define flow check PII in output
   $response = $bot_message
-  if any(char.isdigit() for char in $response[:50])  # Quick SSN/card pattern check
-    if len([w for w in $response.split() if w.replace('-','').isdigit() and len(w.replace('-','')) >= 9]) > 0
-      bot warn PII sharing
-      stop
+  if "身份证" in $response or "社保" in $response or "病历号" in $response
+    bot warn PII sharing
+    stop
