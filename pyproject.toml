@@ -85,3 +85,27 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+# Langchain / dynamic typing: relax noisy rules globally
+disable_error_code = ["call-arg", "typeddict-item", "no-any-return"]
+
+[[tool.mypy.overrides]]
+module = ["agents.agent_decision"]
+disable_error_code = ["attr-defined", "arg-type", "union-attr", "no-any-return", "assignment", "override", "misc", "operator", "index", "call-overload"]
+
+[[tool.mypy.overrides]]
+module = ["agents.rag_agent.incremental_indexing"]
+disable_error_code = ["attr-defined", "arg-type", "union-attr", "no-any-return"]
+
+[[tool.mypy.overrides]]
+module = ["providers"]
+disable_error_code = ["attr-defined", "union-attr", "index"]
