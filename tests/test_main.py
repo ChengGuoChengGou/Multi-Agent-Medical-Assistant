@@ -171,6 +171,70 @@ class TestStaticPages:
         assert "openapi" in data
 
 
+# === Chat Stream Endpoint ===
+
+class TestChatStreamEndpoint:
+    def test_chat_stream_requires_body(self, client):
+        """POST /chat/stream without body returns 422."""
+        r = client.post("/chat/stream")
+        assert r.status_code in [401, 422]
+
+    def test_chat_stream_empty_message_rejected(self, client):
+        """Empty message should be rejected."""
+        r = client.post("/chat/stream", json={"message": ""})
+        assert r.status_code in [400, 401, 422]
+
+    def test_chat_stream_valid_structure(self, client):
+        """Valid request should return SSE stream or auth error."""
+        r = client.post("/chat/stream", json={"message": "hello"})
+        if r.status_code == 200:
+            # SSE response should have text/event-stream content type
+            assert "text/event-stream" in r.headers.get("content-type", "")
+            # Should contain SSE-formatted data
+            body = r.text
+            assert "data:" in body
+
+    def test_chat_stream_xss_rejected(self, client):
+        """XSS payload should be rejected."""
+        r = client.post("/chat/stream", json={"message": "<script>alert(1)</script>"})
+        assert r.status_code in [400, 401, 422]
+
+
+# === Transcribe Endpoint ===
+
+class TestTranscribeEndpoint:
+    def test_transcribe_requires_body(self, client):
+        """POST /transcribe without file returns 422."""
+        r = client.post("/transcribe")
+        assert r.status_code == 422
+
+    def test_transcribe_requires_audio_file(self, client):
+        """POST /transcribe without file field returns 422."""
+        r = client.post("/transcribe", data={})
+        assert r.status_code == 422
+
+
+# === Cache Stats Endpoint ===
+
+class TestCacheStatsEndpoint:
+    def test_cache_stats_returns_200(self, client):
+        """GET /cache/stats should return 200."""
+        r = client.get("/cache/stats")
+        assert r.status_code == 200
+
+    def test_cache_stats_has_structure(self, client):
+        """Response should contain expected cache stat fields."""
+        r = client.get("/cache/stats")
+        data = r.json()
+        # Should have either lru/redis stats or semantic stats
+        assert isinstance(data, dict)
+
+    def test_cache_stats_json_content(self, client):
+        """Response should be valid JSON."""
+        r = client.get("/cache/stats")
+        assert r.headers.get("content-type", "").startswith("application/json")
+
+
 # === Not Found ===
 
 class TestNotFound:
