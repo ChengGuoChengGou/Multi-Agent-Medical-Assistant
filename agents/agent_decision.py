@@ -29,7 +29,7 @@ from request_context import request_id_var
 
 from langgraph.checkpoint.memory import MemorySaver
 import uuid
-from error_handler import StopHookValidator
+from agents.error_handler import StopHookValidator, llm_call_with_recovery
 
 # Vector memory integration (Phase 1: Memory System Upgrade)
 try:
@@ -80,7 +80,7 @@ import numpy as np
 from config import Config
 from circuit_breaker import llm_breaker, mcp_breaker, web_search_breaker, get_all_breaker_stats
 from observability import agent_metrics
-from agents.error_handler import llm_call_with_recovery, classify_llm_error, LLMErrorType, RetryExhausted
+from agents.error_handler import llm_call_with_recovery, classify_error, LLMErrorType, RetryExhausted
 
 # Phase 5: Medical Planner & Diagnosis Reflection
 try:
