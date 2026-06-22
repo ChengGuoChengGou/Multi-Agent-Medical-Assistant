@@ -14,6 +14,20 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
+# ── Env cleanup fixture (prevent leakage to other test modules) ──
+
+
+@pytest.fixture(autouse=True)
+def _clean_api_keys_env():
+    """Save and restore MEDICAL_API_KEYS around each test."""
+    saved = os.environ.get("MEDICAL_API_KEYS")
+    yield
+    if saved is None:
+        os.environ.pop("MEDICAL_API_KEYS", None)
+    else:
+        os.environ["MEDICAL_API_KEYS"] = saved
+
+
 # Load module directly
 AUTH_PATH = os.path.join(os.path.dirname(__file__), "..", "middleware", "api_key_auth.py")
 spec = importlib.util.spec_from_file_location("api_key_auth", AUTH_PATH)
