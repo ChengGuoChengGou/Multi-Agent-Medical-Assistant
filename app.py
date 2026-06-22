@@ -21,6 +21,7 @@ from pydub import AudioSegment
 from elevenlabs.client import ElevenLabs
 
 from config import Config
+from schemas import HealthResponse, ChatResponse, ValidateResponse, TranscribeResponse
 from agents.agent_decision import process_query
 from agents.agent_decision import process_query_streaming  # [Phase 3.1] streaming support
 from sse_utils import sse_stream_chat_streaming  # [Phase 3.1] SSE streaming response
@@ -140,7 +141,7 @@ async def index(request: Request):
     """Serve the main HTML page"""
     return templates.TemplateResponse(request, "index.html")
 
-@app.get("/health", tags=["System"])
+@app.get("/health", response_model=HealthResponse, tags=["System"])
 def health_check():
     """Health check endpoint for Docker / load balancer probes."""
     return {
@@ -179,7 +180,7 @@ def metrics():
     ]
     return Response(content="\n".join(lines), media_type="text/plain; version=0.0.4; charset=utf-8")
 
-@app.post("/chat", tags=["Chat"])
+@app.post("/chat", response_model=ChatResponse, tags=["Chat"])
 def chat(
     request: QueryRequest, 
     response: Response, 
@@ -231,7 +232,7 @@ async def chat_stream(
         streaming_fn=process_query_streaming,
     )
 
-@app.post("/upload", tags=["Document"])
+@app.post("/upload", response_model=ChatResponse, tags=["Document"])
 async def upload_image(
     response: Response,
     image: UploadFile = File(...), 
@@ -305,7 +306,7 @@ async def upload_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/validate", tags=["Document"])
+@app.post("/validate", response_model=ValidateResponse, tags=["Document"])
 def validate_medical_output(
     response: Response,
     validation_result: str = Form(...), 
@@ -344,7 +345,7 @@ def validate_medical_output(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/transcribe", tags=["Voice"])
+@app.post("/transcribe", response_model=TranscribeResponse, tags=["Voice"])
 async def transcribe_audio(audio: UploadFile = File(...)):
     """Endpoint to transcribe speech using ElevenLabs API"""
     if not audio.filename:
