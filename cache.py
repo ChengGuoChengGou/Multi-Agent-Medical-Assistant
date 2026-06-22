@@ -36,13 +36,25 @@ def init_redis(redis_url: str = "redis://localhost:6379/0") -> bool:
         return False
 
 # --- In-memory fallback cache ---
-_memory_cache: dict = {}
+_memory_cache: dict = {}        # key -> {"value": dict, "ts": float, "ttl": int}
 _memory_cache_max = 500
+_memory_cache_default_ttl = 3600  # 1 hour
 
 def _make_key(prefix: str, data: Any) -> str:
     """Generate deterministic cache key from input data."""
     raw = json.dumps(data, sort_keys=True, ensure_ascii=False)
     return f"{prefix}:{hashlib.sha256(raw.encode()).hexdigest()[:16]}"
+
+
+def _memory_cache_cleanup() -> int:
+    """Remove expired entries from memory cache. Returns count removed."""
+    global _memory_cache
+    now = time.time()
+    expired = [k for k, v in _memory_cache.items()
+               if now - v["ts"] > v.get("ttl", _memory_cache_default_ttl)]
+    for k in expired:
+        _memory_cache.pop(k, None)
+    return len(expired)
 
 
 async def cache_get(key: str) -> Optional[dict]:
@@ -55,7 +67,14 @@ async def cache_get(key: str) -> Optional[dict]:
                 return json.loads(val)
         except Exception:
             pass
-    return _memory_cache.get(key)
+    entry = _memory_cache.get(key)
+    if entry is None:
+        return None
+    # Check TTL
+    if time.time() - entry["ts"] > entry.get("ttl", _memory_cache_default_ttl):
+        _memory_cache.pop(key, None)
+        return None
+    return entry["value"]
 
 
 async def cache_set(key: str, value: dict, ttl: int = 3600) -> None:
@@ -66,12 +85,14 @@ async def cache_set(key: str, value: dict, ttl: int = 3600) -> None:
             await _redis_client.setex(key, ttl, json.dumps(value, ensure_ascii=False))
         except Exception:
             pass
-    # Always write to memory as fallback
+    # Always write to memory as fallback (with TTL)
     if len(_memory_cache) >= _memory_cache_max:
-        # Evict oldest
-        oldest = next(iter(_memory_cache))
-        _memory_cache.pop(oldest, None)
-    _memory_cache[key] = value
+        # Evict expired first, then oldest
+        removed = _memory_cache_cleanup()
+        if removed == 0 and len(_memory_cache) >= _memory_cache_max:
+            oldest = next(iter(_memory_cache))
+            _memory_cache.pop(oldest, None)
+    _memory_cache[key] = {"value": value, "ts": time.time(), "ttl": ttl}
 
 
 async def cache_delete(key: str) -> None:
@@ -87,7 +108,14 @@ async def cache_delete(key: str) -> None:
 
 async def cache_stats() -> dict:
     """Return cache statistics."""
-    stats = {"backend": "redis" if REDIS_AVAILABLE else "memory", "memory_entries": len(_memory_cache)}
+    expired_count = _memory_cache_cleanup()
+    stats = {
+        "backend": "redis" if REDIS_AVAILABLE else "memory",
+        "memory_entries": len(_memory_cache),
+        "memory_expired_cleaned": expired_count,
+        "memory_max": _memory_cache_max,
+        "memory_default_ttl": _memory_cache_default_ttl,
+    }
     if REDIS_AVAILABLE and _redis_client:
         try:
             info = await _redis_client.info("keyspace")
@@ -95,6 +123,7 @@ async def cache_stats() -> dict:
         except Exception:
             stats["redis_keys"] = "unknown"
     # Semantic cache stats
+    _semantic_cleanup_expired()
     stats["semantic_cache_entries"] = len(_semantic_cache)
     stats["semantic_cache_hits"] = _semantic_hits
     stats["semantic_cache_misses"] = _semantic_misses
@@ -175,6 +204,18 @@ def _build_idf() -> dict[str, float]:
         for t in seen:
             doc_freq[t] += 1
     return {t: math.log((n_docs + 1) / (df + 1)) + 1 for t, df in doc_freq.items()}
+
+
+def _semantic_cleanup_expired() -> int:
+    """Remove expired semantic cache entries. Returns count removed."""
+    global _semantic_cache
+    now = time.time()
+    before = len(_semantic_cache)
+    _semantic_cache = [
+        e for e in _semantic_cache
+        if now - e["ts"] <= e.get("ttl", 3600)
+    ]
+    return before - len(_semantic_cache)
 
 
 def semantic_get(query: str) -> Optional[dict]:
