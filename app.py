@@ -23,12 +23,29 @@ from config import Config
 from agents.agent_decision import process_query
 from agents.agent_decision import process_query_streaming  # [Phase 3.1] streaming support
 from sse_utils import sse_stream_chat_streaming  # [Phase 3.1] SSE streaming response
+from middleware import (
+    SecurityHeadersMiddleware,
+    RequestLoggingMiddleware,
+    RateLimitMiddleware,
+    RequestDedupMiddleware,
+    get_dedup_stats,
+)
 
 # Load configuration
 config = Config()
 
 # Initialize FastAPI app
 app = FastAPI(title="Multi-Agent Medical Chatbot", version="2.0")
+
+# ── Register Middleware (order matters: outermost first) ──
+# 1. Rate limiting: protect against abuse (60 rpm / 500 rph per IP)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60, requests_per_hour=500)
+# 2. Security headers: CSP, X-Frame-Options, XSS-Protection, etc.
+app.add_middleware(SecurityHeadersMiddleware)
+# 3. Request logging: method, path, status, duration
+app.add_middleware(RequestLoggingMiddleware)
+# 4. Request deduplication: coalesce identical in-flight LLM requests
+app.add_middleware(RequestDedupMiddleware)
 
 # Set up directories
 UPLOAD_FOLDER = "uploads/backend"
@@ -90,8 +107,17 @@ async def index(request: Request):
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for Docker health checks"""
-    return {"status": "healthy"}
+    """Health check endpoint for Docker / load balancer probes."""
+    return {
+        "status": "healthy",
+        "middleware": {
+            "rate_limiting": True,
+            "security_headers": True,
+            "request_logging": True,
+            "request_deduplication": True,
+        },
+        "dedup_stats": get_dedup_stats(),
+    }
 
 @app.post("/chat")
 def chat(
