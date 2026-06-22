@@ -34,6 +34,12 @@ from middleware import (
 )
 from utils.logging_config import setup_logging, get_logger
 
+# [Phase 6.5] Incremental indexing support
+try:
+    from agents.rag_agent import MedicalRAG, RAG_AVAILABLE
+except ImportError:
+    RAG_AVAILABLE = False
+
 # Load configuration
 config = Config()
 
@@ -104,6 +110,49 @@ templates = Jinja2Templates(directory="templates")
 client = ElevenLabs(
     api_key=config.speech.eleven_labs_api_key,
 )
+
+# ── [Phase 6.5] Incremental Indexing Lifecycle ──
+# Singleton MedicalRAG instance for startup/shutdown management
+_rag_singleton = None
+
+@app.on_event("startup")
+async def _startup_incremental_indexing():
+    """Start incremental file indexing and initialize unified tool registry on app startup."""
+    global _rag_singleton
+    _logger = get_logger("startup")
+
+    # Start incremental indexer
+    if RAG_AVAILABLE:
+        try:
+            _rag_singleton = MedicalRAG(config)
+            _rag_singleton.start_incremental_indexing()
+            _logger.info("[STARTUP] Incremental document indexing started")
+        except Exception as e:
+            _logger.warning(f"[STARTUP] Incremental indexer failed to start (non-fatal): {e}")
+
+    # Initialize unified tool registry
+    try:
+        from tools.registry import get_registry
+        registry = get_registry()
+        if registry.initialize():
+            tool_count = len(registry.get_all_tool_names())
+            _logger.info(f"[STARTUP] Tool registry initialized: {tool_count} tools available")
+        else:
+            _logger.info("[STARTUP] Tool registry initialized (no tools loaded)")
+    except Exception as e:
+        _logger.warning(f"[STARTUP] Tool registry init failed (non-fatal): {e}")
+
+
+@app.on_event("shutdown")
+async def _shutdown_incremental_indexing():
+    """Stop incremental file watcher on app shutdown."""
+    _logger = get_logger("shutdown")
+    if _rag_singleton:
+        try:
+            _rag_singleton.stop_incremental_indexing()
+            _logger.info("[SHUTDOWN] Incremental document indexing stopped")
+        except Exception as e:
+            _logger.warning(f"[SHUTDOWN] Incremental indexer stop failed: {e}")
 
 # Define allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}

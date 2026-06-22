@@ -202,16 +202,11 @@ class MedicalRAG:
             self.logger.info(f"   Expanded: '{expanded_query}'")
             query = expanded_query
 
-            # Step 2: Retrieval
+            # Step 2: Retrieval - use hybrid search (BM25 + Vector with RRF fusion)
             self.logger.info(f"2. Retrieving relevant documents for the query: '{query}'")
-            vectorstore, docstore = self.vector_store.load_vectorstore()
-            retrieved_documents = self.vector_store.retrieve_relevant_chunks(
-                query=query,
-                vectorstore=vectorstore,
-                docstore=docstore,
-                )
-
-            self.logger.info(f"   Retrieved {len(retrieved_documents)} relevant document chunks")
+            hybrid_result = self.hybrid_retrieve(query=query, top_k=self.config.rag.top_k)
+            retrieved_documents = hybrid_result["documents"]
+            self.logger.info(f"   Retrieved {len(retrieved_documents)} relevant document chunks via {hybrid_result['method']}")
 
             # Step 3: Rerank the retrieved documents if we have a reranker and enough documents
             self.logger.info(f"3. Reranking the retrieved documents")

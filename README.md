@@ -1,6 +1,6 @@
 <div align="center">
  
-![logo](https://github.com/souvikmajumder26/Multi-Agent-Medical-Assistant/blob/main/assets/logo_rounded.png)
+![logo](assets/logo_rounded.png)
 
 <h1 align="center"><strong>⚕️ Multi-Agent-Medical-Assistant :<h6 align="center">AI-powered multi-agentic system for medical diagnosis and assistance</h6></strong></h1>
 
@@ -182,8 +182,8 @@ If you like what you see and would want to support the project's developer, you 
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/souvikmajumder26/Multi-Agent-Medical-Assistant.git
-cd Multi-Agent-Medical-Assistant
+git clone https://github.com/ChengGuoChengGou/medical-assistant.git
+cd medical-assistant
 ```
 
 ### 2️⃣ Create Environment File
@@ -370,7 +370,7 @@ python ingest_rag_data.py --dir ./data/raw
 ---
 
 ## 🤝 Contributions  <a name="contributions"></a>
-Contributions are welcome! Please check the [issues](https://github.com/souvikmajumder26/Multi-Agent-Medical-Assistant/issues) tab for feature requests and improvements.  
+Contributions are welcome! Please check the [issues](https://github.com/ChengGuoChengGou/medical-assistant/issues) tab for feature requests and improvements.  
 
 ---
 
@@ -387,13 +387,13 @@ This project is licensed under the **Apache-2.0 License**. See the [LICENSE](LIC
   Year = {2025},
   Publisher = {GitHub},
   Journal = {GitHub repository},
-  Howpublished = {\url{https://github.com/souvikmajumder26/Multi-Agent-Medical-Assistant}}
+  Howpublished = {\url{https://github.com/ChengGuoChengGou/medical-assistant}}
 }
 ```
 
 ---
 
-## 🔧 Fork Enhancements (Phase 1–5)
+## 🔧 Fork Enhancements (Phase 1–9)
 
 This fork adds significant security hardening, UI modernization, and new agent capabilities on top of the original project.
 

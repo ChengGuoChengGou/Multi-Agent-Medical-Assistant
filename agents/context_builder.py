@@ -233,6 +233,44 @@ class ContextBuilder:
         self.max_vector_results = max_vector_results
         self.compress_old = compress_old
         self.keep_recent = keep_recent
+        # Fluent API state
+        self._system_prompt = ""
+        self._vector_memory = ""
+        self._chat_history = ""
+        self._extra_sections = []
+
+    # ---- Fluent API (setter pattern) ----
+
+    def set_system(self, prompt: str) -> "ContextBuilder":
+        self._system_prompt = prompt
+        return self
+
+    def set_vector_memory(self, memory_results, min_score: float = 0.0) -> "ContextBuilder":
+        if isinstance(memory_results, str):
+            self._vector_memory = memory_results
+        else:
+            self._vector_memory = self.format_vector_memory(memory_results)
+        return self
+
+    def set_chat_history(self, messages: list, max_messages: int = 0) -> "ContextBuilder":
+        if max_messages > 0:
+            messages = messages[-max_messages:]
+        self._chat_history = self.format_chat_history(messages)
+        return self
+
+    def build(self, user_input: str = "") -> str:
+        parts = []
+        if self._system_prompt:
+            parts.append(f"[SYSTEM]\n{self._system_prompt}")
+        if self._vector_memory:
+            parts.append(f"[MEMORY]\n{self._vector_memory}")
+        if self._chat_history:
+            parts.append(f"[HISTORY]\n{self._chat_history}")
+        for extra in self._extra_sections:
+            parts.append(extra)
+        if user_input:
+            parts.append(f"[USER]\n{user_input}")
+        return "\n\n".join(parts)
 
     # ---- Chat History ----
 

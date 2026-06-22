@@ -81,12 +81,22 @@ class LLMFallbackChain(BaseChatModel):
         return self.models[self.active_index].model
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # ─── Model Registry (env-overridable per-agent routing) ──────────────────────
-_DEFAULT_MODEL = os.getenv("model_name", "gpt-4o-mini")
-_DEFAULT_API_KEY = os.getenv("openai_api_key") or os.getenv("OPENAI_API_KEY")
-_DEFAULT_API_BASE = os.getenv("OPENAI_BASE_URL") or os.getenv("openai_base_url")
+# Phase 10: Provider system - supports domestic models (小米MiMo, DeepSeek, etc.)
+try:
+    from providers import resolve_provider, list_providers
+    _provider = resolve_provider()
+    _DEFAULT_MODEL = _provider["model"]
+    _DEFAULT_API_KEY = _provider["api_key"]
+    _DEFAULT_API_BASE = _provider["base_url"]
+    logger.info(f"[Config] Provider: {_provider['description']} | Model: {_DEFAULT_MODEL} | Base: {_DEFAULT_API_BASE}")
+except ImportError:
+    logger.warning("[Config] providers.py not found, falling back to env vars")
+    _DEFAULT_MODEL = os.getenv("model_name", "gpt-4o-mini")
+    _DEFAULT_API_KEY = os.getenv("openai_api_key") or os.getenv("OPENAI_API_KEY")
+    _DEFAULT_API_BASE = os.getenv("OPENAI_BASE_URL") or os.getenv("openai_base_url", "https://api.openai.com/v1")
 
 # Per-role model overrides (env vars); falls back to defaults above
 _MODEL_ROLES = {

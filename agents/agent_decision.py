@@ -42,6 +42,7 @@ except Exception as e:
 
 # Memory Module (Three-tier: Vector → Mem0 → InMemory)
 from agents.memory_module import get_memory_store
+from agents.memory.medical_memory import get_medical_memory
 
 # Prompt Manager (Centralized template management)
 try:
@@ -53,12 +54,12 @@ except Exception:
 
 # Medical Tool System (Phase 4: Unified Tool Interface)
 try:
-    from agents.medical_tool import get_tool_registry, init_tool_registry
-    MEDICAL_TOOL_AVAILABLE = True
-    logger.info("Medical tool system loaded successfully")
+    from tools.registry import get_registry as get_unified_registry
+    UNIFIED_REGISTRY_AVAILABLE = True
+    logger.info("Unified tool registry loaded successfully")
 except ImportError:
-    MEDICAL_TOOL_AVAILABLE = False
-    logger.warning("Medical tool system not available")
+    UNIFIED_REGISTRY_AVAILABLE = False
+    logger.warning("Unified tool registry not available")
 
 # Optional: Langfuse observability (graceful degradation if not installed)
 try:
@@ -406,12 +407,13 @@ def create_agent_graph():
         
         # Phase 4: Inject tool registry summary for better routing decisions
         tool_context = ""
-        if MEDICAL_TOOL_AVAILABLE:
+        if UNIFIED_REGISTRY_AVAILABLE:
             try:
-                registry = get_tool_registry()
-                if len(registry) > 0:
+                registry = get_unified_registry()
+                tool_names = registry.get_all_tool_names()
+                if tool_names:
                     tool_context = f"\n\n[AVAILABLE TOOLS]\n{registry.get_summary(max_desc_len=80)}\n"
-                    logger.debug(f"[TOOL_REGISTRY] Injected {len(registry)} tools into decision context")
+                    logger.debug(f"[TOOL_REGISTRY] Injected {len(tool_names)} tools into decision context")
             except Exception as e:
                 logger.debug(f"[TOOL_REGISTRY] Tool summary failed (non-fatal): {e}")
         
@@ -496,6 +498,27 @@ def create_agent_graph():
                 logger.debug(f"[MEMORY_MODULE] Injected memory context for user {user_id}")
         except Exception as e:
             logger.debug(f"[MEMORY_MODULE] Recall failed (non-fatal): {e}")
+        
+        # MedicalMemory: medical-specific recall (allergies, medications, history)
+        try:
+            med_mem = get_medical_memory()
+            if med_mem.available:
+                user_id = state.get("thread_id", "default")
+                allergies = med_mem.check_allergies(user_id)
+                medications = med_mem.check_medications(user_id)
+                med_history = med_mem.recall_medical(user_id, input_text, limit=3)
+                med_parts = []
+                if allergies:
+                    med_parts.append(f"已知过敏: {allergies}")
+                if medications:
+                    med_parts.append(f"当前用药: {medifications}")
+                if med_history:
+                    med_parts.append(f"相关病史: {med_history}")
+                if med_parts:
+                    ctx.set_vector_memory([{"content": "\n".join(med_parts), "score": 0.7, "source": "medical_memory"}])
+                    logger.debug(f"[MEDICAL_MEMORY] Injected medical context for user {user_id}")
+        except Exception as e:
+            logger.debug(f"[MEDICAL_MEMORY] Recall failed (non-fatal): {e}")
         
         ctx.set_chat_history(messages, max_messages=20)
         conversation_prompt = ctx.build(input_text)
@@ -1110,9 +1133,9 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     graph = create_agent_graph()
     
     # Phase 4: Initialize tool registry (lazy, only on first call)
-    if MEDICAL_TOOL_AVAILABLE:
+    if UNIFIED_REGISTRY_AVAILABLE:
         try:
-            init_tool_registry()
+            get_unified_registry().initialize()
         except Exception as e:
             logger.debug(f"[TOOL_REGISTRY] Init failed (non-fatal): {e}")
 
@@ -1238,6 +1261,27 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
             if user_msg and ai_msg:
                 memory.remember(user_id, f"Q: {user_msg}\nA: {ai_msg}", metadata={"type": "conversation"})
                 logger.debug(f"[MEMORY_MODULE] Stored conversation for user {user_id}")
+                
+                # MedicalMemory: store with medical category detection
+                try:
+                    med_mem = get_medical_memory()
+                    if med_mem.available:
+                        combined = (user_msg + " " + ai_msg).lower()
+                        category = "general"
+                        if any(kw in combined for kw in ["过敏", "allerg", "不良反应"]):
+                            category = "allergy"
+                        elif any(kw in combined for kw in ["药", "用药", "medication", "处方", "剂量"]):
+                            category = "medication"
+                        elif any(kw in combined for kw in ["诊断", "diagnos", "检查", "化验"]):
+                            category = "diagnosis"
+                        elif any(kw in combined for kw in ["症状", "symptom", "头痛", "发热", "咳嗽", "疼痛"]):
+                            category = "symptom"
+                        elif any(kw in combined for kw in ["病史", "history", "既往", "慢性"]):
+                            category = "history"
+                        med_mem.remember_medical(user_id, f"Q: {user_msg}\nA: {ai_msg}", category=category)
+                        logger.debug(f"[MEDICAL_MEMORY] Stored (category={category}) for user {user_id}")
+                except Exception as e:
+                    logger.debug(f"[MEDICAL_MEMORY] Store failed (non-fatal): {e}")
     except Exception as e:
         logger.debug(f"[MEMORY_MODULE] Remember failed (non-fatal): {e}")
     
