@@ -17,16 +17,28 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langgraph.graph import MessagesState, StateGraph, END
 import os, getpass
+import concurrent.futures
 from dotenv import load_dotenv
 from agents.rag_agent import MedicalRAG
 from agents.web_search_processor_agent import WebSearchProcessorAgent
 from agents.image_analysis_agent import ImageAnalysisAgent
+from agents.context_builder import MedicalSystemPrompt, ContextBuilder, compress_history_tags
 from agents.mcp_agent import mcp_agent_node
 from agents.guardrails.local_guardrails import LocalGuardrails
 from request_context import request_id_var
 
 from langgraph.checkpoint.memory import MemorySaver
 import uuid
+from error_handler import StopHookValidator
+
+# Vector memory integration (Phase 1: Memory System Upgrade)
+try:
+    from agents.medical_vector_memory import search_memory, add_memory, collection_stats
+    VECTOR_MEMORY_AVAILABLE = True
+    logger.info("Medical vector memory loaded successfully")
+except Exception as e:
+    VECTOR_MEMORY_AVAILABLE = False
+    logger.warning(f"Medical vector memory unavailable: {e}")
 
 # Optional: Langfuse observability (graceful degradation if not installed)
 try:
@@ -48,6 +60,17 @@ import numpy as np
 from config import Config
 from circuit_breaker import llm_breaker, mcp_breaker, web_search_breaker, get_all_breaker_stats
 from observability import agent_metrics
+from agents.error_handler import llm_call_with_recovery, classify_llm_error, LLMErrorType, RetryExhausted
+
+# Phase 5: Medical Planner & Diagnosis Reflection
+try:
+    from agents.medical_planner import (
+        create_diagnostic_plan, reflect_on_diagnosis, get_plan_routing_hints,
+        DiagnosticPlan, DiagnosisReflection, PLANNING_AVAILABLE
+    )
+except ImportError:
+    PLANNING_AVAILABLE = False
+    logger.warning("[PLANNER] Medical planner module not available")
 
 load_dotenv()
 
@@ -56,6 +79,7 @@ config = Config()
 
 # Initialize memory
 memory = MemorySaver()
+stop_hook = StopHookValidator()  # Post-agent output validation
 
 # Specify a thread
 # Dynamic thread config - each session gets unique thread_id
@@ -126,6 +150,9 @@ class AgentState(MessagesState):
     retrieval_confidence: float  # Confidence in retrieval (for RAG agent)
     bypass_routing: bool  # Flag to bypass agent routing for guardrails
     insufficient_info: bool  # Flag indicating RAG response has insufficient information
+    # Phase 5: Planning & Reflection
+    diagnostic_plan: Optional[Dict]  # Serialized DiagnosticPlan (JSON-safe)
+    plan_hints: Optional[Dict]  # Routing hints from planner for route_to_agent
 
 
 class AgentDecision(BaseModel):
@@ -223,7 +250,101 @@ def create_agent_graph():
         """Check if we should bypass normal routing due to guardrails."""
         if state.get("bypass_routing", False):
             return "apply_guardrails"
-        return "route_to_agent"
+        return "plan_diagnosis"
+    
+    def reflect_diagnosis(state: AgentState) -> AgentState:
+        """
+        Phase 5 node: Run diagnosis reflection after agent output.
+        Lightweight LLM call to critique diagnosis and suggest follow-ups.
+        """
+        if not PLANNING_AVAILABLE:
+            return state
+        
+        messages = state.get("messages", [])
+        current_input = state.get("current_input", "")
+        plan_data = state.get("diagnostic_plan")
+        
+        # Extract agent's output text
+        output_text = ""
+        if messages:
+            last_msg = messages[-1]
+            if isinstance(last_msg, AIMessage):
+                output_text = last_msg.content
+            elif isinstance(last_msg, str):
+                output_text = last_msg
+        
+        if not output_text or len(output_text) < 50:
+            logger.debug("[REFLECT] Output too short, skipping reflection")
+            return state
+        
+        # Get original query
+        query = ""
+        if isinstance(current_input, str):
+            query = current_input
+        elif isinstance(current_input, dict):
+            query = current_input.get("text", "")
+        
+        # Reconstruct plan for context
+        from agents.medical_planner import DiagnosticPlan
+        plan_obj = DiagnosticPlan(**plan_data) if plan_data else None
+        
+        # Run reflection (cheap LLM call, ~100 tokens)
+        reflection = reflect_on_diagnosis(
+            llm=config.rag.llm,
+            original_query=query,
+            diagnosis_output=output_text,
+            plan=plan_obj
+        )
+        
+        if reflection and reflection.needs_follow_up and reflection.follow_up_questions:
+            followup_note = f"建议追问: {'; '.join(reflection.follow_up_questions[:2])}"
+            logger.info(f"[REFLECT] {followup_note}")
+            return {
+                **state,
+                "plan_hints": {
+                    **(state.get("plan_hints") or {}),
+                    "reflection_followup": reflection.follow_up_questions,
+                    "reflection_notes": reflection.suggested_checks,
+                    "confidence_adjustment": reflection.confidence_adjustment
+                }
+            }
+        
+        logger.info("[REFLECT] Diagnosis looks solid, no follow-up needed")
+        return state
+    
+    def plan_diagnosis(state: AgentState) -> AgentState:
+        """
+        Phase 5 node: Generate diagnostic plan for complex medical queries.
+        Exploration → Plan → Verification pattern.
+        For simple queries, passes through with hints for routing.
+        """
+        if not PLANNING_AVAILABLE:
+            # Planner not loaded, pass through unchanged
+            return {**state, "diagnostic_plan": None, "plan_hints": None}
+        
+        current_input = state["current_input"]
+        if isinstance(current_input, dict):
+            input_text = current_input.get("text", "")
+        else:
+            input_text = str(current_input) if current_input else ""
+        
+        if not input_text.strip():
+            return {**state, "diagnostic_plan": None, "plan_hints": None}
+        
+        try:
+            plan = create_diagnostic_plan(input_text)
+            hints = get_plan_routing_hints(plan)
+            logger.info(f"[PLANNER] Plan created: complexity={plan.complexity}, "
+                       f"reasoning_depth={plan.reasoning_depth}, "
+                       f"recommended_agents={hints.get('recommended_agents', [])}")
+            return {
+                **state,
+                "diagnostic_plan": plan.model_dump(),
+                "plan_hints": hints
+            }
+        except Exception as e:
+            logger.warning(f"[PLANNER] Planning failed (non-fatal): {e}")
+            return {**state, "diagnostic_plan": None, "plan_hints": None}
     
     def route_to_agent(state: AgentState) -> Dict:
         """Make decision about which agent should handle the query."""
@@ -239,39 +360,49 @@ def create_agent_graph():
         elif isinstance(current_input, dict):
             input_text = current_input.get("text", "")
         
-        # Create context from recent conversation history (last 3 messages)
-        recent_context = ""
-        for msg in messages[-6:]:  # Get last 3 exchanges (6 messages)  # Not provided control from config
-            if isinstance(msg, HumanMessage):
-                recent_context += f"User: {msg.content}\n"
-            elif isinstance(msg, AIMessage):
-                recent_context += f"Assistant: {msg.content}\n"
+        # Phase 5: Inject plan hints into decision context
+        plan_hints = state.get("plan_hints")
+        plan_context = ""
+        if plan_hints and plan_hints.get("recommended_agents"):
+            recommended = plan_hints["recommended_agents"]
+            plan_context = f"\n[PLANNER HINTS] Recommended agents: {', '.join(recommended)}\n"
+            if plan_hints.get("priority_steps"):
+                plan_context += f"[PLANNER] Priority: {', '.join(plan_hints['priority_steps'])}\n"
+            logger.info(f"[ROUTE] Using planner hints: {recommended}")
         
-        # Combine everything for the decision input
-        decision_input = f"""
-        User query: {input_text}
-
-        Recent conversation context:
-        {recent_context}
-
-        Has image: {has_image}
-        Image type: {image_type if has_image else 'None'}
-
-        Based on this information, which agent should handle this query?
-        """
+        # Build context using ContextBuilder (Phase 2)
+        ctx = ContextBuilder()
+        ctx.set_system(MedicalSystemPrompt.decision())
+        if VECTOR_MEMORY_AVAILABLE and input_text:
+            try:
+                mem_results = search_memory(input_text, top_k=3)
+                if mem_results:
+                    ctx.set_vector_memory(mem_results)
+                    logger.debug(f"[VECTOR_MEMORY] Injected {len(mem_results)} memory results into decision")
+            except Exception as e:
+                logger.debug(f"[VECTOR_MEMORY] Decision search failed (non-fatal): {e}")
+        ctx.set_chat_history(messages, max_messages=6)
+        decision_input = ctx.build(
+            f"User query: {input_text}\n\nHas image: {has_image}\nImage type: {image_type if has_image else 'None'}{plan_context}\n\nBased on this information, which agent should handle this query?"
+        )
         
         # Make the decision with structured output validation + fallback
+        # [Phase 3.4] Wrapped with llm_call_with_recovery for error classification
         try:
             with agent_metrics.track("DECISION_AGENT"):
-                decision = llm_breaker.call(
-                    lambda: decision_chain.invoke({"input": decision_input})
+                decision = llm_call_with_recovery(
+                    lambda: llm_breaker.call(
+                        lambda: decision_chain.invoke({"input": decision_input})
+                    ),
+                    context_builder=lambda: list(messages[-6:]),
+                    max_context_retries=1,
                 )
             # Validate through Pydantic model
             validated = AgentDecision(**decision)
             agent_name = validated.agent
             reasoning = validated.reasoning
             confidence = validated.confidence
-        except Exception as e:
+        except (RetryExhausted, Exception) as e:
             logger.warning(f"Decision chain parse/validation failed: {e}. Falling back to CONVERSATION_AGENT")
             agent_name = "CONVERSATION_AGENT"
             reasoning = f"Fallback due to parse error: {str(e)[:200]}"
@@ -308,78 +439,33 @@ def create_agent_graph():
         elif isinstance(current_input, dict):
             input_text = current_input.get("text", "")
         
-        # Create context from recent conversation history
-        recent_context = ""
-        for msg in messages:#[-20:]:  # Get last 10 exchanges (20 messages)  # currently considering complete history - limit control from config
-            if isinstance(msg, HumanMessage):
-                # print("######### DEBUG 1:", msg)
-                recent_context += f"User: {msg.content}\n"
-            elif isinstance(msg, AIMessage):
-                # print("######### DEBUG 2:", msg)
-                recent_context += f"Assistant: {msg.content}\n"
-        
-        # Combine everything for the decision input
-        conversation_prompt = f"""User query: {input_text}
-
-        Recent conversation context: {recent_context}
-
-        You are an AI-powered Medical Conversation Assistant. Your goal is to facilitate smooth and informative conversations with users, handling both casual and medical-related queries. You must respond naturally while ensuring medical accuracy and clarity.
-
-        ### Role & Capabilities
-        - Engage in **general conversation** while maintaining professionalism.
-        - Answer **medical questions** using verified knowledge.
-        - Route **complex queries** to RAG (retrieval-augmented generation) or web search if needed.
-        - Handle **follow-up questions** while keeping track of conversation context.
-        - Redirect **medical images** to the appropriate AI analysis agent.
-
-        ### Guidelines for Responding:
-        1. **General Conversations:**
-        - If the user engages in casual talk (e.g., greetings, small talk), respond in a friendly, engaging manner.
-        - Keep responses **concise and engaging**, unless a detailed answer is needed.
-
-        2. **Medical Questions:**
-        - If you have **high confidence** in answering, provide a medically accurate response.
-        - Ensure responses are **clear, concise, and factual**.
-
-        3. **Follow-Up & Clarifications:**
-        - Maintain conversation history for better responses.
-        - If a query is unclear, ask **follow-up questions** before answering.
-
-        4. **Handling Medical Image Analysis:**
-        - Do **not** attempt to analyze images yourself.
-        - If user speaks about analyzing or processing or detecting or segmenting or classifying any disease from any image, ask the user to upload the image so that in the next turn it is routed to the appropriate medical vision agents.
-        - If an image was uploaded, it would have been routed to the medical computer vision agents. Read the history to know about the diagnosis results and continue conversation if user asks anything regarding the diagnosis.
-        - After processing, **help the user interpret the results**.
-
-        5. **Uncertainty & Ethical Considerations:**
-        - If unsure, **never assume** medical facts.
-        - Recommend consulting a **licensed healthcare professional** for serious medical concerns.
-        - Avoid providing **medical diagnoses** or **prescriptions**—stick to general knowledge.
-
-        ### Response Format:
-        - Maintain a **conversational yet professional tone**.
-        - Use **bullet points or numbered lists** for clarity when needed.
-        - If pulling from external sources (RAG/Web Search), mention **where the information is from** (e.g., "According to Mayo Clinic...").
-        - If a user asks for a diagnosis, remind them to **seek medical consultation**.
-
-        ### Example User Queries & Responses:
-
-        **User:** "Hey, how's your day going?"
-        **You:** "I'm here and ready to help! How can I assist you today?"
-
-        **User:** "I have a headache and fever. What should I do?"
-        **You:** "I'm not a doctor, but headaches and fever can have various causes, from infections to dehydration. If your symptoms persist, you should see a medical professional."
-
-        Conversational LLM Response:"""
+        # Build context using ContextBuilder (Phase 2)
+        ctx = ContextBuilder()
+        ctx.set_system(MedicalSystemPrompt.conversation())
+        if VECTOR_MEMORY_AVAILABLE:
+            try:
+                mem_results = search_memory(input_text, min_score=0.45, top_k=3)
+                if mem_results:
+                    ctx.set_vector_memory(mem_results)
+                    logger.debug(f"[VECTOR_MEMORY] Injected {len(mem_results)} memories into conversation")
+            except Exception as e:
+                logger.debug(f"[VECTOR_MEMORY] Conversation search failed (non-fatal): {e}")
+        ctx.set_chat_history(messages, max_messages=20)
+        conversation_prompt = ctx.build(input_text)
 
         # print("Conversation Prompt:", conversation_prompt)
 
+        # [Phase 3.4] Wrapped with llm_call_with_recovery for error classification
         try:
             with agent_metrics.track("CONVERSATION_AGENT"):
-                response = llm_breaker.call(
-                    lambda: config.conversation.llm.invoke(conversation_prompt)
+                response = llm_call_with_recovery(
+                    lambda: llm_breaker.call(
+                        lambda: config.conversation.llm.invoke(conversation_prompt)
+                    ),
+                    context_builder=lambda: list(messages[-20:]),
+                    max_context_retries=2,
                 )
-        except Exception as e:
+        except (RetryExhausted, Exception) as e:
             logger.error(f"[CONVERSATION_AGENT] LLM invocation failed: {e}", exc_info=True)
             response = AIMessage(content="I apologize, but I'm experiencing technical difficulties. Please try again.")
 
@@ -410,12 +496,16 @@ def create_agent_graph():
                 # print("######### DEBUG 2:", msg)
                 recent_context += f"Assistant: {msg.content}\n"
 
+        # [Phase 3.4] Wrapped with llm_call_with_recovery for error classification
         try:
             with agent_metrics.track("RAG_AGENT"):
-                response = llm_breaker.call(
-                    lambda: rag_agent.process_query(query, chat_history=recent_context)
+                response = llm_call_with_recovery(
+                    lambda: llm_breaker.call(
+                        lambda: rag_agent.process_query(query, chat_history=recent_context)
+                    ),
+                    max_context_retries=1,
                 )
-        except Exception as e:
+        except (RetryExhausted, Exception) as e:
             logger.error(f"[RAG_AGENT] RAG query failed: {e}", exc_info=True)
             return {
                 **state,
@@ -464,6 +554,22 @@ def create_agent_graph():
         if retrieval_confidence >= config.rag.min_retrieval_confidence:
             # response_output = response["response"]
             response_output = AIMessage(content=response_text)
+            
+            # Store high-confidence RAG results to vector memory
+            if VECTOR_MEMORY_AVAILABLE:
+                try:
+                    add_memory(
+                        text=f"Medical RAG Q&A: Q={query[:200]} A={response_text[:500]}",
+                        metadata={
+                            "type": "rag_qa",
+                            "confidence": str(retrieval_confidence),
+                            "sources": str(len(response.get("sources", []))),
+                            "query_preview": query[:100],
+                        },
+                    )
+                    logger.debug(f"[VECTOR_MEMORY] Stored RAG result (confidence={retrieval_confidence:.2f})")
+                except Exception as e:
+                    logger.debug(f"[VECTOR_MEMORY] RAG store failed (non-fatal): {e}")
         else:
             response_output = AIMessage(content="")
         
@@ -497,12 +603,16 @@ def create_agent_graph():
 
         web_search_processor = WebSearchProcessorAgent(config)
 
+        # [Phase 3.4] Wrapped with llm_call_with_recovery for error classification
         try:
             with agent_metrics.track("WEB_SEARCH_PROCESSOR_AGENT"):
-                processed_response = web_search_breaker.call(
-                    lambda: web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
+                processed_response = llm_call_with_recovery(
+                    lambda: web_search_breaker.call(
+                        lambda: web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
+                    ),
+                    max_context_retries=1,
                 )
-        except Exception as e:
+        except (RetryExhausted, Exception) as e:
             logger.error(f"[WEB_SEARCH_PROCESSOR_AGENT] Web search processing failed: {e}", exc_info=True)
             processed_response = AIMessage(content="I apologize, but the web search system encountered an error. Please try again.")
 
@@ -534,6 +644,63 @@ def create_agent_graph():
             logger.info("Re-routed to Web Search Agent due to low confidence or insufficient information...")
             return "WEB_SEARCH_PROCESSOR_AGENT"  # Correct format
         return "check_validation"  # No transition needed if confidence is high and info is sufficient
+    
+    def run_parallel_retrieval(state: AgentState) -> AgentState:
+        """Run RAG and WebSearch in parallel, merge best result (Phase 3.3)."""
+        logger.info(f"Selected agent: PARALLEL_RETRIEVAL (RAG + WebSearch concurrent)")
+        
+        rag_state = None
+        web_state = None
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            rag_future = executor.submit(run_rag_agent, state)
+            web_future = executor.submit(run_web_search_processor_agent, state)
+            try:
+                rag_state = rag_future.result(timeout=120)
+            except Exception as e:
+                logger.warning(f"RAG agent failed in parallel: {e}")
+            try:
+                web_state = web_future.result(timeout=120)
+            except Exception as e:
+                logger.warning(f"WebSearch agent failed in parallel: {e}")
+        
+        # Merge strategy: prefer RAG if high confidence, else WebSearch, else combine
+        rag_conf = (rag_state or {}).get("retrieval_confidence", 0.0)
+        web_conf = (web_state or {}).get("web_search_confidence", 0.0)
+        
+        merged_state = {**state}
+        
+        if rag_conf >= config.rag.min_retrieval_confidence:
+            # RAG is good enough - use it as primary
+            merged_state.update({
+                "agent_name": "RAG_AGENT",
+                "output": rag_state.get("output", state.get("output")),
+                "retrieval_confidence": rag_conf,
+            })
+            logger.info(f"[PARALLEL] Using RAG result (confidence={rag_conf:.2f})")
+        elif web_conf >= 0.5:
+            # Use web search result
+            merged_state.update({
+                "agent_name": "WEB_SEARCH_PROCESSOR_AGENT",
+                "output": web_state.get("output", state.get("output")),
+                "web_search_confidence": web_conf,
+            })
+            logger.info(f"[PARALLEL] Using WebSearch result (confidence={web_conf:.2f})")
+        else:
+            # Both low - combine contexts for richer input to downstream
+            combined_output = ""
+            if rag_state and rag_state.get("output"):
+                combined_output += f"[RAG Context]\n{rag_state['output']}\n\n"
+            if web_state and web_state.get("output"):
+                combined_output += f"[Web Context]\n{web_state['output']}"
+            merged_state.update({
+                "agent_name": "PARALLEL_RETRIEVAL",
+                "output": combined_output or state.get("output"),
+                "retrieval_confidence": max(rag_conf, web_conf),
+            })
+            logger.info(f"[PARALLEL] Combined RAG({rag_conf:.2f}) + Web({web_conf:.2f})")
+        
+        return merged_state
     
     def run_brain_tumor_agent(state: AgentState) -> AgentState:
         """Handle brain MRI image analysis using EfficientNet-B0 classifier."""
@@ -671,7 +838,26 @@ def create_agent_graph():
         }
     
     def handle_human_validation(state: AgentState) -> Dict:
-        """Prepare for human validation if needed."""
+        """Prepare for human validation if needed, with stopHook check."""
+        # ── StopHook: post-agent validation (confidence + safety + completeness) ──
+        agent_name = state.get("agent", "unknown")
+        if agent_name not in ("unknown", "HUMAN_VALIDATION", "INTAKE_AGENT"):
+            hook_result = stop_hook.validate_output(state, agent_name)
+            if not hook_result.passed:
+                logger.warning(
+                    f"[STOP_HOOK] {agent_name} failed validation: "
+                    f"{hook_result.reason} (action={hook_result.action})"
+                )
+                # Force human validation on hook failure
+                state["needs_human_validation"] = True
+                # Append hook failure info to messages for human reviewer
+                hook_msg = (
+                    f"[StopHook Alert] Agent '{agent_name}' output flagged: {hook_result.reason}. "
+                    f"Suggested action: {hook_result.action}. Please review."
+                )
+                state.setdefault("messages", []).append(AIMessage(content=hook_msg))
+        # ── End StopHook ──
+
         if state.get("needs_human_validation", False):
             return {"agent_state": state, "next": "human_validation", "agent": "HUMAN_VALIDATION"}
         return {"agent_state": state, "next": END}
@@ -758,10 +944,13 @@ def create_agent_graph():
     
     # Add nodes for each step
     workflow.add_node("analyze_input", analyze_input)
+    workflow.add_node("plan_diagnosis", plan_diagnosis)  # Phase 5: Planning node
+    workflow.add_node("reflect_diagnosis", reflect_diagnosis)  # Phase 5: Reflection node
     workflow.add_node("route_to_agent", route_to_agent)
     workflow.add_node("CONVERSATION_AGENT", run_conversation_agent)
     workflow.add_node("RAG_AGENT", run_rag_agent)
     workflow.add_node("WEB_SEARCH_PROCESSOR_AGENT", run_web_search_processor_agent)
+    workflow.add_node("PARALLEL_RETRIEVAL", run_parallel_retrieval)
     workflow.add_node("BRAIN_TUMOR_AGENT", run_brain_tumor_agent)
     workflow.add_node("CHEST_XRAY_AGENT", run_chest_xray_agent)
     workflow.add_node("SKIN_LESION_AGENT", run_skin_lesion_agent)
@@ -779,9 +968,12 @@ def create_agent_graph():
         check_if_bypassing,
         {
             "apply_guardrails": "apply_guardrails",
-            "route_to_agent": "route_to_agent"
+            "plan_diagnosis": "plan_diagnosis"  # Phase 5: routing goes through planner first
         }
     )
+    
+    # Phase 5: Plan → Route (planner feeds hints to router)
+    workflow.add_edge("plan_diagnosis", "route_to_agent")
     
     # Connect decision router to agents
     workflow.add_conditional_edges(
@@ -789,13 +981,13 @@ def create_agent_graph():
         lambda x: x["next"],
         {
             "CONVERSATION_AGENT": "CONVERSATION_AGENT",
-            "RAG_AGENT": "RAG_AGENT",
+            "RAG_AGENT": "PARALLEL_RETRIEVAL",
             "WEB_SEARCH_PROCESSOR_AGENT": "WEB_SEARCH_PROCESSOR_AGENT",
             "BRAIN_TUMOR_AGENT": "BRAIN_TUMOR_AGENT",
             "CHEST_XRAY_AGENT": "CHEST_XRAY_AGENT",
             "SKIN_LESION_AGENT": "SKIN_LESION_AGENT",
             "MCP_AGENT": "MCP_AGENT",
-            "needs_validation": "RAG_AGENT"  # Default to RAG if confidence is low
+            "needs_validation": "PARALLEL_RETRIEVAL"  # Default to parallel RAG+Web if confidence is low
         }
     )
     
@@ -803,6 +995,7 @@ def create_agent_graph():
     workflow.add_edge("CONVERSATION_AGENT", "check_validation")
     # workflow.add_edge("RAG_AGENT", "check_validation")
     workflow.add_edge("WEB_SEARCH_PROCESSOR_AGENT", "check_validation")
+    workflow.add_edge("PARALLEL_RETRIEVAL", "check_validation")
     workflow.add_conditional_edges("RAG_AGENT", confidence_based_routing)
     workflow.add_edge("BRAIN_TUMOR_AGENT", "check_validation")
     workflow.add_edge("CHEST_XRAY_AGENT", "check_validation")
@@ -817,9 +1010,10 @@ def create_agent_graph():
         lambda x: x["next"],
         {
             "human_validation": "human_validation",
-            END: "apply_guardrails"  # Route to guardrails instead of END
+            END: "reflect_diagnosis"  # Phase 5: Reflect before guardrails
         }
     )
+    workflow.add_edge("reflect_diagnosis", "apply_guardrails")  # Phase 5: Reflect → Guardrails
     
     # workflow.add_edge("human_validation", END)
     
@@ -886,39 +1080,65 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     # print("######### DEBUG 4:", result)
     # state["messages"] = [result["messages"][-1].content]
 
-    # Phase 51: Summarize old conversation messages before truncating
-    if config.summarize_conversation_history and len(result["messages"]) > config.max_conversation_history:
+    # Phase 51: Compress history tags + summarize old conversation messages
+    if len(result["messages"]) > config.max_conversation_history:
         try:
             messages = result["messages"]
-            keep = config.summary_keep_recent
-            old_messages = messages[:-keep]
-            recent_messages = messages[-keep:]
+            # Step 1: Pre-compress thinking and tool_result tags (Phase 2)
+            messages = compress_history_tags(messages)
             
-            # Build summary text from old messages
-            summary_parts = []
-            for m in old_messages:
-                role = getattr(m, "type", "unknown")
-                content = getattr(m, "content", str(m))
-                if content:
-                    summary_parts.append(f"{role}: {content[:200]}")
-            
-            if summary_parts:
-                summary_prompt = (
-                    "Summarize the following medical conversation history concisely, "
-                    "preserving key medical topics, symptoms discussed, and recommendations given:\n\n"
-                    + "\n".join(summary_parts)
-                )
-                summary_response = config.conversation.llm.invoke(summary_prompt)
-                summary_text = getattr(summary_response, "content", str(summary_response))
+            if config.summarize_conversation_history and len(messages) > config.max_conversation_history:
+                keep = config.summary_keep_recent
+                old_messages = messages[:-keep]
+                recent_messages = messages[-keep:]
                 
-                from langchain_core.messages import SystemMessage
-                summary_msg = SystemMessage(
-                    content=f"[Conversation Summary]\n{summary_text}"
-                )
-                result["messages"] = [summary_msg] + recent_messages
-                logger.info(f"[Phase51] Summarized {len(old_messages)} messages → summary + {keep} recent")
+                # Build summary text from old messages
+                summary_parts = []
+                for m in old_messages:
+                    role = getattr(m, "type", "unknown")
+                    content = getattr(m, "content", str(m))
+                    if content:
+                        summary_parts.append(f"{role}: {content[:200]}")
+                
+                if summary_parts:
+                    summary_prompt = (
+                        "Summarize the following medical conversation history concisely, "
+                        "preserving key medical topics, symptoms discussed, and recommendations given:\n\n"
+                        + "\n".join(summary_parts)
+                    )
+                    # [Phase 3.4] Wrapped with llm_call_with_recovery for error classification
+                    summary_response = llm_call_with_recovery(
+                        lambda: config.conversation.llm.invoke(summary_prompt),
+                        max_context_retries=1,
+                    )
+                    summary_text = getattr(summary_response, "content", str(summary_response))
+                    
+                    from langchain_core.messages import SystemMessage
+                    summary_msg = SystemMessage(
+                        content=f"[Conversation Summary]\n{summary_text}"
+                    )
+                    result["messages"] = [summary_msg] + recent_messages
+                    logger.info(f"[Phase51] Compressed + summarized {len(old_messages)} messages → summary + {keep} recent")
+                    
+                    # Store conversation summary to vector memory
+                    if VECTOR_MEMORY_AVAILABLE:
+                        try:
+                            add_memory(
+                                text=f"Conversation summary: {summary_text}",
+                                metadata={
+                                    "type": "conversation_summary",
+                                    "messages_summarized": str(len(old_messages)),
+                                    "topic_preview": summary_text[:100],
+                                },
+                            )
+                            logger.debug(f"[VECTOR_MEMORY] Stored Phase51 conversation summary")
+                        except Exception as e:
+                            logger.debug(f"[VECTOR_MEMORY] Phase51 store failed (non-fatal): {e}")
+                else:
+                    result["messages"] = recent_messages
             else:
-                result["messages"] = recent_messages
+                # Even if no summarization needed, store compressed messages back
+                result["messages"] = messages
         except Exception as e:
             logger.warning(f"[Phase51] Summarization failed, falling back to truncation: {e}")
             result["messages"] = result["messages"][-config.max_conversation_history:]
@@ -932,3 +1152,129 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     
     # Add the response to conversation history
     return result
+
+
+def process_query_streaming(query: Union[str, Dict], conversation_history: List[BaseMessage] = None):
+    """
+    Generator-based streaming version of process_query.
+    Uses graph.stream() to yield intermediate node results as each agent completes,
+    then yields the final result.
+    
+    Yields:
+        dict: {"type": "node_start", "node": node_name} when a node starts
+        dict: {"type": "node_end", "node": node_name, "output_preview": ...} when a node completes
+        dict: {"type": "final", "result": result} when the full graph is done
+    
+    Usage:
+        for event in process_query_streaming(query):
+            if event["type"] == "final":
+                return event["result"]
+    """
+    graph = create_agent_graph()
+    langfuse_handler = None
+    if LANGFUSE_ENABLED:
+        try:
+            from langfuse.callback import CallbackHandler
+            langfuse_handler = CallbackHandler()
+        except Exception:
+            pass
+
+    state = {
+        "messages": [],
+        "next": None,
+        "current_agent": None,
+        "agent_name": None,
+        "current_input": None,
+        "has_image": False,
+        "image_type": None,
+        "output": None,
+        "needs_human_validation": False,
+        "retrieval_confidence": 0.0,
+        "bypass_routing": False,
+        "insufficient_info": False
+    }
+
+    if isinstance(query, dict):
+        if "image_data" in query:
+            image_msg = HumanMessage(content=[
+                {"type": "text", "text": query.get("text", "")},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{query['image_data']}"}}
+            ])
+            state["messages"].append(image_msg)
+            state["has_image"] = True
+            state["image_type"] = query.get("image_type", "unknown")
+            state["current_input"] = query.get("text", "")
+        else:
+            state["messages"].append(HumanMessage(content=str(query)))
+            state["current_input"] = str(query)
+    else:
+        state["messages"].append(HumanMessage(content=str(query)))
+        state["current_input"] = str(query)
+
+    config = {"configurable": {"session_id": "default"}}
+    callbacks = [langfuse_handler] if LANGFUSE_ENABLED and langfuse_handler else []
+
+    # Stream node-by-node progress
+    final_result = None
+    try:
+        for node_name, node_output in graph.stream(state, config, callbacks=callbacks):
+            # Yield node completion event
+            output_preview = ""
+            if node_output and "output" in node_output and node_output["output"]:
+                preview = str(node_output["output"])
+                output_preview = preview[:100] + "..." if len(preview) > 100 else preview
+            yield {
+                "type": "node_end",
+                "node": node_name,
+                "output_preview": output_preview,
+                "needs_human_validation": node_output.get("needs_human_validation", False) if node_output else False,
+            }
+            final_result = node_output
+    except Exception as e:
+        logger.error(f"[STREAMING] Graph stream error: {e}")
+        yield {"type": "error", "message": str(e)}
+        return
+
+    # Post-processing: compress + summarize (same as process_query)
+    if final_result and "messages" in final_result:
+        result = final_result
+        if len(result["messages"]) > config_default.max_conversation_history:
+            try:
+                messages = result["messages"]
+                messages = compress_history_tags(messages)
+                if config_default.summarize_conversation_history and len(messages) > config_default.max_conversation_history:
+                    keep = config_default.summary_keep_recent
+                    old_messages = messages[:-keep]
+                    recent_messages = messages[-keep:]
+                    summary_parts = []
+                    for m in old_messages:
+                        role = getattr(m, "type", "unknown")
+                        content = getattr(m, "content", str(m))
+                        if content:
+                            summary_parts.append(f"{role}: {content[:200]}")
+                    if summary_parts:
+                        summary_prompt = (
+                            "Summarize the following medical conversation history concisely, "
+                            "preserving key medical topics, symptoms discussed, and recommendations given:\n\n"
+                            + "\n".join(summary_parts)
+                        )
+                        summary_response = llm_call_with_recovery(
+                            lambda: config_default.conversation.llm.invoke(summary_prompt),
+                            max_context_retries=1,
+                        )
+                        summary_text = getattr(summary_response, "content", str(summary_response))
+                        from langchain_core.messages import SystemMessage
+                        summary_msg = SystemMessage(content=f"[Conversation Summary]\n{summary_text}")
+                        result["messages"] = [summary_msg] + recent_messages
+                        logger.info(f"[Phase51/Streaming] Compressed + summarized {len(old_messages)} messages")
+                    else:
+                        result["messages"] = recent_messages
+                else:
+                    result["messages"] = messages
+            except Exception as e:
+                logger.warning(f"[Phase51/Streaming] Summarization failed: {e}")
+                result["messages"] = result["messages"][-config_default.max_conversation_history:]
+        elif len(result["messages"]) > config_default.max_conversation_history:
+            result["messages"] = result["messages"][-config_default.max_conversation_history:]
+
+        yield {"type": "final", "result": result}

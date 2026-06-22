@@ -9,6 +9,8 @@ from .vectorstore_qdrant import VectorStore
 from .reranker import Reranker
 from .query_expander import QueryExpander
 from .response_generator import ResponseGenerator
+from .hybrid_search import BM25Index, HybridSearch
+from .incremental_indexing import IncrementalIndexer
 
 class MedicalRAG:
     """
@@ -32,6 +34,16 @@ class MedicalRAG:
         self.query_expander = QueryExpander(config)
         self.response_generator = ResponseGenerator(config)
         self.parsed_content_dir = self.config.rag.parsed_content_dir
+        self.hybrid_search = HybridSearch(
+            vectorstore_manager=self.vector_store,
+            k=60
+        )
+        self.incremental_indexer = IncrementalIndexer(
+            watch_paths=[self.config.rag.raw_content_dir],
+            content_processor=self.content_processor,
+            vectorstore_manager=self.vector_store,
+            hybrid_search=self.hybrid_search,
+        )
     
     def ingest_directory(self, directory_path: str) -> Dict[str, Any]:
         """
@@ -231,3 +243,52 @@ class MedicalRAG:
                 "confidence": 0.0,
                 "processing_time": time.time() - start_time
             }
+
+    def hybrid_retrieve(self, query: str, top_k: int = 5, use_bm25: bool = True, use_vector: bool = True) -> Dict[str, Any]:
+        """
+        Hybrid retrieval combining BM25 keyword search and Qdrant vector search
+        with Reciprocal Rank Fusion (RRF).
+        
+        Args:
+            query: Search query
+            top_k: Number of final results to return
+            use_bm25: Whether to include BM25 results
+            use_vector: Whether to include vector search results
+            
+        Returns:
+            Dict with 'documents' (list of LangChain Documents) and 'method' (str)
+        """
+        self.logger.info(f"[HYBRID] Starting hybrid retrieval for: '{query}' (bm25={use_bm25}, vector={use_vector})")
+        
+        # Build BM25 index from docstore if needed
+        if use_bm25 and not self.hybrid_search.bm25_index.is_built:
+            self.logger.info("[HYBRID] Building BM25 index from docstore...")
+            self.hybrid_search.build_bm25_from_docstore()
+        
+        results = self.hybrid_search.search(
+            query=query,
+            top_k=top_k,
+            use_bm25=use_bm25,
+            use_vector=use_vector,
+        )
+        
+        self.logger.info(f"[HYBRID] Retrieved {len(results)} documents")
+        return {
+            "documents": results,
+            "count": len(results),
+            "method": "hybrid_rrf" if (use_bm25 and use_vector) else ("bm25" if use_bm25 else "vector"),
+        }
+
+    def start_incremental_indexing(self):
+        """Start the file watcher for incremental indexing of new documents."""
+        self.incremental_indexer.start()
+        self.logger.info("[INDEXER] Incremental indexing started")
+
+    def stop_incremental_indexing(self):
+        """Stop the file watcher."""
+        self.incremental_indexer.stop()
+
+    @property
+    def indexing_stats(self) -> Dict[str, Any]:
+        """Get incremental indexing statistics."""
+        return self.incremental_indexer.stats

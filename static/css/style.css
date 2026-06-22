@@ -590,6 +590,128 @@ textarea:focus-visible {
   box-shadow: var(--shadow-sm);
 }
 
+/* ===== RAG Reference Images Gallery (Phase 6.3) ===== */
+.message-content details {
+  margin-top: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  background: var(--muted-bg, rgba(0,0,0,0.02));
+}
+
+.message-content details summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--font-sm);
+  color: var(--muted-foreground, #6b7280);
+  padding: var(--space-1) 0;
+  user-select: none;
+}
+
+.message-content details summary:hover {
+  color: var(--foreground);
+}
+
+.rag-ref-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.message-content details img {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.message-content details img:hover {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-md);
+}
+
+/* ===== Cross-Document References (Phase 6.4) ===== */
+.rag-cross-ref {
+  margin-top: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f0f9ff;
+  overflow: hidden;
+}
+
+.rag-cross-ref summary {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  color: var(--primary);
+  cursor: pointer;
+  background: #e0f2fe;
+  user-select: none;
+}
+
+.rag-cross-ref summary:hover {
+  background: #bae6fd;
+}
+
+.rag-cross-ref-inner {
+  padding: var(--space-3) var(--space-4);
+}
+
+.rag-cross-pair {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: #fff;
+  border-radius: var(--radius-sm);
+  border: 1px solid #e2e8f0;
+}
+
+.rag-cross-pair:last-child {
+  margin-bottom: 0;
+}
+
+.rag-cross-pair-header {
+  font-weight: 600;
+  font-size: var(--font-sm);
+  color: var(--foreground);
+  margin-bottom: var(--space-2);
+}
+
+.rag-cross-pair-header .src-tag {
+  display: inline-block;
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: var(--font-xs);
+  margin: 0 2px;
+}
+
+.rag-cross-pair-header .arrow {
+  color: #94a3b8;
+  margin: 0 var(--space-1);
+}
+
+.rag-cross-keywords {
+  font-size: var(--font-xs);
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.rag-cross-keywords .kw-tag {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin: 2px 2px;
+  font-size: 0.7rem;
+}
+
 /* ===== Markdown Content ===== */
 .message-content h1,
 .message-content h2,

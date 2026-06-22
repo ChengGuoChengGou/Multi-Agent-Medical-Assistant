@@ -1,5 +1,36 @@
 import logging
+import re
+from collections import Counter, defaultdict
 from typing import List, Dict, Any, Optional, Union
+
+from agents.context_builder import MedicalSystemPrompt
+
+# Common English stopwords for keyword extraction
+_STOPWORDS = frozenset({
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+    'should', 'may', 'might', 'shall', 'can', 'to', 'of', 'in', 'for',
+    'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during',
+    'before', 'after', 'above', 'below', 'between', 'out', 'off', 'over',
+    'under', 'again', 'further', 'then', 'once', 'and', 'but', 'or', 'nor',
+    'not', 'so', 'if', 'than', 'that', 'this', 'these', 'those', 'it',
+    'its', 'they', 'them', 'their', 'we', 'our', 'you', 'your', 'he', 'she',
+    'his', 'her', 'which', 'who', 'whom', 'what', 'where', 'when', 'how',
+    'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
+    'such', 'no', 'only', 'own', 'same', 'also', 'just', 'about', 'up',
+    'down', 'here', 'there', 'very', 'too', 'any', 'because', 'while',
+    'although', 'however', 'therefore', 'thus', 'e.g', 'i.e', 'fig',
+    'figure', 'table', 'ref', 'references', 'et', 'al', 'pp', 'vol',
+    'method', 'methods', 'result', 'results', 'conclusion', 'conclusions',
+    'background', 'objective', 'objectives', 'abstract', 'discussion',
+    'introduction', 'materials', 'supplementary',
+    # Chinese common stopwords
+    '的', '了', '在', '是', '和', '与', '及', '或', '等', '中', '对',
+    '为', '以', '从', '到', '上', '下', '不', '有', '这', '那', '个',
+    '被', '将', '把', '使', '让', '给', '用', '也', '都', '而', '但',
+    '如', '所', '其', '该', '可', '会', '能', '已', '还', '更', '最',
+    '较', '比', '并', '则', '即', '因', '由', '于', '之', '去', '来',
+})
 
 class ResponseGenerator:
     """
@@ -35,32 +66,11 @@ class ResponseGenerator:
             Complete prompt string
         """
 
-        table_instructions = """
-        Some of the retrieved information is presented in table format. When using information from tables:
-        1. Present tabular data using proper markdown table formatting with headers, like this:
-            | Column1 | Column2 | Column3 |
-            |---------|---------|---------|
-            | Value1  | Value2  | Value3  |
-        2. Re-format the table structure to make it easier to read and understand
-        3. If any new component is introduced during re-formatting of the table, mention it explicitly
-        4. Clearly interpret the tabular data in your response
-        5. Reference the relevant table when presenting specific data points
-        6. If appropriate, summarize trends or patterns shown in the tables
-        7. If only reference numbers are mentioned and you can fetch the corresponding values like research paper title or authors from the context, replace the reference numbers with the actual values
-        """
+        # Use unified MedicalSystemPrompt.rag() for static system instructions (Phase 2)
+        system_prompt = MedicalSystemPrompt.rag()
 
-        response_format_instructions = """Instructions:
-        1. Answer the query based ONLY on the information provided in the context.
-        2. If the context doesn't contain relevant information to answer the query, state: "I don't have enough information to answer this question based on the provided context."
-        3. Do not use prior knowledge not contained in the context.
-        5. Be concise and accurate.
-        6. Provide a well-structured response with heading, sub-headings and tabular structure if required in markdown format based on retrieved knowledge. Keep the headings and sub-headings small sized.
-        7. Only provide sections that are meaningful to have in a chatbot reply. For example, do not explicitly mention references.
-        8. If values are involved, make sure to respond with perfect values present in context. Do not make up values.
-        9. Do not repeat the question in the answer or response."""
-            
         # Build the prompt
-        prompt = f"""You are a medical assistant providing accurate information based on verified medical sources.
+        prompt = f"""{system_prompt}
 
         Here are the last few messages from our conversation:
         
@@ -72,10 +82,6 @@ class ResponseGenerator:
         I've retrieved the following information to help answer this question:
 
         {context}
-
-        {table_instructions}
-
-        {response_format_instructions}
 
         Based on the provided information, please answer the user's question thoroughly but concisely.
         If the information doesn't contain the answer, acknowledge the limitations of the available information.
@@ -134,10 +140,22 @@ class ResponseGenerator:
             else:
                 response_with_source = response.content
             
-            # Add picture paths to response
-            response_with_source_and_picture_paths = response_with_source + "\n\n##### Reference images:"
-            for picture_path in picture_paths:
-                response_with_source_and_picture_paths += f"\n- [{picture_path.split('/')[-1]}]({picture_path})"
+            # Add picture paths to response as inline images (Phase 6.3 UI optimization)
+            if picture_paths:
+                gallery_html = response_with_source + '\n\n<details><summary>📷 Reference Images (' + str(len(picture_paths)) + ')</summary>\n\n<div class="rag-ref-gallery">\n\n'
+                for picture_path in picture_paths:
+                    img_name = picture_path.split('/')[-1]
+                    # Use raw HTML <img> since marked.js won't parse markdown inside <div>
+                    gallery_html += f'<img src="{picture_path}" alt="{img_name}" loading="lazy">\n\n'
+                gallery_html += "</div>\n\n</details>"
+                response_with_source_and_picture_paths = gallery_html
+            else:
+                response_with_source_and_picture_paths = response_with_source
+            
+            # Add cross-document references (Phase 6.4)
+            cross_ref_html = self._build_cross_references(retrieved_docs)
+            if cross_ref_html:
+                response_with_source_and_picture_paths += cross_ref_html
             
             # Format final response
             result = {
@@ -155,6 +173,100 @@ class ResponseGenerator:
                 "sources": [],
                 "confidence": 0.0
             }
+
+    def _build_cross_references(self, retrieved_docs: List[Dict[str, Any]]) -> str:
+        """
+        Analyze retrieved documents across different source papers and build
+        cross-reference suggestions when multiple papers discuss related topics.
+        
+        Args:
+            retrieved_docs: List of retrieved document dicts with 'source' and 'content'
+            
+        Returns:
+            HTML string for cross-reference section, or empty string if <2 sources
+        """
+        # Group docs by source
+        source_groups = defaultdict(list)
+        for doc in retrieved_docs:
+            source = doc.get("source", "unknown")
+            source_groups[source].append(doc)
+        
+        # Need at least 2 different sources for cross-references
+        if len(source_groups) < 2:
+            return ""
+        
+        # Extract keywords per source
+        source_keywords = {}
+        for source, docs in source_groups.items():
+            all_text = " ".join(d["content"] for d in docs)
+            keywords = self._extract_keywords(all_text)
+            source_keywords[source] = keywords
+        
+        # Find cross-reference pairs with shared keywords
+        sources = list(source_groups.keys())
+        cross_refs = []
+        for i in range(len(sources)):
+            for j in range(i + 1, len(sources)):
+                src_a, src_b = sources[i], sources[j]
+                kw_a = source_keywords[src_a]
+                kw_b = source_keywords[src_b]
+                shared = set(kw_a.keys()) & set(kw_b.keys())
+                if shared:
+                    # Rank by keyword importance (sum of frequencies)
+                    shared_ranked = sorted(shared, 
+                        key=lambda k: source_keywords[src_a].get(k, 0) + source_keywords[src_b].get(k, 0),
+                        reverse=True)[:5]
+                    cross_refs.append({
+                        "src_a": src_a,
+                        "src_b": src_b,
+                        "shared_keywords": shared_ranked,
+                        "count_a": len(source_groups[src_a]),
+                        "count_b": len(source_groups[src_b]),
+                        "strength": len(shared),
+                    })
+        
+        if not cross_refs:
+            return ""
+        
+        # Sort by strength (most shared keywords first)
+        cross_refs.sort(key=lambda x: x["strength"], reverse=True)
+        
+        # Build HTML
+        html = '\n\n<details><summary>🔗 Cross-References (' + str(len(cross_refs)) + ')</summary>\n\n'
+        html += '<div class="rag-cross-ref">\n\n'
+        for ref in cross_refs:
+            title_a = ref["src_a"].replace(".pdf", "").replace(".md", "")
+            title_b = ref["src_b"].replace(".pdf", "").replace(".md", "")
+            keywords_str = ", ".join(ref["shared_keywords"])
+            html += f'<div class="rag-cross-ref-item">\n'
+            html += f'  <span class="rag-cross-ref-paper">📄 {title_a}</span>\n'
+            html += f'  <span class="rag-cross-ref-arrow">⟷</span>\n'
+            html += f'  <span class="rag-cross-ref-paper">📄 {title_b}</span>\n'
+            html += f'  <span class="rag-cross-ref-kw">Shared: {keywords_str}</span>\n'
+            html += f'</div>\n\n'
+        html += '</div>\n\n</details>'
+        
+        return html
+    
+    def _extract_keywords(self, text: str, top_n: int = 30) -> dict:
+        """
+        Extract top keywords from text using word frequency.
+        Returns dict of {word: count} for keywords above threshold.
+        
+        Args:
+            text: Input text
+            top_n: Number of top keywords to return
+            
+        Returns:
+            Dict mapping keyword to frequency count
+        """
+        # Tokenize: split on non-alpha chars, lowercase
+        words = re.findall(r'[a-zA-Z]{3,}', text.lower())
+        # Filter stopwords and short words
+        filtered = [w for w in words if w not in _STOPWORDS and len(w) >= 3]
+        counts = Counter(filtered)
+        # Return top N keywords
+        return dict(counts.most_common(top_n))
 
     def _extract_sources(self, documents: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         """
