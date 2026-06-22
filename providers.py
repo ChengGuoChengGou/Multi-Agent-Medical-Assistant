@@ -84,6 +84,9 @@ def load_mykey(filepath: str) -> dict:
         return {}
 
     spec = importlib.util.spec_from_file_location("mykey", filepath)
+    if spec is None or spec.loader is None:
+        logger.warning(f"Cannot create module spec from {filepath}")
+        return {}
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 

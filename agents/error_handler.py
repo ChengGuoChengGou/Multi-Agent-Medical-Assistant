@@ -217,7 +217,7 @@ def llm_call_with_recovery(
         RetryExhausted: If all retries fail
         Exception: If error type is AUTH (no retry)
     """
-    last_error = None
+    last_error: Exception | None = None
     messages = args[0] if args else None
 
     for attempt in range(max_retries + 1):
@@ -288,6 +288,7 @@ def llm_call_with_recovery(
             else:
                 logger.error(f"[ERROR_HANDLER] All {max_retries + 1} attempts failed for {error_type.value}: {e}")
 
+    assert last_error is not None, "last_error should be set after retry loop"
     raise RetryExhausted(last_error, error_type, max_retries + 1)
 
 

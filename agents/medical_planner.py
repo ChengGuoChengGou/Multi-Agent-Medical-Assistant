@@ -199,7 +199,7 @@ def _analyze_query_complexity(query: str) -> dict[str, Any]:
     """Extract features from query to inform plan generation."""
     q = query.lower()
 
-    features = {
+    features: dict[str, Any] = {
         "has_image_ref": any(w in q for w in ["image", "x-ray", "xray", "mri", "ct scan", "scan", "photo"]),
         "has_symptoms": any(
             w in q for w in ["pain", "ache", "fever", "cough", "fatigue", "nausea", "rash", "swelling"]
@@ -244,7 +244,7 @@ def exploration_stage(query: str, has_image: bool = False, image_type: str | Non
     """
     features = _analyze_query_complexity(query)
 
-    findings = {
+    findings: dict[str, Any] = {
         "query_features": features,
         "has_image": has_image,
         "image_type": image_type,
@@ -347,7 +347,7 @@ def planning_stage(
         )
 
     # Build steps from suggested agents
-    prev_step_ids = []
+    prev_step_ids: list[str] = []
     for agent_info in suggested:
         agent = agent_info["agent"]
         reason = agent_info["reason"]
