@@ -38,27 +38,38 @@ class SpeechRequest(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response for Docker / load balancer probes.
 
-    Returns middleware stack status and request deduplication statistics.
+    Returns middleware stack status, request deduplication statistics,
+    API auth statistics, and server uptime.
     """
     model_config = ConfigDict(json_schema_extra={
         "examples": [{
             "status": "healthy",
+            "uptime_seconds": 12345.67,
             "middleware": {
                 "rate_limiting": True,
                 "security_headers": True,
                 "request_logging": True,
-                "request_deduplication": True
+                "request_deduplication": True,
+                "api_key_auth": True
             },
             "dedup_stats": {
                 "active_requests": 2,
                 "total_deduped": 15,
                 "cache_size": 8
+            },
+            "api_auth": {
+                "dev_mode": True,
+                "keys_configured": 0,
+                "auth_successes": 0,
+                "auth_failures": 0
             }
         }]
     })
     status: str = Field(..., description="Service status", examples=["healthy"])
+    uptime_seconds: float = Field(..., description="Server uptime in seconds")
     middleware: Dict[str, bool] = Field(..., description="Middleware stack status")
     dedup_stats: Dict[str, Any] = Field(..., description="Request deduplication statistics")
+    api_auth: Dict[str, Any] = Field(default_factory=dict, description="API key auth statistics")
 
 
 class ChatResponse(BaseModel):

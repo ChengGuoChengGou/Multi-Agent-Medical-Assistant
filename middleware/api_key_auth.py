@@ -23,6 +23,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
+# ── Module-level singleton reference (set in __init__) ──
+_middleware_instance: Optional["APIKeyAuthMiddleware"] = None
+
 # ── Paths that require API key auth ──
 _PROTECTED_PREFIXES: tuple = (
     "/chat",
@@ -95,8 +98,10 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     """
 
     def __init__(self, app, api_keys: Optional[Set[str]] = None):
+        global _middleware_instance
         super().__init__(app)
         self._api_keys = api_keys if api_keys is not None else _load_api_keys()
+        _middleware_instance = self
         self._dev_mode = len(self._api_keys) == 0
         self._auth_failures = 0
         self._auth_successes = 0
@@ -163,3 +168,10 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             "auth_failures": self._auth_failures,
             "protected_prefixes": list(_PROTECTED_PREFIXES),
         }
+
+
+def get_auth_stats() -> dict:
+    """Module-level accessor for API key auth middleware statistics."""
+    if _middleware_instance is None:
+        return {"dev_mode": True, "keys_configured": 0, "auth_successes": 0, "auth_failures": 0}
+    return _middleware_instance.get_stats()

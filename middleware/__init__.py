@@ -23,7 +23,7 @@ from .security import (
 )
 from .rate_limiter import RateLimitMiddleware
 from .request_dedup import RequestDedupMiddleware, get_dedup_stats
-from .api_key_auth import APIKeyAuthMiddleware
+from .api_key_auth import APIKeyAuthMiddleware, get_auth_stats
 
 __all__ = [
     "SecurityHeadersMiddleware",
@@ -39,4 +39,5 @@ __all__ = [
     "CSP_POLICY",
     "build_csp_header",
     "get_dedup_stats",
+    "get_auth_stats",
 ]

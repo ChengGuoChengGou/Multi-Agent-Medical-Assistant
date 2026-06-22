@@ -32,6 +32,7 @@ from middleware import (
     RequestDedupMiddleware,
     APIKeyAuthMiddleware,
     get_dedup_stats,
+    get_auth_stats,
 )
 from utils.logging_config import setup_logging, get_logger
 from cache import semantic_get, semantic_set, semantic_stats  # [Phase 51] Semantic cache
@@ -226,15 +227,19 @@ def health_check():
     Used by Docker HEALTHCHECK, Kubernetes liveness/readiness probes, and load balancers.
     No authentication required.
     """
+    uptime_seconds = time.time() - _app_start_time
     return {
         "status": "healthy",
+        "uptime_seconds": round(uptime_seconds, 2),
         "middleware": {
             "rate_limiting": True,
             "security_headers": True,
             "request_logging": True,
             "request_deduplication": True,
+            "api_key_auth": True,
         },
         "dedup_stats": get_dedup_stats(),
+        "api_auth": get_auth_stats(),
     }
 
 @app.get("/metrics", tags=["System"])
