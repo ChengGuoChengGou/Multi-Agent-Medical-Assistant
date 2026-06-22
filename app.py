@@ -36,6 +36,9 @@ from utils.logging_config import setup_logging, get_logger
 # Load configuration
 config = Config()
 
+# Track application start time for uptime metric
+_app_start_time = time.time()
+
 # Initialize structured logging (JSON in production, human-readable in dev)
 setup_logging()
 
@@ -131,6 +134,31 @@ def health_check():
         },
         "dedup_stats": get_dedup_stats(),
     }
+
+@app.get("/metrics")
+def metrics():
+    """Prometheus-compatible metrics endpoint (plain text exposition format)."""
+    uptime_seconds = time.time() - _app_start_time
+    dedup = get_dedup_stats()
+    lines = [
+        "# HELP medical_app_uptime_seconds Time since application start.",
+        "# TYPE medical_app_uptime_seconds gauge",
+        f"medical_app_uptime_seconds {uptime_seconds:.2f}",
+        "",
+        "# HELP medical_app_dedup_total Total deduplication lookups.",
+        "# TYPE medical_app_dedup_total counter",
+        f"medical_app_dedup_total {dedup.get('total_lookups', 0)}",
+        "",
+        "# HELP medical_app_dedup_hits Total deduplication cache hits.",
+        "# TYPE medical_app_dedup_hits counter",
+        f"medical_app_dedup_hits {dedup.get('cache_hits', 0)}",
+        "",
+        "# HELP medical_app_dedup_pending Currently pending deduplicated requests.",
+        "# TYPE medical_app_dedup_pending gauge",
+        f"medical_app_dedup_pending {dedup.get('pending_requests', 0)}",
+        "",
+    ]
+    return Response(content="\n".join(lines), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 @app.post("/chat")
 def chat(
