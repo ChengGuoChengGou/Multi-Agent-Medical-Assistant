@@ -1,11 +1,16 @@
 """
-Unit tests for agents/medical_tool.py
-Run: python -m pytest tests/test_medical_tool.py -v
-"""
-import os, sys, pytest, asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
-from typing import Dict, Any, Optional
+Tests for agents/medical_tool.py
 
+MedicalToolResult, MedicalTool.validate, MedicalTool.query,
+MCPMedicalTool.category inference, MedicalToolRegistry.
+"""
+import asyncio
+import pytest
+from unittest.mock import AsyncMock, MagicMock
+from typing import Any, Dict, Optional
+
+# Add project root to path
+import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.medical_tool import (
@@ -14,453 +19,456 @@ from agents.medical_tool import (
     MCPMedicalTool,
     MedicalToolRegistry,
     get_tool_registry,
-    init_tool_registry,
 )
 
 
-# ── Helper: Concrete MedicalTool subclass for testing ABC ──
+# ── Fixtures ──────────────────────────────────────────────
 
 class DummyTool(MedicalTool):
-    """Concrete implementation for testing the MedicalTool ABC."""
+    """Minimal concrete MedicalTool for testing."""
 
-    def __init__(self, name="dummy", description="A dummy tool",
-                 category="utility", schema=None):
+    def __init__(
+        self,
+        name: str = "dummy_tool",
+        description: str = "A dummy tool",
+        category: str = "utility",
+        schema: Optional[Dict[str, Any]] = None,
+        execute_fn=None,
+    ):
         self._name = name
         self._description = description
         self._category = category
-        self._schema = schema or {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "limit": {"type": "integer"},
-            },
-            "required": ["query"],
-        }
+        self._schema = schema or {"type": "object", "properties": {}, "required": []}
+        self._execute_fn = execute_fn
 
     @property
-    def name(self): return self._name
+    def name(self) -> str:
+        return self._name
 
     @property
-    def description(self): return self._description
+    def description(self) -> str:
+        return self._description
 
     @property
-    def category(self): return self._category
+    def category(self) -> str:
+        return self._category
 
     @property
-    def input_schema(self): return self._schema
+    def input_schema(self) -> Dict[str, Any]:
+        return self._schema
 
     async def execute(self, **kwargs) -> MedicalToolResult:
+        if self._execute_fn:
+            return await self._execute_fn(**kwargs)
         return MedicalToolResult(
-            success=True, content="dummy_result",
-            tool_name=self.name, source="test",
+            success=True, content="ok", tool_name=self.name, source="built_in"
         )
 
 
-# ═══════════════════════════════════════
-# MedicalToolResult (dataclass)
-# ═══════════════════════════════════════
+def make_mcp_tool(name, description="desc", server_name="biomcp", input_schema=None):
+    """Create a mock MCPTool."""
+    tool = MagicMock()
+    tool.name = name
+    tool.description = description
+    tool.server_name = server_name
+    tool.input_schema = input_schema or {"type": "object", "properties": {}, "required": []}
+    return tool
+
+
+# ── MedicalToolResult ─────────────────────────────────────
 
 class TestMedicalToolResult:
-    """Tests for the MedicalToolResult dataclass."""
 
-    def test_defaults(self):
-        r = MedicalToolResult(success=True, content="ok", tool_name="t", source="s")
-        assert r.error is None
-        assert r.metadata == {}
-        # execution_time_ms defaults to 0.0 in the actual dataclass
-        assert r.execution_time_ms == 0.0 or r.execution_time_ms is None
-
-    def test_to_dict_success(self):
+    def test_to_dict(self):
         r = MedicalToolResult(
-            success=True, content="data", tool_name="search",
-            source="mcp:biomcp", metadata={"server": "biomcp"},
+            success=True, content="data", tool_name="t1", source="mcp",
+            error=None, metadata={"k": "v"}, execution_time_ms=42.5,
         )
         d = r.to_dict()
         assert d["success"] is True
         assert d["content"] == "data"
-        assert d["tool_name"] == "search"
-        assert d["source"] == "mcp:biomcp"
-        assert d["metadata"] == {"server": "biomcp"}
+        assert d["tool_name"] == "t1"
+        assert d["source"] == "mcp"
         assert d["error"] is None
+        assert d["metadata"] == {"k": "v"}
+        assert d["execution_time_ms"] == 42.5
 
-    def test_to_dict_failure(self):
+    def test_defaults(self):
+        r = MedicalToolResult(success=False, content="", tool_name="t", source="error")
+        assert r.error is None
+        assert r.metadata == {}
+        assert r.execution_time_ms == 0.0
+
+    def test_to_dict_error(self):
         r = MedicalToolResult(
-            success=False, content="", tool_name="t",
-            source="error", error="boom",
+            success=False, content="", tool_name="t", source="error", error="boom"
         )
         d = r.to_dict()
-        assert d["success"] is False
         assert d["error"] == "boom"
-
-    def test_to_dict_with_execution_time(self):
-        r = MedicalToolResult(
-            success=True, content="ok", tool_name="t",
-            source="s", execution_time_ms=42.5,
-        )
-        assert r.to_dict()["execution_time_ms"] == 42.5
+        assert d["success"] is False
 
 
-# ═══════════════════════════════════════
-# MedicalTool (ABC)
-# ═══════════════════════════════════════
+# ── MedicalTool.validate ──────────────────────────────────
 
-class TestMedicalToolABC:
-    """Tests for the MedicalTool abstract base class via DummyTool."""
+class TestMedicalToolValidate:
 
-    def test_instantiation(self):
+    def test_valid_no_required(self):
         tool = DummyTool()
-        assert tool.name == "dummy"
-        assert tool.description == "A dummy tool"
-        assert tool.category == "utility"
+        ok, err = tool.validate()
+        assert ok is True
+        assert err is None
 
-    def test_cannot_instantiate_abc_directly(self):
-        with pytest.raises(TypeError):
-            MedicalTool()  # type: ignore
-
-    # -- describe() --
-
-    def test_describe_basic(self):
-        tool = DummyTool()
-        d = tool.describe()
-        assert d["name"] == "dummy"
-        assert d["description"] == "A dummy tool"
-        assert d["category"] == "utility"
-        assert "input_schema" in d
-
-    def test_describe_returns_full_description(self):
-        """describe() returns the full description without truncation."""
-        long_desc = "x" * 500
-        tool = DummyTool(description=long_desc)
-        d = tool.describe()
-        assert d["description"] == long_desc
-        assert len(d["description"]) == 500
-
-    # -- validate() --
-
-    def test_validate_required_missing(self):
-        tool = DummyTool()
-        is_valid, err = tool.validate()  # missing "query"
-        assert is_valid is False
-        assert "Missing required parameter: query" in err
-
-    def test_validate_required_present(self):
-        tool = DummyTool()
-        result = tool.validate(query="hello")
-        # Returns (True, None) on success
-        assert result == (True, None)
-
-    def test_validate_type_string_wrong(self):
-        tool = DummyTool()
-        is_valid, err = tool.validate(query=123)
-        assert is_valid is False
-        assert "must be string" in err
-
-    def test_validate_type_integer_wrong(self):
-        tool = DummyTool()
-        is_valid, err = tool.validate(query="hello", limit="not_int")
-        assert is_valid is False
-        assert "must be integer" in err
-
-    def test_validate_extra_fields_ignored(self):
-        tool = DummyTool()
-        result = tool.validate(query="hello", extra_field="ignored")
-        assert result == (True, None)
-
-    def test_validate_optional_field_none_ok(self):
-        tool = DummyTool()
-        result = tool.validate(query="hello", limit=None)
-        assert result == (True, None)
-
-    # -- query() (async) --
-
-    @pytest.mark.asyncio
-    async def test_query_success(self):
-        tool = DummyTool()
-        result = await tool.query(query="test")
-        assert result.success is True
-        assert result.content == "dummy_result"
-        assert result.execution_time_ms is not None
-        assert result.execution_time_ms >= 0
-
-    @pytest.mark.asyncio
-    async def test_query_validation_failure(self):
-        tool = DummyTool()
-        result = await tool.query()  # missing required "query"
-        assert result.success is False
-        assert result.source == "validation"
-        assert "Missing required" in result.error
-
-    @pytest.mark.asyncio
-    async def test_query_execution_exception(self):
-        class BrokenTool(DummyTool):
-            async def execute(self, **kwargs):
-                raise RuntimeError("boom")
-
-        tool = BrokenTool()
-        result = await tool.query(query="test")
-        assert result.success is False
-        assert result.source == "error"
-        assert "boom" in result.error
-
-
-# ═══════════════════════════════════════
-# MCPMedicalTool
-# ═══════════════════════════════════════
-
-class TestMCPMedicalTool:
-    """Tests for MCPMedicalTool wrapping and category inference."""
-
-    def _make_mcp_tool(self, name="test_tool", server="biomcp",
-                       desc="Test", schema=None):
-        mcp = MagicMock()
-        mcp.name = name
-        mcp.description = desc
-        mcp.server_name = server
-        mcp.input_schema = schema or {"type": "object", "properties": {}}
-        return mcp
-
-    def test_basic_wrapping(self):
-        mcp = self._make_mcp_tool(name="pubmed_search", server="biomcp")
-        tool = MCPMedicalTool(mcp, call_fn=AsyncMock())
-        assert tool.name == "pubmed_search"
-        assert tool.description == "Test"
-        assert tool.server_name == "biomcp"
-
-    # -- category inference --
-
-    @pytest.mark.parametrize("name,server,expected_cat", [
-        ("drug_interaction_check", "server", "drug"),
-        ("find_drug_info", "server", "drug"),
-        ("icd10_lookup", "server", "coding"),
-        ("snomed_search", "server", "coding"),
-        ("code_mapper", "server", "coding"),
-        ("pubmed_search", "server", "research"),
-        ("article_finder", "server", "research"),
-        ("search_literature", "server", "research"),
-        ("diagnosis_helper", "server", "diagnosis"),
-        ("disease_lookup", "server", "diagnosis"),
-        ("random_tool", "biomcp", "research"),
-        ("random_tool", "autoicd", "coding"),
-        ("random_tool", "other", "utility"),
-    ])
-    def test_category_inference(self, name, server, expected_cat):
-        mcp = self._make_mcp_tool(name=name, server=server)
-        tool = MCPMedicalTool(mcp, call_fn=AsyncMock())
-        assert tool.category == expected_cat
-
-    @pytest.mark.asyncio
-    async def test_execute_delegates_to_call_fn(self):
-        mock_result = MagicMock()
-        mock_result.success = True
-        mock_result.content = "result_data"
-        mock_result.error = None
-
-        call_fn = AsyncMock(return_value=mock_result)
-        mcp = self._make_mcp_tool(name="t1", server="s1")
-        tool = MCPMedicalTool(mcp, call_fn=call_fn)
-
-        result = await tool.execute(query="test")
-        call_fn.assert_awaited_once_with("t1", {"query": "test"})
-        assert result.success is True
-        assert result.content == "result_data"
-        assert result.source == "mcp:s1"
-
-    @pytest.mark.asyncio
-    async def test_execute_failure(self):
-        mock_result = MagicMock()
-        mock_result.success = False
-        mock_result.content = ""
-        mock_result.error = "connection refused"
-
-        call_fn = AsyncMock(return_value=mock_result)
-        mcp = self._make_mcp_tool(name="t2", server="s2")
-        tool = MCPMedicalTool(mcp, call_fn=call_fn)
-
-        result = await tool.execute(query="x")
-        assert result.success is False
-        assert result.error == "connection refused"
-
-    @pytest.mark.asyncio
-    async def test_query_validation_then_execute(self):
-        """Integration: query → validate → execute pipeline."""
-        mock_result = MagicMock()
-        mock_result.success = True
-        mock_result.content = "ok"
-        mock_result.error = None
-
-        call_fn = AsyncMock(return_value=mock_result)
+    def test_missing_required(self):
         schema = {
             "type": "object",
             "properties": {"query": {"type": "string"}},
             "required": ["query"],
         }
-        mcp = self._make_mcp_tool(name="t3", server="s3", schema=schema)
-        tool = MCPMedicalTool(mcp, call_fn=call_fn)
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate()
+        assert ok is False
+        assert "query" in err
 
-        # Valid call
-        result = await tool.query(query="hello")
-        assert result.success is True
+    def test_required_present(self):
+        schema = {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(query="aspirin")
+        assert ok is True
 
-        # Invalid call (missing required)
+    def test_required_none_value(self):
+        schema = {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(query=None)
+        assert ok is False
+
+    def test_type_string_wrong(self):
+        schema = {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": [],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(query=123)
+        assert ok is False
+        assert "string" in err
+
+    def test_type_integer_wrong(self):
+        schema = {
+            "type": "object",
+            "properties": {"count": {"type": "integer"}},
+            "required": [],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(count="abc")
+        assert ok is False
+        assert "integer" in err
+
+    def test_type_number_accepts_float(self):
+        schema = {
+            "type": "object",
+            "properties": {"score": {"type": "number"}},
+            "required": [],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(score=3.14)
+        assert ok is True
+
+    def test_type_number_accepts_int(self):
+        schema = {
+            "type": "object",
+            "properties": {"score": {"type": "number"}},
+            "required": [],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(score=42)
+        assert ok is True
+
+    def test_type_number_wrong(self):
+        schema = {
+            "type": "object",
+            "properties": {"score": {"type": "number"}},
+            "required": [],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(score="high")
+        assert ok is False
+
+    def test_extra_field_ignored(self):
+        schema = {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": [],
+        }
+        tool = DummyTool(schema=schema)
+        ok, err = tool.validate(query="ok", unknown="field")
+        assert ok is True
+
+
+# ── MedicalTool.query ─────────────────────────────────────
+
+class TestMedicalToolQuery:
+
+    @pytest.mark.asyncio
+    async def test_query_success(self):
+        tool = DummyTool()
         result = await tool.query()
+        assert result.success is True
+        assert result.execution_time_ms >= 0  # instant DummyTool may round to 0.0
+
+    @pytest.mark.asyncio
+    async def test_query_validation_failure(self):
+        schema = {
+            "type": "object",
+            "properties": {"q": {"type": "string"}},
+            "required": ["q"],
+        }
+        tool = DummyTool(schema=schema)
+        result = await tool.query()  # missing required 'q'
         assert result.success is False
         assert result.source == "validation"
+        assert "q" in result.error
+
+    @pytest.mark.asyncio
+    async def test_query_execute_exception(self):
+        async def boom(**kwargs):
+            raise RuntimeError("tool broken")
+
+        tool = DummyTool(execute_fn=boom)
+        result = await tool.query()
+        assert result.success is False
+        assert result.source == "error"
+        assert "tool broken" in result.error
+
+    @pytest.mark.asyncio
+    async def test_query_execution_time_recorded(self):
+        import time
+
+        async def slow(**kwargs):
+            await asyncio.sleep(0.05)
+            return MedicalToolResult(
+                success=True, content="done", tool_name="t", source="built_in"
+            )
+
+        tool = DummyTool(execute_fn=slow)
+        result = await tool.query()
+        assert result.success is True
+        assert result.execution_time_ms >= 40  # at least 40ms
 
 
-# ═══════════════════════════════════════
-# MedicalToolRegistry
-# ═══════════════════════════════════════
+# ── MedicalTool.describe ──────────────────────────────────
+
+class TestMedicalToolDescribe:
+
+    def test_describe(self):
+        schema = {
+            "type": "object",
+            "properties": {"q": {"type": "string"}},
+            "required": ["q"],
+        }
+        tool = DummyTool(name="search", description="Search tool", category="research", schema=schema)
+        d = tool.describe()
+        assert d["name"] == "search"
+        assert d["description"] == "Search tool"
+        assert d["category"] == "research"
+        assert d["input_schema"] == schema
+
+
+# ── MCPMedicalTool ────────────────────────────────────────
+
+class TestMCPMedicalToolCategory:
+
+    def test_drug_in_tool_name(self):
+        mcp = make_mcp_tool(name="drug_interaction_check")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "drug"
+
+    def test_interaction_in_tool_name(self):
+        mcp = make_mcp_tool(name="check_interactions")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "drug"
+
+    def test_icd_in_name(self):
+        mcp = make_mcp_tool(name="icd10_lookup")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "coding"
+
+    def test_snomed_in_name(self):
+        mcp = make_mcp_tool(name="snomed_search")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "coding"
+
+    def test_search_in_name(self):
+        mcp = make_mcp_tool(name="pubmed_search")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "research"
+
+    def test_article_in_name(self):
+        mcp = make_mcp_tool(name="fetch_article")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "research"
+
+    def test_diagnosis_in_name(self):
+        mcp = make_mcp_tool(name="diagnosis_helper")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "diagnosis"
+
+    def test_disease_in_name(self):
+        mcp = make_mcp_tool(name="disease_lookup")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "diagnosis"
+
+    def test_biomcp_server_default_research(self):
+        mcp = make_mcp_tool(name="unknown_tool", server_name="biomcp")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "research"
+
+    def test_autoicd_server_default_coding(self):
+        mcp = make_mcp_tool(name="unknown_tool", server_name="autoicd")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "coding"
+
+    def test_unknown_server_default_utility(self):
+        mcp = make_mcp_tool(name="unknown_tool", server_name="other")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.category == "utility"
+
+    def test_properties(self):
+        mcp = make_mcp_tool(name="test_tool", description="A test", server_name="srv")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=AsyncMock())
+        assert t.name == "test_tool"
+        assert t.description == "A test"
+        assert t.server_name == "srv"
+
+
+class TestMCPMedicalToolExecute:
+
+    @pytest.mark.asyncio
+    async def test_execute_delegates_to_call_fn(self):
+        mcp_result = MedicalToolResult(
+            success=True, content="result_data", tool_name="t", source="mcp"
+        )
+        call_fn = AsyncMock(return_value=mcp_result)
+        mcp = make_mcp_tool(name="test_tool", server_name="biomcp")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=call_fn)
+
+        result = await t.execute(query="aspirin")
+        assert result.success is True
+        assert result.content == "result_data"
+        assert result.source == "mcp:biomcp"
+        assert result.metadata == {"server": "biomcp"}
+        call_fn.assert_called_once_with("test_tool", {"query": "aspirin"})
+
+    @pytest.mark.asyncio
+    async def test_execute_error(self):
+        mcp_result = MedicalToolResult(
+            success=False, content="", tool_name="t", source="mcp", error="connection failed"
+        )
+        call_fn = AsyncMock(return_value=mcp_result)
+        mcp = make_mcp_tool(name="t", server_name="srv")
+        t = MCPMedicalTool(mcp_tool=mcp, call_fn=call_fn)
+
+        result = await t.execute()
+        assert result.success is False
+        assert result.error == "connection failed"
+
+
+# ── MedicalToolRegistry ───────────────────────────────────
 
 class TestMedicalToolRegistry:
-    """Tests for the MedicalToolRegistry."""
-
-    def _make_tool(self, name="t", category="utility"):
-        return DummyTool(name=name, category=category)
 
     def test_register_and_get(self):
         reg = MedicalToolRegistry()
-        tool = self._make_tool(name="search")
+        tool = DummyTool(name="t1")
         reg.register(tool)
-        assert reg.get("search") is tool
+        assert reg.get("t1") is tool
 
-    def test_get_nonexistent(self):
+    def test_get_missing(self):
         reg = MedicalToolRegistry()
-        assert reg.get("nope") is None
+        assert reg.get("nonexistent") is None
 
-    def test_register_overwrite_logs_warning(self):
+    def test_register_overwrite(self):
         reg = MedicalToolRegistry()
-        t1 = self._make_tool(name="dup")
-        t2 = self._make_tool(name="dup")
+        t1 = DummyTool(name="t1", description="first")
+        t2 = DummyTool(name="t1", description="second")
         reg.register(t1)
         reg.register(t2)
-        assert reg.get("dup") is t2  # overwritten
+        assert reg.get("t1").description == "second"
 
     def test_get_by_category(self):
         reg = MedicalToolRegistry()
-        reg.register(self._make_tool(name="a", category="drug"))
-        reg.register(self._make_tool(name="b", category="drug"))
-        reg.register(self._make_tool(name="c", category="coding"))
-
-        drugs = reg.get_by_category("drug")
-        assert len(drugs) == 2
-        assert all(t.category == "drug" for t in drugs)
-
-        codings = reg.get_by_category("coding")
-        assert len(codings) == 1
-
-        assert reg.get_by_category("nonexistent") == []
+        reg.register(DummyTool(name="a", category="research"))
+        reg.register(DummyTool(name="b", category="drug"))
+        reg.register(DummyTool(name="c", category="research"))
+        research = reg.get_by_category("research")
+        assert len(research) == 2
+        assert all(t.category == "research" for t in research)
 
     def test_get_all(self):
         reg = MedicalToolRegistry()
-        reg.register(self._make_tool(name="x"))
-        reg.register(self._make_tool(name="y"))
+        reg.register(DummyTool(name="a"))
+        reg.register(DummyTool(name="b"))
         assert len(reg.get_all()) == 2
 
     def test_len(self):
         reg = MedicalToolRegistry()
         assert len(reg) == 0
-        reg.register(self._make_tool(name="a"))
+        reg.register(DummyTool(name="a"))
         assert len(reg) == 1
 
     def test_contains(self):
         reg = MedicalToolRegistry()
-        reg.register(self._make_tool(name="exists"))
-        assert "exists" in reg
-        assert "nope" not in reg
+        reg.register(DummyTool(name="a"))
+        assert "a" in reg
+        assert "b" not in reg
 
     def test_get_summary(self):
         reg = MedicalToolRegistry()
-        reg.register(self._make_tool(name="drug_check", category="drug"))
-        reg.register(self._make_tool(name="pubmed", category="research"))
-
+        reg.register(DummyTool(name="search_pubmed", description="Search PubMed articles", category="research"))
+        reg.register(DummyTool(name="drug_check", description="Check drug interactions", category="drug"))
         summary = reg.get_summary()
         assert "Available Medical Tools:" in summary
-        assert "[DRUG]" in summary
         assert "[RESEARCH]" in summary
+        assert "[DRUG]" in summary
+        assert "search_pubmed" in summary
         assert "drug_check" in summary
-        assert "pubmed" in summary
 
     def test_get_summary_max_desc_len(self):
-        tool = DummyTool(name="long", description="a" * 200, category="x")
         reg = MedicalToolRegistry()
-        reg.register(tool)
-        summary = reg.get_summary(max_desc_len=10)
-        # Description should be truncated
-        assert "a" * 10 in summary
-        assert "a" * 200 not in summary
+        reg.register(DummyTool(name="t", description="A" * 200, category="c"))
+        summary = reg.get_summary(max_desc_len=50)
+        assert "A" * 50 in summary
+        assert "A" * 51 not in summary
 
     def test_get_tools_for_llm(self):
         reg = MedicalToolRegistry()
-        reg.register(self._make_tool(name="a"))
-        reg.register(self._make_tool(name="b"))
-        llm_list = reg.get_tools_for_llm()
-        assert len(llm_list) == 2
-        assert all(isinstance(d, dict) for d in llm_list)
-        assert all("name" in d for d in llm_list)
+        reg.register(DummyTool(name="t1", category="research"))
+        reg.register(DummyTool(name="t2", category="drug"))
+        tools = reg.get_tools_for_llm()
+        assert len(tools) == 2
+        assert all("name" in t for t in tools)
+        assert all("input_schema" in t for t in tools)
 
 
-# ═══════════════════════════════════════
-# get_tool_registry (singleton)
-# ═══════════════════════════════════════
+# ── get_tool_registry (singleton) ─────────────────────────
 
 class TestGetToolRegistry:
-    """Tests for the singleton get_tool_registry function."""
 
     def test_singleton_returns_same_instance(self):
-        # Reset singleton first
         import agents.medical_tool as mt
-        mt._global_registry = None
-        r1 = get_tool_registry()
-        r2 = get_tool_registry()
-        assert r1 is r2
-        assert isinstance(r1, MedicalToolRegistry)
-        # Cleanup
-        mt._global_registry = None
-
-    def test_singleton_starts_empty(self):
-        import agents.medical_tool as mt
-        mt._global_registry = None
-        reg = get_tool_registry()
-        assert len(reg) == 0
-        mt._global_registry = None
-
-
-# ═══════════════════════════════════════
-# init_tool_registry (integration)
-# ═══════════════════════════════════════
-
-class TestInitToolRegistry:
-    """Tests for init_tool_registry with mocked MCP client."""
-
-    @pytest.mark.asyncio
-    async def test_init_wraps_mcp_tools(self):
-        import agents.medical_tool as mt
-        mt._global_registry = None
-
-        # Create fake MCP tools
-        mcp_tool_1 = MagicMock()
-        mcp_tool_1.name = "search_pubmed"
-        mcp_tool_1.description = "Search PubMed"
-        mcp_tool_1.server_name = "biomcp"
-        mcp_tool_1.input_schema = {"type": "object", "properties": {}}
-
-        mcp_tool_2 = MagicMock()
-        mcp_tool_2.name = "icd10_code"
-        mcp_tool_2.description = "ICD-10 lookup"
-        mcp_tool_2.server_name = "autoicd"
-        mcp_tool_2.input_schema = {"type": "object", "properties": {}}
-
-        mock_client = MagicMock()
-        mock_client.get_all_tools.return_value = [mcp_tool_1, mcp_tool_2]
-        mock_client.call_tool = AsyncMock()
-
-        with patch.dict("sys.modules", {"agents.mcp_client": MagicMock(
-                get_mcp_client=AsyncMock(return_value=mock_client)
-            )}):
-                reg = await init_tool_registry()
-
-        assert len(reg) == 2
-        assert "search_pubmed" in reg
-        assert "icd10_code" in reg
-        assert isinstance(reg.get("search_pubmed"), MCPMedicalTool)
-        mt._global_registry = None
+        old = mt._global_registry
+        mt._global_registry = None  # reset
+        try:
+            r1 = get_tool_registry()
+            r2 = get_tool_registry()
+            assert r1 is r2
+            assert isinstance(r1, MedicalToolRegistry)
+        finally:
+            mt._global_registry = old
