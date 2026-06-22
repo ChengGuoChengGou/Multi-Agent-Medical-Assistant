@@ -34,6 +34,9 @@ from middleware import (
 )
 from utils.logging_config import setup_logging, get_logger
 
+# [Phase 8] Startup configuration validation
+from startup_validator import validate_startup_config, ConfigValidationError
+
 # [Phase 7] API versioning with dependency health checks
 from api.health import router as health_v1_router
 
@@ -126,6 +129,14 @@ async def _startup_incremental_indexing():
     """Start incremental file indexing and initialize unified tool registry on app startup."""
     global _rag_singleton
     _logger = get_logger("startup")
+
+    # [Phase 8] Validate startup configuration (fail-fast)
+    try:
+        result = validate_startup_config()
+        _logger.info(f"[StartupValidator] OK ({len(result.warnings)} warnings)")
+    except ConfigValidationError as e:
+        _logger.error(f"[StartupValidator] CRITICAL: {e}")
+        # In production, uncomment: raise
 
     # Start incremental indexer
     if RAG_AVAILABLE:
