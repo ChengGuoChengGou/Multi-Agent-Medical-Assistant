@@ -22,13 +22,19 @@ class TavilySearchAgent:
             except Exception as e:
                 logger.warning(f"[WebSearch] Tavily init failed: {e}")
 
-        # Check DuckDuckGo availability as fallback
+        # Check DuckDuckGo availability as fallback (prefer new 'ddgs' package)
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
             self._ddgs_available = True
-            logger.info("[WebSearch] DuckDuckGo fallback available")
+            logger.info("[WebSearch] DuckDuckGo (ddgs) fallback available")
         except ImportError:
-            logger.warning("[WebSearch] duckduckgo-search not installed, no fallback")
+            try:
+                from duckduckgo_search import DDGS
+                self._ddgs_available = True
+                logger.info("[WebSearch] DuckDuckGo (legacy) fallback available")
+            except ImportError:
+                self._ddgs_available = False
+                logger.warning("[WebSearch] No DuckDuckGo package installed, no fallback")
 
     def search_tavily(self, query: str) -> str:
         """Perform a web search. Tries Tavily first, falls back to DuckDuckGo."""

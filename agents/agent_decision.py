@@ -689,13 +689,20 @@ def create_agent_graph():
             with agent_metrics.track("WEB_SEARCH_PROCESSOR_AGENT"):
                 processed_response = llm_call_with_recovery(
                     lambda: web_search_breaker.call(
-                        lambda: web_search_processor.process_web_results(query=state["current_input"], chat_history=recent_context)
+                        lambda: web_search_processor.process_web_search_results(query=state["current_input"], chat_history=recent_context)
                     ),
                     max_retries=1,
                 )
         except (RetryExhausted, Exception) as e:
+            import traceback
+            tb = traceback.format_exc()
+            try:
+                with open(r"D:\Code\Multi-Agent-Medical-Assistant\debug_web_search.log", "w") as df:
+                    df.write(f"EXCEPTION: {e}\n\n{tb}")
+            except:
+                pass
             logger.error(f"[WEB_SEARCH_PROCESSOR_AGENT] Web search processing failed: {e}", exc_info=True)
-            processed_response = AIMessage(content="I apologize, but the web search system encountered an error. Please try again.")
+            processed_response = AIMessage(content=f"I apologize, but the web search system encountered an error: {e}. Please try again.")
 
         # print("######### DEBUG WEB SEARCH:", processed_response)
         
