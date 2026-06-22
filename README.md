@@ -434,17 +434,53 @@ This fork adds significant security hardening, UI modernization, and new agent c
   - MIME type validation: magic bytes, medical formats, edge cases (8 tests)
   - Error response sanitization: info leak prevention (5 tests)
 
+### Phase 6: LLM Provider Abstraction & Fallback Chain
+- **`providers.py`** — unified LLM provider abstraction (OpenAI-compatible HTTP):
+  - Support for **xiaomi-mimo** (primary), OpenAI, Anthropic, DeepSeek, Qwen, Moonshot
+  - `LLMFallbackChain` with automatic retry across multiple providers
+  - Config-driven via `PROVIDER`, `BASE_URL`, `FALLBACK_MODELS` env vars
+- **`config.py`** — 374-line centralized configuration with Pydantic Settings
+  - All secrets loaded from `.env`, zero hardcoding
+
+### Phase 7: SSE Streaming & Request Deduplication
+- **`sse_utils.py`** — Server-Sent Events streaming with `text/event-stream`
+- **`/chat/stream`** endpoint — real-time token-by-token response delivery
+- **`middleware/request_dedup.py`** — in-flight request deduplication to prevent LLM double-calls
+
+### Phase 8: API Security & Rate Limiting
+- **`middleware/auth.py`** — API Key authentication via `X-API-Key` header
+- **`middleware/rate_limiter.py`** — per-IP sliding-window rate limiter (configurable limits)
+- All middleware properly integrated into FastAPI middleware stack
+
+### Phase 9: CI/CD, Coverage & Quality Guardrails
+- **GitHub Actions CI pipeline** (`.github/workflows/ci.yml`):
+  - Lint (Ruff) → Test (pytest + coverage) → Docker build (validation)
+  - Coverage threshold: **75%** minimum (actual: **83.3%**)
+  - Coverage artifact upload for review
+- **1,255 tests** across 40 test files, covering all meaningful source modules
+- **`agents/guardrails/`** — full test suite for medical safety guardrails
+- **`Makefile`** — developer experience shortcuts (`make test`, `make lint`, `make coverage`)
+
 ### Running Tests
 ```bash
 # Activate venv first
 .venv\Scripts\activate   # Windows
 source .venv/bin/activate  # Linux/Mac
 
-# Run all security tests
-pytest tests/test_security.py -v
+# Run all tests (1,255 tests, 40 test files)
+pytest tests/ -v --tb=short
 
 # Run with coverage
-pytest tests/test_security.py -v --tb=short
+pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
+
+# Run specific test file
+pytest tests/test_security.py -v
+pytest tests/test_guardrails_governance.py -v
+
+# Quick quality check
+make test       # all tests
+make lint       # ruff check + format
+make coverage   # full coverage report
 ```
 
 ---
