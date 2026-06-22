@@ -744,35 +744,37 @@ def create_agent_graph():
         rag_state = None
         web_state = None
         
-        # Smart strategy: try RAG first, only run WebSearch if RAG fails/low confidence
+        # True parallel: submit both immediately, wait for RAG first
         rag_state = None
         web_state = None
         
-        # Use executor without 'with' to avoid __exit__ hanging on abandoned threads
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         try:
+            # Submit both simultaneously
             rag_future = executor.submit(run_rag_agent, state)
+            web_future = executor.submit(run_web_search_processor_agent, state)
+            
+            # Wait for RAG first with short timeout
             try:
-                rag_state = rag_future.result(timeout=30)
+                rag_state = rag_future.result(timeout=25)
                 rag_conf = (rag_state or {}).get("retrieval_confidence", 0.0)
                 if rag_conf >= config.rag.min_retrieval_confidence:
-                    logger.info(f"[PARALLEL] RAG succeeded with confidence={rag_conf:.2f}, skipping WebSearch")
+                    logger.info(f"[PARALLEL] RAG succeeded (conf={rag_conf:.2f}), canceling WebSearch")
+                    web_future.cancel()
                     return {**rag_state, "agent_name": "RAG_AGENT"}
             except concurrent.futures.TimeoutError:
-                logger.warning("RAG agent timed out (30s), falling back to WebSearch")
-                rag_future.cancel()
+                logger.warning("RAG timed out (25s), waiting for WebSearch")
             except Exception as e:
-                logger.warning(f"RAG agent failed in parallel: {e}")
+                logger.warning(f"RAG failed: {e}")
             
-            # RAG failed or low confidence - run WebSearch with timeout
-            web_future = executor.submit(run_web_search_processor_agent, state)
+            # Wait for WebSearch (already running)
             try:
-                web_state = web_future.result(timeout=45)
+                web_state = web_future.result(timeout=50)
             except concurrent.futures.TimeoutError:
-                logger.warning("WebSearch agent timed out (45s)")
+                logger.warning("WebSearch timed out (50s)")
                 web_future.cancel()
             except Exception as e:
-                logger.warning(f"WebSearch agent failed in parallel: {e}")
+                logger.warning(f"WebSearch failed: {e}")
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
         
