@@ -25,6 +25,3 @@ rails:
   input:
     flows:
       - self check medical input
-  output:
-    flows:
-      - self check medical output

@@ -91,18 +91,6 @@ define flow self check medical input drug abuse
   stop
 
 # ─── Output Rails ────────────────────────────────────────────────
-
-define flow self check medical output
-  $response = $bot_message
-  # Check for unqualified diagnosis language
-  if "you definitely have" in $response.lower()
-    or "you are diagnosed with" in $response.lower()
-    or "you certainly have" in $response.lower()
-    bot require professional consultation
-    stop
-
-define flow check PII in output
-  $response = $bot_message
-  if "身份证" in $response or "社保" in $response or "病历号" in $response
-    bot warn PII sharing
-    stop
+# NOTE: Output safety checks (diagnosis language, PII detection, disclaimer injection)
+# are handled by Python code in local_guardrails.py check_output() method.
+# Colang 2.0 does not support Python-style conditionals; keeping input rails only.
