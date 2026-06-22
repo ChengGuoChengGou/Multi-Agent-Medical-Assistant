@@ -230,12 +230,20 @@ def chat(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/chat/stream", tags=["Chat"])
+@app.post("/chat/stream", responses={500: {"model": ErrorResponse}}, tags=["Chat"])
 async def chat_stream(
     request: QueryRequest,
     session_id: Optional[str] = Cookie(None)
 ):
-    """Process user query with SSE streaming - real-time agent progress + response chunks."""
+    """Process user query with SSE streaming for real-time agent interaction.
+
+    Returns a Server-Sent Events (SSE) stream with two event types:
+    - ``progress``: Agent routing decisions and reasoning steps
+    - ``content``: Response text chunks as they are generated
+
+    The stream ends with a ``done`` event containing the full response metadata.
+    Client should use EventSource or equivalent SSE consumer to process the stream.
+    """
     if not session_id:
         session_id = str(uuid.uuid4())
     
@@ -463,7 +471,12 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 
 @app.post("/generate-speech", responses={500: {"model": ErrorResponse}}, tags=["Voice"])
 async def generate_speech(request: SpeechRequest):
-    """Endpoint to generate speech using ElevenLabs API"""
+    """Convert text to speech using ElevenLabs TTS API.
+
+    Accepts a text string and returns synthesized audio in the requested voice.
+    Supports multiple voice options and audio output formats. Used for read-aloud
+    functionality of medical responses and accessibility features.
+    """
     try:
         text = request.text
         selected_voice_id = request.voice_id
