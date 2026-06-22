@@ -5,8 +5,8 @@ The app imports agents.rag_agent → langchain_qdrant → qdrant_client → etc.
 which requires a full vector DB setup. For API-level tests we mock the entire
 agent subsystem so only FastAPI routing / middleware logic is tested.
 """
-import sys
 import os
+import sys
 from unittest.mock import MagicMock
 
 # ── Ensure project root is on sys.path ──────────────────────────────

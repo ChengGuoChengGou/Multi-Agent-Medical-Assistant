@@ -7,7 +7,8 @@ as they're generated instead of waiting for the full response.
 import asyncio
 import json
 import logging
-from typing import AsyncGenerator, Optional, Dict, Any
+from typing import Any, AsyncGenerator, Dict, Optional
+
 from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)

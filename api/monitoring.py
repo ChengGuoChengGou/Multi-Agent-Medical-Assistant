@@ -6,12 +6,14 @@ Provides /api/v1/admin/stats that aggregates:
 - Rate limiter state (active IPs)
 - System info (uptime, Python version, memory)
 """
+import os
 import sys
 import time
-import os
+
 from fastapi import APIRouter
-from observability import metrics, agent_metrics
+
 from circuit_breaker import get_all_breaker_stats
+from observability import agent_metrics, metrics
 from utils.logging_config import get_logger
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])

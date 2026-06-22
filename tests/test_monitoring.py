@@ -1,11 +1,11 @@
 """Tests for Phase 9: System monitoring aggregation endpoint."""
 import time
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app import app
 from api.monitoring import set_app_start_time
-
+from app import app
 
 client = TestClient(app)
 

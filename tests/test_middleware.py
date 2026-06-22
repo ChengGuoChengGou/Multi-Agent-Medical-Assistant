@@ -4,19 +4,19 @@ SecurityHeadersMiddleware, RequestLoggingMiddleware.
 
 Run: python -m pytest tests/test_middleware.py -v
 """
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from starlette.testclient import TestClient
 from starlette.applications import Starlette
-from starlette.routing import Route
+from starlette.middleware import Middleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.middleware import Middleware
-
+from starlette.routing import Route
+from starlette.testclient import TestClient
 
 # ─── Test helper ───
 

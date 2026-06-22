@@ -1,8 +1,10 @@
-import requests
 from typing import Dict
+
+import requests
 
 from .pubmed_search import PubmedSearchAgent
 from .tavily_search import TavilySearchAgent
+
 
 class WebSearchAgent:
     """

@@ -1,11 +1,13 @@
-import os
-import cv2
-import torch
 import logging
-import numpy as np
+import os
+
+import cv2
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from .model_download import download_model_checkpoint
 
 # Configure logging

@@ -12,7 +12,6 @@ from starlette.requests import Request
 
 from middleware.rate_limiter import RateLimitMiddleware, get_rate_limit_stats
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

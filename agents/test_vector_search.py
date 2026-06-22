@@ -1,7 +1,9 @@
 """Quick test: verify medical_vector_memory search works."""
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from agents.medical_vector_memory import search_memory, collection_stats
+from agents.medical_vector_memory import collection_stats, search_memory
 
 stats = collection_stats()
 print("Collection stats:", stats)

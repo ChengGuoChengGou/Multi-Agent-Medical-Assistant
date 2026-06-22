@@ -163,14 +163,14 @@ class TestMakeLlm:
     @patch.dict(os.environ, {"FALLBACK_MODELS": "model-b,model-c"}, clear=False)
     def test_make_llm_with_fallback_returns_chain(self):
         """With FALLBACK_MODELS set, returns LLMFallbackChain."""
-        from config import _make_llm, LLMFallbackChain
+        from config import LLMFallbackChain, _make_llm
         llm = _make_llm(0.5, role="rag")
         assert isinstance(llm, LLMFallbackChain)
         assert len(llm.models) == 3  # primary + 2 fallbacks
 
     def test_make_llm_uses_role_model(self):
         """_make_llm picks model from _MODEL_ROLES by role."""
-        from config import _make_llm, _MODEL_ROLES
+        from config import _MODEL_ROLES, _make_llm
         # The role 'decision' should use DECISION_MODEL or default
         decision_model = _MODEL_ROLES.get("decision")
         assert decision_model is not None

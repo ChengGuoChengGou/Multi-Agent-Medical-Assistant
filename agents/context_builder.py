@@ -12,10 +12,10 @@ Segments:
   5. rag_results    - Structured RAG output for downstream agents
 """
 
-import re
 import logging
+import re
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +160,7 @@ def compress_history_tags(
 
         # Create a copy of the message with compressed content
         try:
-            from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+            from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
             if isinstance(msg, HumanMessage):
                 new_msg = HumanMessage(content=compressed)
             elif isinstance(msg, AIMessage):

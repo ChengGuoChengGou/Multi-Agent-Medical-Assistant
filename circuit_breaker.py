@@ -8,11 +8,11 @@ Usage:
     result = breaker.call(lambda: llm.invoke(query))
 """
 import logging
-import time
 import threading
+import time
 from enum import Enum
-from typing import Callable, TypeVar, Any, Optional
 from functools import wraps
+from typing import Any, Callable, Optional, TypeVar
 
 logger = logging.getLogger("medical_chatbot.circuit_breaker")
 

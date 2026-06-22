@@ -17,19 +17,19 @@ Features:
 
 import logging
 import os
-import time
 import threading
+import time
 from pathlib import Path
-from typing import Callable, Optional, Set, Dict, Any, List
+from typing import Any, Callable, Dict, List, Optional, Set
 
-from watchdog.observers import Observer
 from watchdog.events import (
-    FileSystemEventHandler,
     FileCreatedEvent,
+    FileDeletedEvent,
     FileModifiedEvent,
     FileMovedEvent,
-    FileDeletedEvent,
+    FileSystemEventHandler,
 )
+from watchdog.observers import Observer
 
 logger = logging.getLogger(__name__)
 

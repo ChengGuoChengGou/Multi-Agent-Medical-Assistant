@@ -2,16 +2,26 @@
 Unit tests for agents/error_handler.py — LLM error classification, retry, truncation, StopHook.
 Run: python -m pytest tests/test_agents_error_handler.py -v
 """
-import os, sys, time, pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+import os
+import sys
+import time
 from dataclasses import dataclass
+from unittest.mock import MagicMock, PropertyMock, patch
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.error_handler import (
-    LLMErrorType, classify_error, _get_retry_delay, _estimate_token_count,
-    truncate_messages, llm_call_with_recovery, RetryExhausted,
-    HookResult, StopHookValidator,
+    HookResult,
+    LLMErrorType,
+    RetryExhausted,
+    StopHookValidator,
+    _estimate_token_count,
+    _get_retry_delay,
+    classify_error,
+    llm_call_with_recovery,
+    truncate_messages,
 )
 
 

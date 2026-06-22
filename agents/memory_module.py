@@ -16,8 +16,8 @@ Usage:
     context = memory.recall(user_id, "What medications should I avoid?")
 """
 
-import os
 import logging
+import os
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -49,8 +49,11 @@ class VectorMemoryStore(MemoryStore):
     def __init__(self):
         try:
             from agents.medical_vector_memory import (
-                add_memory, search_memory, get_all_memories,
-                collection_stats, _lazy_init
+                _lazy_init,
+                add_memory,
+                collection_stats,
+                get_all_memories,
+                search_memory,
             )
             
             if not _lazy_init():
@@ -101,8 +104,9 @@ class VectorMemoryStore(MemoryStore):
         if not self._available:
             return False
         try:
-            from agents.medical_vector_memory import _qdrant_client, _collection_name
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+            from agents.medical_vector_memory import _collection_name, _qdrant_client
             _qdrant_client.delete(
                 collection_name=_collection_name,
                 points_selector=Filter(

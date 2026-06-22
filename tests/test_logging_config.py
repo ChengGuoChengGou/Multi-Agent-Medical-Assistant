@@ -2,11 +2,21 @@
 Unit tests for utils/logging_config.py — JSON/Human formatters, setup_logging, get_logger.
 Run: python -m pytest tests/test_logging_config.py -v
 """
-import os, sys, json, logging, pytest
+import json
+import logging
+import os
+import sys
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.logging_config import (
-    JSONFormatter, HumanFormatter, setup_logging, get_logger, request_id_var,
+    HumanFormatter,
+    JSONFormatter,
+    get_logger,
+    request_id_var,
+    setup_logging,
 )
 
 

@@ -6,8 +6,9 @@ Note: conftest.py mocks heavy deps (agents.rag_agent etc.) but process_query
 return shape must match what /chat endpoint expects:
   {"messages": [obj_with_.content], "agent_name": str}
 """
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 def _make_process_query_return(text="mock reply", agent="GENERAL_AGENT"):
@@ -21,6 +22,7 @@ def _make_process_query_return(text="mock reply", agent="GENERAL_AGENT"):
 def client():
     """Create a TestClient with all middleware and routes active."""
     from fastapi.testclient import TestClient
+
     from app import app
     return TestClient(app)
 

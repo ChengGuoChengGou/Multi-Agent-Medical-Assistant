@@ -2,11 +2,11 @@
 Unit tests for circuit_breaker.py — CircuitBreaker state machine & protection logic.
 Run: python -m pytest tests/test_circuit_breaker.py -v
 """
+import asyncio
 import os
 import sys
-import asyncio
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -14,10 +14,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from circuit_breaker import (
     CircuitBreaker,
-    CircuitState,
     CircuitBreakerOpenError,
+    CircuitState,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -2,21 +2,22 @@
 Tests for security middleware and utilities.
 Run: python -m pytest tests/test_security.py -v
 """
-import pytest
-import sys
-import os
 import json
+import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from middleware.security import (
     CSP_POLICY,
-    build_csp_header,
     CSRFProtection,
-    sanitize_input,
+    build_csp_header,
     sanitize_filename,
-    validate_mime_type,
+    sanitize_input,
     secure_error_response,
+    validate_mime_type,
 )
 
 

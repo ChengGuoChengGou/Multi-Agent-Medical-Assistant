@@ -2,7 +2,11 @@
 Unit tests for dependencies.py — DI container.
 Run: python -m pytest tests/test_dependencies.py -v
 """
-import os, sys, pytest
+import os
+import sys
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import dependencies

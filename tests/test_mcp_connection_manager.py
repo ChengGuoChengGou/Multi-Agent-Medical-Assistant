@@ -8,12 +8,13 @@ Covers:
 - ResilientMCPClientManager: add_server, start_all, stop_all, get_connection,
   get_all_tools, call_tool, call_on_server, health_check_all, get_health_summary
 """
-import sys
-import os
 import asyncio
+import os
+import sys
 import time
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 # Ensure project root on path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -27,11 +28,11 @@ for mod_key in list(sys.modules.keys()):
         del sys.modules[mod_key]
 
 from agents.mcp_connection_manager import (
+    ConnectionHealth,
+    ResilientMCPClientManager,
+    ResilientMCPConnection,
     RetryConfig,
     TimeoutConfig,
-    ConnectionHealth,
-    ResilientMCPConnection,
-    ResilientMCPClientManager,
 )
 
 

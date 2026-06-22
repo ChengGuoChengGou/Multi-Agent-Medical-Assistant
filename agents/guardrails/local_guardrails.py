@@ -1,9 +1,10 @@
+import logging
+import os
+import re
+
+from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.messages import AIMessage
-import re
-import os
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 def _try_load_nemo_rails(config_dir: str | None = None):
     """Attempt to load NeMo Guardrails RailsApp. Returns (rails_app, error_msg)."""
     try:
-        from nemoguardrails import RailsConfig, LLMRails
+        from nemoguardrails import LLMRails, RailsConfig
         if config_dir is None:
             config_dir = os.path.join(os.path.dirname(__file__), "config")
         if not os.path.isdir(config_dir):

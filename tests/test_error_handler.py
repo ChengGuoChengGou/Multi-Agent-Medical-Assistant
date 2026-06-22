@@ -13,7 +13,12 @@ Covers:
 
 from __future__ import annotations
 
-import sys, os, re, time, pytest
+import os
+import re
+import sys
+import time
+
+import pytest
 
 # Bootstrap project root
 _this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,17 +32,16 @@ for mod_key in list(sys.modules):
         del sys.modules[mod_key]
 
 from agents.error_handler import (
-    LLMErrorType,
-    classify_error,
-    _get_retry_delay,
-    _estimate_token_count,
-    truncate_messages,
-    llm_call_with_recovery,
-    RetryExhausted,
     HookResult,
+    LLMErrorType,
+    RetryExhausted,
     StopHookValidator,
+    _estimate_token_count,
+    _get_retry_delay,
+    classify_error,
+    llm_call_with_recovery,
+    truncate_messages,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -11,8 +11,8 @@ Tests cover:
 InMemoryStore is a pure dict-based fallback store with no external deps.
 """
 import pytest
-from agents.memory_module import InMemoryStore
 
+from agents.memory_module import InMemoryStore
 
 # ─────────────────────────────────────────
 # Fixtures

@@ -8,16 +8,16 @@ Covers:
 
 Run: python -m pytest tests/test_sse_utils.py -v
 """
-import pytest
-import sys
-import os
-import json
 import asyncio
+import json
+import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sse_utils import sse_generator, sse_stream_chat, sse_stream_chat_streaming
-
 
 # ── sse_generator ──────────────────────────────────────────────────────────
 

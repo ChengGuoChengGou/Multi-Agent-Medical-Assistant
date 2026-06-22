@@ -2,11 +2,14 @@
 Unit tests for tools/registry.py — ToolRegistry singleton, tool management.
 Run: python -m pytest tests/test_registry.py -v
 """
-import os, sys, pytest
+import os
+import sys
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.registry import ToolRegistry, get_registry
-
 
 # ── Helpers ──
 

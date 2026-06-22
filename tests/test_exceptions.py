@@ -10,15 +10,14 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from exceptions import (
-    MedicalAssistantError,
     AgentError,
-    ValidationError,
-    RateLimitError,
     FileUploadError,
-    TTSError,
     MCPError,
+    MedicalAssistantError,
+    RateLimitError,
+    TTSError,
+    ValidationError,
 )
-
 
 # ── MedicalAssistantError (base) ────────────────────────────────────
 

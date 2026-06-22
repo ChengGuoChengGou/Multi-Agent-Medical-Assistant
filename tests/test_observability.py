@@ -2,11 +2,18 @@
 Unit tests for observability.py — MetricsCollector, AgentMetrics, JSONFormatter.
 Run: python -m pytest tests/test_observability.py -v
 """
-import json, logging, os, sys, time, threading
+import json
+import logging
+import os
+import sys
+import threading
+import time
+
 import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from observability import MetricsCollector, AgentMetrics, JSONFormatter, setup_json_logging
+from observability import AgentMetrics, JSONFormatter, MetricsCollector, setup_json_logging
 
 
 # ── MetricsCollector ──

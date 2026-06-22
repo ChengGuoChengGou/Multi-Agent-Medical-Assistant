@@ -11,21 +11,20 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import (
-    QueryRequest,
-    SpeechRequest,
+    AgentRouteDecision,
+    AgentRouteInfo,
     ChatResponse,
+    ConversationMessage,
     ErrorResponse,
     HealthResponse,
-    AgentRouteInfo,
-    ConversationMessage,
     MedicalDiagnosis,
     MedicalReport,
-    AgentRouteDecision,
-    api_success,
+    QueryRequest,
+    SpeechRequest,
     api_error,
+    api_success,
     get_structured_output_schema,
 )
-
 
 # ── QueryRequest ────────────────────────────────────────────────────
 

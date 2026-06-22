@@ -4,12 +4,16 @@ Tests for agents/guardrails/local_guardrails.py
 _try_load_nemo_rails, _regex_check, check_input, check_output,
 BLOCKED_PATTERNS, DISCLAIMER injection logic.
 """
-import pytest
+import os
+import sys
 from unittest.mock import MagicMock, patch
-import sys, os
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from langchain_core.messages import AIMessage
+
 from agents.guardrails.local_guardrails import LocalGuardrails, _try_load_nemo_rails
 
 

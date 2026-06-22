@@ -1,10 +1,11 @@
-import re
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
 
 class ContentProcessor:
     """

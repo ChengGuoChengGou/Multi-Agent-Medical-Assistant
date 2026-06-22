@@ -1,5 +1,6 @@
 import requests
 
+
 class PubmedSearchAgent:
     """
     Processes medical documents for the RAG system with context-aware chunking.

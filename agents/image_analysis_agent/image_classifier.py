@@ -1,10 +1,11 @@
-import os
-import json
 import base64
+import json
+import os
 from mimetypes import guess_type
-
 from typing import TypedDict
+
 from langchain_core.output_parsers import JsonOutputParser
+
 
 class ClassificationDecision(TypedDict):
     """Output structure for the decision agent."""

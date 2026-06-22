@@ -20,14 +20,15 @@ Model Registry:
     All fall back to model_name if not set.
 """
 
-import os
 import logging
+import os
 import time
 from typing import Optional
+
 from dotenv import load_dotenv
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ load_dotenv(override=True)
 # ─── Model Registry (env-overridable per-agent routing) ──────────────────────
 # Phase 10: Provider system - supports domestic models (小米MiMo, DeepSeek, etc.)
 try:
-    from providers import resolve_provider, list_providers
+    from providers import list_providers, resolve_provider
     _provider = resolve_provider()
     _DEFAULT_MODEL = _provider["model"]
     _DEFAULT_API_KEY = _provider["api_key"]

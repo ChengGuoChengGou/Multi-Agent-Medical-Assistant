@@ -1,18 +1,18 @@
+import logging
 import os
 import time
-import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 RAG_AVAILABLE = False
 try:
-    from .doc_parser import MedicalDocParser
     from .content_processor import ContentProcessor
-    from .vectorstore_qdrant import VectorStore
-    from .reranker import Reranker
-    from .query_expander import QueryExpander
-    from .response_generator import ResponseGenerator
+    from .doc_parser import MedicalDocParser
     from .hybrid_search import BM25Index, HybridSearch
     from .incremental_indexing import IncrementalIndexer
+    from .query_expander import QueryExpander
+    from .reranker import Reranker
+    from .response_generator import ResponseGenerator
+    from .vectorstore_qdrant import VectorStore
     try:
         from langchain_community.storage import LocalFileStore
     except ImportError:

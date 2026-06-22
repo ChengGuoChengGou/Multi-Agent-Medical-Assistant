@@ -15,8 +15,8 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -377,7 +377,9 @@ async def get_mcp_client() -> Any:
         # Wrap with ResilientMCPClientManager for retry/reconnect/health
         try:
             from agents.mcp_connection_manager import (
-                ResilientMCPClientManager, RetryConfig, TimeoutConfig,
+                ResilientMCPClientManager,
+                RetryConfig,
+                TimeoutConfig,
             )
             resilient = ResilientMCPClientManager()
             for name, conn in raw_client._connections.items():

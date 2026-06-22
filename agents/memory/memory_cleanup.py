@@ -8,10 +8,10 @@ Provides cleanup policies for medical memory:
 - Storage quota management
 """
 
-import time
 import logging
-from typing import List, Dict, Any, Optional
+import time
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

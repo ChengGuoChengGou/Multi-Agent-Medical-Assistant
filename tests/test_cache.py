@@ -2,10 +2,10 @@
 Tests for cache.py — Phase 52: TTL, cleanup, semantic cache.
 """
 import asyncio
-import time
-import sys
-import os
 import importlib.util
+import os
+import sys
+import time
 
 import pytest
 

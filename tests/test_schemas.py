@@ -2,13 +2,21 @@
 Unit tests for schemas.py — API request/response Pydantic schemas.
 Run: python -m pytest tests/test_schemas.py -v
 """
-import os, sys
+import os
+import sys
+
 import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from schemas import (
-    QueryRequest, SpeechRequest, HealthResponse,
-    ChatResponse, ValidateResponse, TranscribeResponse, ErrorResponse,
+    ChatResponse,
+    ErrorResponse,
+    HealthResponse,
+    QueryRequest,
+    SpeechRequest,
+    TranscribeResponse,
+    ValidateResponse,
 )
 
 

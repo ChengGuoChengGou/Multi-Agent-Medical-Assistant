@@ -8,12 +8,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from evaluation.eval_runner import (
-    load_benchmark,
-    run_ragas_evaluation,
-    run_deepeval_evaluation,
     generate_report,
+    load_benchmark,
+    run_deepeval_evaluation,
+    run_ragas_evaluation,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

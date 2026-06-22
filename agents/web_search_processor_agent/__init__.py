@@ -1,5 +1,7 @@
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from .web_search_processor import WebSearchProcessor
+
 
 class WebSearchProcessorAgent:
     """

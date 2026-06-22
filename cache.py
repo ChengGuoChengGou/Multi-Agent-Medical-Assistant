@@ -12,8 +12,8 @@ import math
 import re
 import time
 from collections import Counter
-from typing import Optional, Any
 from functools import lru_cache
+from typing import Any, Optional
 
 logger = logging.getLogger("medical_chatbot.cache")
 

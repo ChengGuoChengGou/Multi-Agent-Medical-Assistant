@@ -18,9 +18,9 @@ You can also load from a mykey.py file (GA-style):
     providers.load_mykey("path/to/mykey.py")
 """
 
-import os
 import importlib.util
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 

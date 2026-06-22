@@ -13,10 +13,10 @@ keyword-based retrieval capability, improving recall for medical terminology.
 import logging
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from rank_bm25 import BM25Okapi
 from langchain_core.documents import Document
+from rank_bm25 import BM25Okapi
 
 logger = logging.getLogger(__name__)
 

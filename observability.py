@@ -4,14 +4,13 @@ Provides /metrics endpoint for monitoring and JSON-formatted logs
 for production log aggregation (ELK/Loki/etc).
 """
 
-import logging
 import json
-import time
+import logging
 import threading
-from typing import Dict, Optional, Any
+import time
 from collections import defaultdict
 from contextlib import contextmanager
-
+from typing import Any, Dict, Optional
 
 # ─── Prometheus-style Metrics ───────────────────────────────────────
 

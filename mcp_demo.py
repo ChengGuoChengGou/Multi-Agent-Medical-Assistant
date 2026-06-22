@@ -1,5 +1,7 @@
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, r"D:\Code\Multi-Agent-Medical-Assistant")
 
 print("=" * 60)
@@ -9,6 +11,7 @@ print("=" * 60)
 # 1. Load MCPConfig
 print("\n[1/4] Loading MCPConfig...")
 from config import MCPConfig
+
 cfg = MCPConfig()
 print(f"  biomcp:     enabled={cfg.biomcp['enabled']}, cmd={cfg.biomcp['command']}")
 print(f"  autoicd:    enabled={cfg.autoicd['enabled']}, cmd={cfg.autoicd['command']}")
@@ -19,6 +22,7 @@ print("  ✅ MCPConfig loaded")
 # 2. Load MCPClientManager
 print("\n[2/4] Loading MCPClientManager...")
 from agents.mcp_client import MCPClientManager, get_mcp_client
+
 client = MCPClientManager(cfg)
 print(f"  Client class: {type(client).__name__}")
 print(f"  biomcp path exists: {os.path.exists(os.path.join(r'D:\\Code\\Multi-Agent-Medical-Assistant', 'mcp_servers', 'biomcp'))}")
@@ -26,7 +30,8 @@ print("  ✅ MCPClientManager ready")
 
 # 3. Load MCP Agent
 print("\n[3/4] Loading MCP Agent...")
-from agents.mcp_agent import mcp_agent_node, MCP_ROUTING_PROMPT
+from agents.mcp_agent import MCP_ROUTING_PROMPT, mcp_agent_node
+
 print(f"  Node function: {mcp_agent_node.__name__}")
 print(f"  Routing prompt: {len(MCP_ROUTING_PROMPT)} chars")
 print(f"  Prompt preview:")

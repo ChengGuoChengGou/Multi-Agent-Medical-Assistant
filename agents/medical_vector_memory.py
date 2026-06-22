@@ -26,9 +26,9 @@ Usage:
     seed_from_medical_knowledge(["path/to/medical_notes.txt"])
 """
 
+import logging
 import os
 import re
-import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -60,9 +60,9 @@ def _lazy_init():
         return False
 
     try:
-        from sentence_transformers import SentenceTransformer
         from qdrant_client import QdrantClient
         from qdrant_client.models import Distance, VectorParams
+        from sentence_transformers import SentenceTransformer
 
         os.makedirs(_qdrant_store_path, exist_ok=True)
 
@@ -106,8 +106,9 @@ def add_memory(text: str, user_id: str = "global", metadata: dict = None) -> boo
     if not _lazy_init():
         return False
     try:
-        from qdrant_client.models import PointStruct
         import uuid
+
+        from qdrant_client.models import PointStruct
 
         text = (text or "").strip()
         if not text:
@@ -150,8 +151,9 @@ def add_memories_batch(texts: list, user_id: str = "global") -> int:
     if not _lazy_init() or not texts:
         return 0
     try:
-        from qdrant_client.models import PointStruct
         import uuid
+
+        from qdrant_client.models import PointStruct
 
         # Filter and truncate
         clean = []
@@ -208,7 +210,7 @@ def search_memory(query: str, user_id: str = None, top_k: int = 5, min_score: fl
         # Build filter for user_id if specified
         query_filter = None
         if user_id:
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
             query_filter = Filter(
                 must=[
                     FieldCondition(
@@ -248,7 +250,7 @@ def get_all_memories(limit: int = 200, user_id: str = None) -> list:
     try:
         query_filter = None
         if user_id:
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
             query_filter = Filter(
                 must=[
                     FieldCondition(

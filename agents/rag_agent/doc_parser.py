@@ -1,15 +1,15 @@
-import os
 import logging
+import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List, Tuple
 
 try:
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import (
-        PdfPipelineOptions, 
-        TableFormerMode, 
-        RapidOcrOptions, 
-        smolvlm_picture_description
+        PdfPipelineOptions,
+        RapidOcrOptions,
+        TableFormerMode,
+        smolvlm_picture_description,
     )
     from docling.document_converter import DocumentConverter, PdfFormatOption
     from docling_core.types.doc import PictureItem, TableItem

@@ -2,9 +2,9 @@
 Rate Limiting Middleware for Medical Assistant Application
 Implements sliding window rate limiting per client IP.
 """
-import time
 import asyncio
 import logging
+import time
 from collections import defaultdict
 from typing import Dict, List
 

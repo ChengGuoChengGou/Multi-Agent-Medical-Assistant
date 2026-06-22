@@ -1,9 +1,11 @@
+import logging
 import os
 import re
-import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+
 from sentence_transformers import CrossEncoder
+
 
 class Reranker:
     """

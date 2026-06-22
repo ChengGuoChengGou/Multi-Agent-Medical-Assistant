@@ -7,12 +7,12 @@ Covers:
   - register_extended_tools: registry integration
 """
 import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
-from agents.medical_tools_extended import PubMedTool, DrugInteractionTool, register_extended_tools
-from agents.medical_tool import MedicalToolResult, MedicalToolRegistry
-
+from agents.medical_tool import MedicalToolRegistry, MedicalToolResult
+from agents.medical_tools_extended import DrugInteractionTool, PubMedTool, register_extended_tools
 
 # ============================================================
 # Fixtures

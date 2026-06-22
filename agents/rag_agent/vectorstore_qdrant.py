@@ -1,18 +1,22 @@
+import logging
 import os
 import re
-import logging
-from uuid import uuid4
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from uuid import uuid4
 
 from langchain_core.documents import Document
 from langchain_core.stores import InMemoryStore
+
 try:
-    from langchain_community.storage import LocalFileStore
+    import shutil
+
     # Verify LocalFileStore can actually be instantiated with a path
     # (some langchain versions: LocalFileStore.__init__ calls super().__init__() 
     #  which is InMemoryBaseStore that rejects positional args)
-    import tempfile, shutil
+    import tempfile
+
+    from langchain_community.storage import LocalFileStore
     _tmp_dir = tempfile.mkdtemp(prefix="_lc_test_")
     try:
         _test = LocalFileStore(_tmp_dir)
@@ -25,7 +29,8 @@ except (ImportError, Exception):
     LocalFileStore = None  # will use InMemoryStore below
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient, models
-from qdrant_client.http.models import Distance, SparseVectorParams, VectorParams, OptimizersConfigDiff
+from qdrant_client.http.models import Distance, OptimizersConfigDiff, SparseVectorParams, VectorParams
+
 
 class _QdrantClientSingleton:
     """Singleton to avoid file-lock conflicts when multiple VectorStore instances use the same path."""

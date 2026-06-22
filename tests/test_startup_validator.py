@@ -1,15 +1,16 @@
 """Tests for Phase 8: Startup Configuration Validator."""
 import os
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from startup_validator import (
     ConfigValidationError,
     ValidationResult,
-    _check_required_env,
+    _check_directory_structure,
     _check_model_config,
     _check_qdrant_config,
-    _check_directory_structure,
+    _check_required_env,
     validate_startup_config,
 )
 

@@ -11,8 +11,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from providers import PRESETS, load_mykey, resolve_provider, list_providers
-
+from providers import PRESETS, list_providers, load_mykey, resolve_provider
 
 # ── PRESETS ──────────────────────────────────────────────────────────────────
 

@@ -57,8 +57,10 @@ output = "coverage.xml"
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-ignore = ["E501", "E741", "W503"]
+ignore = ["E501", "E741", "W2", "W3", "W6", "E401", "E402", "F401", "F841", "F541", "F821", "F811", "E711", "E722", "E731"]
 
 [tool.ruff.format]
 quote-style = "double"

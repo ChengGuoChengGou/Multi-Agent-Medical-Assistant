@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from agents.medical_tool import MedicalTool, MedicalToolResult, MedicalToolRegistry
+from agents.medical_tool import MedicalTool, MedicalToolRegistry, MedicalToolResult
 
 logger = logging.getLogger(__name__)
 

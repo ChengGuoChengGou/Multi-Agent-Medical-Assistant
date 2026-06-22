@@ -1,10 +1,10 @@
 """
 Tests for middleware/api_key_auth.py — Phase 53: API Key authentication.
 """
+import asyncio
+import importlib.util
 import os
 import sys
-import importlib.util
-import asyncio
 
 import pytest
 from starlette.applications import Starlette

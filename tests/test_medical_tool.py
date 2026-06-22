@@ -5,22 +5,24 @@ MedicalToolResult, MedicalTool.validate, MedicalTool.query,
 MCPMedicalTool.category inference, MedicalToolRegistry.
 """
 import asyncio
-import pytest
-from unittest.mock import AsyncMock, MagicMock
-from typing import Any, Dict, Optional
+import os
 
 # Add project root to path
-import sys, os
+import sys
+from typing import Any, Dict, Optional
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.medical_tool import (
-    MedicalToolResult,
-    MedicalTool,
     MCPMedicalTool,
+    MedicalTool,
     MedicalToolRegistry,
+    MedicalToolResult,
     get_tool_registry,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────
 

@@ -11,10 +11,10 @@ Usage:
     Authorization: Bearer <api-key>
     X-API-Key: <api-key>
 """
-import os
-import logging
-import time
 import hmac
+import logging
+import os
+import time
 from typing import Optional, Set
 
 from fastapi import Request, Response

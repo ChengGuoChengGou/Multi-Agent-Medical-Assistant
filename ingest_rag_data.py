@@ -1,9 +1,9 @@
-import sys
 import json
 import logging
+import sys
+import warnings
 from pathlib import Path
 
-import warnings
 warnings.filterwarnings('ignore')
 
 # Set up logging
@@ -13,10 +13,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Import your components
+import argparse
+
 from agents.rag_agent import MedicalRAG
 from config import Config
-
-import argparse
 
 # Initialize parser
 parser = argparse.ArgumentParser(description="Process some command-line arguments.")

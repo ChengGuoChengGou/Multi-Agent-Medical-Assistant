@@ -1,7 +1,8 @@
-from .image_classifier import ImageClassifier
-from .chest_xray_agent.covid_chest_xray_inference import ChestXRayClassification
 from .brain_tumor_agent import BrainTumorClassification
+from .chest_xray_agent.covid_chest_xray_inference import ChestXRayClassification
+from .image_classifier import ImageClassifier
 from .skin_lesion_agent.skin_lesion_inference import SkinLesionSegmentation
+
 
 class ImageAnalysisAgent:
     """

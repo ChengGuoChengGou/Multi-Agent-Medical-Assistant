@@ -13,12 +13,12 @@ Usage:
     logger = get_logger(__name__)
     logger.info("query_processed", extra={"query": "headache", "duration_ms": 1234})
 """
-import logging
 import json
-import sys
+import logging
 import os
-from datetime import datetime, timezone
+import sys
 from contextvars import ContextVar
+from datetime import datetime, timezone
 
 # ── request_id context (injected by middleware, read by logger) ──
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")

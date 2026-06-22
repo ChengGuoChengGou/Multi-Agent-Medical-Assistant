@@ -2,9 +2,9 @@
 
 All models use Field(examples=...) for rich OpenAPI schema rendering.
 """
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ── Request Models ──
 

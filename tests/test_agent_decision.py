@@ -2,9 +2,12 @@
 Unit tests for agents/agent_decision.py — AgentDecision model, graph construction, query processing.
 Run: python -m pytest tests/test_agent_decision.py -v
 """
-import os, sys, pytest
-from unittest.mock import MagicMock, patch, PropertyMock
-from typing import Dict, Any
+import os
+import sys
+from typing import Any, Dict
+from unittest.mock import MagicMock, PropertyMock, patch
+
+import pytest
 
 # Ensure project root on sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -66,8 +69,9 @@ class TestAgentDecision:
             saved[mod] = sys.modules.get(mod)
             sys.modules[mod] = MagicMock()
 
+        from typing import ClassVar, Literal
+
         from pydantic import BaseModel, Field, field_validator
-        from typing import Literal, ClassVar
 
         # Define AgentDecision locally (mirrors the real one) to test model logic
         # without importing the full module with all its side-effects.

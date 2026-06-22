@@ -15,8 +15,9 @@ import asyncio
 import json
 import os
 import sys
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # ── Undo conftest's MagicMock for agents.mcp_client ──
 # conftest.py inserts MagicMock() into sys.modules to avoid heavy imports.
@@ -32,10 +33,10 @@ for _k in list(sys.modules):
 
 # Now import the REAL module
 from agents.mcp_client import (
+    MCPClientManager,
+    MCPServerConnection,
     MCPTool,
     MCPToolResult,
-    MCPServerConnection,
-    MCPClientManager,
     create_default_mcp_client,
     get_project_mcp_dir,
 )

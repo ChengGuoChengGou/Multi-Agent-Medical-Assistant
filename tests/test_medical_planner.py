@@ -10,16 +10,28 @@ Tests cover pure functions (no LLM/network calls):
   - Refresh scheduler: RefreshConfig, check_refresh_needed, mark_refreshed
 """
 import pytest
-from agents.medical_planner import (
-    PlanStage, StepType, StepPriority,
-    PlanStep, DiagnosticPlan, DiagnosisReflection,
-    _needs_planning, _analyze_query_complexity,
-    _agent_to_step_type, _refine_query_for_agent,
-    exploration_stage, planning_stage, verification_stage,
-    create_diagnostic_plan, reflect_on_diagnosis, get_plan_routing_hints,
-    RefreshConfig, check_refresh_needed, mark_refreshed,
-)
 
+from agents.medical_planner import (
+    DiagnosisReflection,
+    DiagnosticPlan,
+    PlanStage,
+    PlanStep,
+    RefreshConfig,
+    StepPriority,
+    StepType,
+    _agent_to_step_type,
+    _analyze_query_complexity,
+    _needs_planning,
+    _refine_query_for_agent,
+    check_refresh_needed,
+    create_diagnostic_plan,
+    exploration_stage,
+    get_plan_routing_hints,
+    mark_refreshed,
+    planning_stage,
+    reflect_on_diagnosis,
+    verification_stage,
+)
 
 # ═══════════════════════════════════════════
 # Enum Tests

@@ -1,54 +1,56 @@
-import os
-import uuid
-import tempfile
-from typing import Dict, Union, Optional, List
 import glob
+import os
+import tempfile
 import threading
 import time
+import uuid
 from io import BytesIO
+from typing import Dict, List, Optional, Union
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response, Cookie
+import requests
+import uvicorn
+from elevenlabs.client import ElevenLabs
+from fastapi import Cookie, Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-
-import uvicorn
-import requests
-from werkzeug.utils import secure_filename
 from pydub import AudioSegment
-from elevenlabs.client import ElevenLabs
+from werkzeug.utils import secure_filename
 
-from config import Config
-from schemas import HealthResponse, ChatResponse, ValidateResponse, TranscribeResponse, ErrorResponse
-from agents.agent_decision import process_query
-from agents.agent_decision import process_query_streaming  # [Phase 3.1] streaming support
-from sse_utils import sse_stream_chat_streaming, sse_generator  # [Phase 3.1] SSE streaming response
-from middleware import (
-    SecurityHeadersMiddleware,
-    RequestLoggingMiddleware,
-    RateLimitMiddleware,
-    RequestDedupMiddleware,
-    APIKeyAuthMiddleware,
-    get_dedup_stats,
-    get_auth_stats,
+from agents.agent_decision import (
+    process_query,
+    process_query_streaming,  # [Phase 3.1] streaming support
 )
-from utils.logging_config import setup_logging, get_logger
-from cache import semantic_get, semantic_set, semantic_stats  # [Phase 51] Semantic cache
-
-# [Phase 8] Startup configuration validation
-from startup_validator import validate_startup_config, ConfigValidationError
 
 # [Phase 7] API versioning with dependency health checks
 from api.health import router as health_v1_router
 
-
 # [Phase 9] System monitoring aggregation endpoint
-from api.monitoring import router as monitoring_v1_router, set_app_start_time
+from api.monitoring import router as monitoring_v1_router
+from api.monitoring import set_app_start_time
+from cache import semantic_get, semantic_set, semantic_stats  # [Phase 51] Semantic cache
+from config import Config
+from middleware import (
+    APIKeyAuthMiddleware,
+    RateLimitMiddleware,
+    RequestDedupMiddleware,
+    RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
+    get_auth_stats,
+    get_dedup_stats,
+)
+from schemas import ChatResponse, ErrorResponse, HealthResponse, TranscribeResponse, ValidateResponse
+from sse_utils import sse_generator, sse_stream_chat_streaming  # [Phase 3.1] SSE streaming response
+
+# [Phase 8] Startup configuration validation
+from startup_validator import ConfigValidationError, validate_startup_config
+from utils.logging_config import get_logger, setup_logging
+
 # [Phase 6.5] Incremental indexing support
 try:
-    from agents.rag_agent import MedicalRAG, RAG_AVAILABLE
+    from agents.rag_agent import RAG_AVAILABLE, MedicalRAG
 except ImportError:
     RAG_AVAILABLE = False
 

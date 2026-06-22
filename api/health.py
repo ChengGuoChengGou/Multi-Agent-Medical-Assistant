@@ -6,11 +6,12 @@ Provides /api/v1/health/detailed with status of all dependencies:
 - Embedding model
 - File storage
 """
-import time
 import logging
+import time
+from typing import Dict, Optional
+
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/health", tags=["Health v1"])
@@ -122,7 +123,8 @@ def _check_embedding() -> DependencyStatus:
 def _check_file_storage() -> DependencyStatus:
     """Check file storage directories exist and are writable."""
     try:
-        import tempfile, os
+        import os
+        import tempfile
         dirs_to_check = ["uploads/backend", "uploads/frontend", "data"]
         missing = []
         for d in dirs_to_check:

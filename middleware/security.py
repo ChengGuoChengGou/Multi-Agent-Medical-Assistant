@@ -2,15 +2,15 @@
 Security Middleware for Medical Assistant Application
 Implements CSP, security headers, CSRF protection, and input sanitization.
 """
-import os
-import hmac
 import hashlib
+import hmac
+import html
+import logging
+import os
+import re
 import secrets
 import time
-import logging
-import re
-import html
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse

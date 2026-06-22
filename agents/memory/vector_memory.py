@@ -6,7 +6,7 @@ Provides semantic search capabilities for medical context retrieval.
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,11 @@ class VectorMemory:
         
         try:
             from agents.medical_vector_memory import (
-                add_memory, search_memory, get_all_memories,
-                collection_stats, _lazy_init
+                _lazy_init,
+                add_memory,
+                collection_stats,
+                get_all_memories,
+                search_memory,
             )
             
             if not _lazy_init():

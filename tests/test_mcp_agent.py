@@ -8,18 +8,18 @@ Covers:
 """
 
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 from agents.mcp_agent import (
     MCP_ROUTING_PROMPT,
     _determine_mcp_tools_keyword,
     _determine_mcp_tools_llm,
-    mcp_agent_node,
     _format_tool_results_raw,
+    mcp_agent_node,
 )
-
 
 # ============================================================
 # Fixtures

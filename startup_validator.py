@@ -9,8 +9,8 @@ Usage:
     validate_startup_config()  # raises ConfigValidationError if invalid
 """
 
-import os
 import logging
+import os
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)

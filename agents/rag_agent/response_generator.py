@@ -1,7 +1,7 @@
 import logging
 import re
 from collections import Counter, defaultdict
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from agents.context_builder import MedicalSystemPrompt
 

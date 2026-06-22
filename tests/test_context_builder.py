@@ -11,6 +11,7 @@ Covers:
 
 import sys
 import types
+
 import pytest
 
 # Remove conftest-injected mock if present
@@ -19,12 +20,11 @@ for mod_key in list(sys.modules.keys()):
         del sys.modules[mod_key]
 
 from agents.context_builder import (
+    ContextBuilder,
+    ContextSegments,
     MedicalSystemPrompt,
     compress_history_tags,
-    ContextSegments,
-    ContextBuilder,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers: lightweight message objects (avoid importing langchain_core directly)

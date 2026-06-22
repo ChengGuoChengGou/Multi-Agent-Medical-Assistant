@@ -5,9 +5,10 @@ Content-negotiation: HTML for browsers, JSON for API clients.
 import logging
 import time
 import uuid
-from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse, HTMLResponse
+
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, JSONResponse
 
 logger = logging.getLogger("medical_chatbot.errors")
 

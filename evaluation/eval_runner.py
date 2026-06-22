@@ -49,14 +49,14 @@ def run_ragas_evaluation(test_cases: list[dict], llm=None) -> dict:
         Dict of metric_name -> score
     """
     try:
+        from datasets import Dataset
         from ragas import evaluate
         from ragas.metrics import (
-            faithfulness,
             answer_relevancy,
             context_precision,
             context_recall,
+            faithfulness,
         )
-        from datasets import Dataset
     except ImportError as e:
         logger.warning("RAGAS not available: %s", e)
         return {"error": str(e)}
@@ -103,14 +103,14 @@ def run_deepeval_evaluation(test_cases: list[dict]) -> dict:
     """
     try:
         from deepeval import evaluate as deepeval_evaluate
-        from deepeval.test_case import LLMTestCase
         from deepeval.metrics import (
             AnswerRelevancyMetric,
+            BiasMetric,
             FaithfulnessMetric,
             HallucinationMetric,
-            BiasMetric,
             ToxicityMetric,
         )
+        from deepeval.test_case import LLMTestCase
     except ImportError as e:
         logger.warning("DeepEval not available: %s", e)
         return {"error": str(e)}

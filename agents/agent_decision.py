@@ -7,33 +7,35 @@ It dynamically routes user queries to the appropriate agent based on content and
 
 import json
 import logging
-from typing import Dict, List, Optional, Any, Literal, TypedDict, Union, Annotated, ClassVar
+from typing import Annotated, Any, ClassVar, Dict, List, Literal, Optional, TypedDict, Union
 
 logger = logging.getLogger(__name__)
-from pydantic import BaseModel, Field, field_validator
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langgraph.graph import MessagesState, StateGraph, END
-import os, getpass
 import concurrent.futures
+import getpass
+import os
+import uuid
+
 from dotenv import load_dotenv
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, MessagesState, StateGraph
+from pydantic import BaseModel, Field, field_validator
+
+from agents.context_builder import ContextBuilder, MedicalSystemPrompt, compress_history_tags
+from agents.error_handler import StopHookValidator, llm_call_with_recovery
+from agents.guardrails.local_guardrails import LocalGuardrails
+from agents.image_analysis_agent import ImageAnalysisAgent
+from agents.mcp_agent import mcp_agent_node
 from agents.rag_agent import MedicalRAG
 from agents.web_search_processor_agent import WebSearchProcessorAgent
-from agents.image_analysis_agent import ImageAnalysisAgent
-from agents.context_builder import MedicalSystemPrompt, ContextBuilder, compress_history_tags
-from agents.mcp_agent import mcp_agent_node
-from agents.guardrails.local_guardrails import LocalGuardrails
 from request_context import request_id_var
-
-from langgraph.checkpoint.memory import MemorySaver
-import uuid
-from agents.error_handler import StopHookValidator, llm_call_with_recovery
 
 # Vector memory integration (Phase 1: Memory System Upgrade)
 try:
-    from agents.medical_vector_memory import search_memory, add_memory, collection_stats
+    from agents.medical_vector_memory import add_memory, collection_stats, search_memory
     VECTOR_MEMORY_AVAILABLE = True
     logger.info("Medical vector memory loaded successfully")
 except Exception as e:
@@ -41,8 +43,8 @@ except Exception as e:
     logger.warning(f"Medical vector memory unavailable: {e}")
 
 # Memory Module (Three-tier: Vector → Mem0 → InMemory)
-from agents.memory_module import get_memory_store
 from agents.memory.medical_memory import get_medical_memory
+from agents.memory_module import get_memory_store
 
 # Prompt Manager (Centralized template management)
 try:
@@ -78,16 +80,20 @@ except (ImportError, Exception):
 import cv2
 import numpy as np
 
+from agents.error_handler import LLMErrorType, RetryExhausted, classify_error, llm_call_with_recovery
+from circuit_breaker import get_all_breaker_stats, llm_breaker, mcp_breaker, web_search_breaker
 from config import Config
-from circuit_breaker import llm_breaker, mcp_breaker, web_search_breaker, get_all_breaker_stats
 from observability import agent_metrics
-from agents.error_handler import llm_call_with_recovery, classify_error, LLMErrorType, RetryExhausted
 
 # Phase 5: Medical Planner & Diagnosis Reflection
 try:
     from agents.medical_planner import (
-        create_diagnostic_plan, reflect_on_diagnosis, get_plan_routing_hints,
-        DiagnosticPlan, DiagnosisReflection, PLANNING_AVAILABLE
+        PLANNING_AVAILABLE,
+        DiagnosisReflection,
+        DiagnosticPlan,
+        create_diagnostic_plan,
+        get_plan_routing_hints,
+        reflect_on_diagnosis,
     )
 except ImportError:
     PLANNING_AVAILABLE = False
