@@ -538,7 +538,7 @@ def create_agent_graph():
                 if allergies:
                     med_parts.append(f"已知过敏: {allergies}")
                 if medications:
-                    med_parts.append(f"当前用药: {medifications}")
+                    med_parts.append(f"当前用药: {medications}")
                 if med_history:
                     med_parts.append(f"相关病史: {med_history}")
                 if med_parts:
@@ -721,7 +721,7 @@ def create_agent_graph():
             try:
                 with open(r"D:\Code\Multi-Agent-Medical-Assistant\debug_web_search.log", "w") as df:
                     df.write(f"EXCEPTION: {e}\n\n{tb}")
-            except:
+            except Exception:
                 pass
             logger.error(f"[WEB_SEARCH_PROCESSOR_AGENT] Web search processing failed: {e}", exc_info=True)
             processed_response = AIMessage(
@@ -730,7 +730,7 @@ def create_agent_graph():
 
         # print("######### DEBUG WEB SEARCH:", processed_response)
 
-        if state["agent_name"] != None:
+        if state["agent_name"] is not None:
             involved_agents = f"{state['agent_name']}, WEB_SEARCH_PROCESSOR_AGENT"
         else:
             involved_agents = "WEB_SEARCH_PROCESSOR_AGENT"

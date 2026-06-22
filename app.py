@@ -48,6 +48,8 @@ from sse_utils import sse_generator, sse_stream_chat_streaming  # [Phase 3.1] SS
 from startup_validator import ConfigValidationError, validate_startup_config
 from utils.logging_config import get_logger, setup_logging
 
+logger = get_logger(__name__)
+
 # [Phase 6.5] Incremental indexing support
 try:
     from agents.rag_agent import RAG_AVAILABLE, MedicalRAG
