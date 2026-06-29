@@ -1,6 +1,8 @@
 import logging
 from typing import List, Dict, Any
 
+from core import ModelGateway, PromptRegistry
+
 class QueryExpander:
     """
     Expands user queries with medical terminology to improve retrieval.
@@ -9,6 +11,8 @@ class QueryExpander:
         self.logger = logging.getLogger(f"{self.__module__}")
         self.config = config
         self.model = config.rag.llm
+        self.model_gateway = ModelGateway()
+        self.prompt_registry = PromptRegistry()
         
     def expand_query(self, original_query: str) -> Dict[str, Any]:
         """
@@ -32,17 +36,16 @@ class QueryExpander:
     
     def _generate_expansions(self, query: str) -> str:
         """Use LLM to expand query with medical terminology."""
-        prompt = f"""
-        As a medical expert, expand the following query with relevant medical terminology, 
-        synonyms, and related concepts that would help in retrieving relevant medical information:
-        
-        User Query: {query}
-        
-        Expand the query only if you feel like it is required, otherwise keep the user query intact.
-        Be specific to the medical or any other domain mentioned in the ueer query, do not add other medical domains.
-        If the user query asks about answering in tabular format, include that in the expanded query and do not answer in tabular format yourself.
-        Provide only the expanded query without explanations.
-        """
-        expansion = self.model.invoke(prompt)
+        prompt_template = self.prompt_registry.get("rag.query_expansion")
+        prompt = prompt_template.render(query=query)
+        expansion = self.model_gateway.invoke(
+            model=self.model,
+            prompt=prompt,
+            model_id="rag-query-expander",
+            metadata={
+                "stage": "query_expansion",
+                **prompt_template.metadata(),
+            },
+        ).output
         
         return expansion

@@ -181,3 +181,13 @@ cython_debug/
 
 # ignore below since it gets updated on every local run
 uploads/skin_lesion_output/segmentation_plot.png
+data/session_memory/
+
+# Qdrant vector DB binary files
+data/docs_db/
+data/qdrant_db/
+data/faq/
+data/knowledge_inventory.json
+data/session_memory/
+*.sqlite
+.env.example.openai-compatible

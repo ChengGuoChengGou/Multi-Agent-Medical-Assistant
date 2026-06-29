@@ -1,3 +1,128 @@
+## Interview-Ready Agentic RAG Refactor
+
+This fork has been extended from a demo-style multi-agent medical assistant into an interview-ready Agentic RAG project. The refactor is inspired by the engineering structure of Ragent and focuses on explainability, evaluation, reliability, and operational traceability.
+
+### What Was Added
+
+- **Medical intent taxonomy**: 15 medical/user-safety intents with deterministic routing before LLM fallback.
+- **Agentic RAG retrieval**: query planning, follow-up completion, sub-question split, query expansion, multi-channel retrieval, reranking, confidence scoring, and ReAct-style retrieval self-correction.
+- **Active clarification**: ambiguous questions such as "is it serious?" without context are routed to a clarification response before generation.
+- **Conversation memory**: file-backed sliding window plus extractive summary compression under `data/session_memory/`.
+- **MCP-like tool registry**: `knowledge_base`, `web_search`, vision tools, and safety policy are registered by tool id for explainable routing traces.
+- **Traceability**: `route_decision`, `agent_trace`, `retrieval_trace`, `react_trace`, and `ingestion_trace`.
+- **Model reliability**: `ModelGateway` with retry, three-state circuit breaker, token estimation, prompt metadata, and FIFO concurrency limiting.
+- **Prompt governance**: versioned prompt files under `prompts/` with `manifest.json` active-version control.
+- **Evaluation**: seed intent/tool-call evaluation plus runnable FAQ retrieval metrics.
+
+### Offline Demo
+
+Run the walkthrough without API keys, Qdrant, Docling, or model calls:
+
+```bash
+python demo/offline_agentic_walkthrough.py
+```
+
+It demonstrates local medical knowledge routing, latest-research routing, vision-agent routing, ReAct retrieval self-correction, and unsafe prescription blocking.
+
+For full JSON traces:
+
+```bash
+python demo/offline_agentic_walkthrough.py --json
+```
+
+### Evaluation Commands
+
+```bash
+python evals/run_eval.py --task intent
+python evals/run_eval.py --task tool
+python evals/run_faq_retrieval_eval.py --mode keyword
+python evals/test_metrics.py
+python evals/test_model_gateway.py
+python evals/test_prompt_registry.py
+python evals/test_rate_limiter.py
+python evals/test_react_controller.py
+python evals/test_query_planner.py
+python evals/test_conversation_memory.py
+python evals/test_tool_registry.py
+```
+
+Or run the full local non-network check suite:
+
+```bash
+python scripts/run_local_checks.py
+```
+
+Current seed baseline:
+
+- Intent accuracy: `50/50 = 100%`
+- Agent accuracy: `50/50 = 100%`
+- Tool accuracy: `50/50 = 100%`
+- Tool-call seed eval: `25/25 = 100%`
+- FAQ retrieval seed eval: `50` samples, keyword Recall@1 `81.00%`, keyword Recall@5 `96.00%`, full RAG Recall@1 `80.00%`, full RAG Recall@5 `96.00%`, full RAG MRR `0.941`
+- Knowledge inventory: `4` indexed PDFs, `12` candidate PDFs, `150` FAQ markdown entries, `131` currently indexed Qdrant/docstore chunks
+- Ragent-inspired local checks: query planner, conversation memory, and tool registry all pass.
+
+Knowledge inventory:
+
+```bash
+python scripts/knowledge_inventory.py --json-output data/knowledge_inventory.json
+```
+
+### Refactored Architecture
+
+```mermaid
+flowchart TD
+    U["User Query / Image"] --> G["Input Guardrails"]
+    G --> R["Medical Intent Router"]
+    R --> C["Conversation Agent"]
+    R --> K["RAG Agent"]
+    R --> W["Web Search Agent"]
+    R --> V["Vision Agents"]
+    R --> S["Safety Block"]
+
+    K --> QP["Query Planner / Clarification / Split"]
+    QP --> QE["Query Expansion"]
+    QE --> RC["ReAct Retrieval Controller"]
+    RC --> MCR["Multi-Channel Retrieval"]
+    MCR --> FQ["FAQ Keyword Channel"]
+    MCR --> PP["Dedup + FAQ Priority Boost + Rerank + Confidence"]
+    PP --> RG["Grounded Response Generation"]
+    RG --> OG["Output Guardrails"]
+
+    DOC["Uploaded Documents"] --> IP["Ingestion Pipeline Trace"]
+    IP --> VS["Qdrant Vector Store + Docstore"]
+    VS --> MCR
+
+    MG["ModelGateway"] --> CB["Circuit Breaker"]
+    MG --> RL["FIFO Rate Limiter"]
+    MG --> PR["Prompt Registry"]
+    MEM["Session Memory Summary + Window"] --> R
+    TR["MCP-like Tool Registry"] --> R
+    QE --> MG
+    RG --> MG
+```
+
+### Engineering Notes
+
+Detailed design notes are in:
+
+- [`docs/business_scenario.md`](docs/business_scenario.md)
+- [`docs/intent_taxonomy.md`](docs/intent_taxonomy.md)
+- [`docs/agentic_rag_react.md`](docs/agentic_rag_react.md)
+- [`docs/multi_channel_retrieval.md`](docs/multi_channel_retrieval.md)
+- [`docs/model_reliability.md`](docs/model_reliability.md)
+- [`docs/concurrency_control.md`](docs/concurrency_control.md)
+- [`docs/ingestion_pipeline.md`](docs/ingestion_pipeline.md)
+- [`docs/prompt_management.md`](docs/prompt_management.md)
+- [`docs/evaluation_system.md`](docs/evaluation_system.md)
+- [`docs/faq_dataset.md`](docs/faq_dataset.md)
+- [`docs/engineering_cleanup.md`](docs/engineering_cleanup.md)
+- [`docs/refactor_summary.md`](docs/refactor_summary.md)
+- [`docs/ragent_comparison.md`](docs/ragent_comparison.md)
+- [`docs/openai_compatible_setup.md`](docs/openai_compatible_setup.md)
+
+----
+
 <div align="center">
  
 ![logo](https://github.com/souvikmajumder26/Multi-Agent-Medical-Assistant/blob/main/assets/logo_rounded.png)

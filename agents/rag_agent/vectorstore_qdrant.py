@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 
 from langchain_core.documents import Document
-from langchain.storage import InMemoryStore, LocalFileStore
+from langchain_classic.storage import LocalFileStore
 from langchain_qdrant import FastEmbedSparse, QdrantVectorStore, RetrievalMode
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, SparseVectorParams, VectorParams, OptimizersConfigDiff
@@ -43,17 +43,46 @@ class VectorStore:
     def _create_collection(self):
         """Create a new collection with dense and sparse vectors."""
         try:
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config={"dense": VectorParams(size=self.embedding_dim, distance=Distance.COSINE)},
-                sparse_vectors_config={
-                    "sparse": SparseVectorParams(index=models.SparseIndexParams(on_disk=False))
-                },
-            )
+            if self._use_hybrid_retrieval():
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config={"dense": VectorParams(size=self.embedding_dim, distance=Distance.COSINE)},
+                    sparse_vectors_config={
+                        "sparse": SparseVectorParams(index=models.SparseIndexParams(on_disk=False))
+                    },
+                )
+            else:
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(size=self.embedding_dim, distance=Distance.COSINE),
+                )
             self.logger.info(f"Created new collection: {self.collection_name}")
         except Exception as e:
             self.logger.error(f"Error creating collection: {e}")
             raise e
+
+    def _use_hybrid_retrieval(self) -> bool:
+        return str(self.vector_search_type).lower() == "hybrid"
+
+    def _build_qdrant_vectorstore(self) -> QdrantVectorStore:
+        if self._use_hybrid_retrieval():
+            sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
+            return QdrantVectorStore(
+                client=self.client,
+                collection_name=self.collection_name,
+                embedding=self.embedding_model,
+                sparse_embedding=sparse_embeddings,
+                retrieval_mode=RetrievalMode.HYBRID,
+                vector_name="dense",
+                sparse_vector_name="sparse",
+            )
+
+        return QdrantVectorStore(
+            client=self.client,
+            collection_name=self.collection_name,
+            embedding=self.embedding_model,
+            vector_name="dense",
+        )
             
     def load_vectorstore(self) -> Tuple[QdrantVectorStore, LocalFileStore]:
         """
@@ -67,19 +96,8 @@ class VectorStore:
             self.logger.error(f"Collection {self.collection_name} does not exist. Please ingest documents first.")
             raise ValueError(f"Collection {self.collection_name} does not exist")
             
-        # Setup sparse embeddings
-        sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
-        
         # Initialize vector store
-        qdrant_vectorstore = QdrantVectorStore(
-            client=self.client,
-            collection_name=self.collection_name,
-            embedding=self.embedding_model,
-            sparse_embedding=sparse_embeddings,
-            retrieval_mode=RetrievalMode.HYBRID,
-            vector_name="dense",
-            sparse_vector_name="sparse",
-        )
+        qdrant_vectorstore = self._build_qdrant_vectorstore()
         
         # Document storage
         docstore = LocalFileStore(self.docstore_local_path)
@@ -91,6 +109,7 @@ class VectorStore:
             self,
             document_chunks: List[str],
             document_path: str,
+            document_metadatas: Optional[List[Dict[str, Any]]] = None,
         ) -> Tuple[QdrantVectorStore, LocalFileStore, List[str]]:
         """
         Create a vector store from document chunks or upsert documents to existing store.
@@ -108,7 +127,12 @@ class VectorStore:
         
         # Create langchain documents
         langchain_documents = []
+        document_metadatas = document_metadatas or [{} for _ in document_chunks]
+        if len(document_metadatas) != len(document_chunks):
+            raise ValueError("document_metadatas must match document_chunks length")
+
         for id_idx, chunk in enumerate(document_chunks):
+            extra_metadata = dict(document_metadatas[id_idx])
             langchain_documents.append(
                 Document(
                     page_content=chunk,
@@ -116,13 +140,11 @@ class VectorStore:
                         "source": os.path.basename(document_path),
                         "doc_id": doc_ids[id_idx],
                         # "source_path": Path(os.path.abspath(document_path)).as_uri()
-                        "source_path": os.path.join("http://localhost:8000/", document_path)
+                        "source_path": os.path.join("http://localhost:8000/", document_path),
+                        **extra_metadata,
                     }
                 )
             )
-        
-        # Setup sparse embeddings
-        sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
         
         # Check if collection exists, create if it doesn't
         collection_exists = self._does_collection_exist()
@@ -133,15 +155,7 @@ class VectorStore:
             self.logger.info(f"Collection {self.collection_name} already exists, will upsert documents")
         
         # Initialize vector store
-        qdrant_vectorstore = QdrantVectorStore(
-            client=self.client,
-            collection_name=self.collection_name,
-            embedding=self.embedding_model,
-            sparse_embedding=sparse_embeddings,
-            retrieval_mode=RetrievalMode.HYBRID,
-            vector_name="dense",
-            sparse_vector_name="sparse",
-        )
+        qdrant_vectorstore = self._build_qdrant_vectorstore()
         
         # Document storage for parent documents
         docstore = LocalFileStore(self.docstore_local_path)
@@ -158,6 +172,7 @@ class VectorStore:
             query: str,
             vectorstore: QdrantVectorStore,
             docstore: LocalFileStore,
+            top_k: Optional[int] = None,
         ) -> Tuple[List[Dict[str, Any]], List[str]]:
         """
         Retrieve relevant chunks based on a query.
@@ -174,7 +189,7 @@ class VectorStore:
         # Use similarity_search_with_score to get documents and scores
         results = vectorstore.similarity_search_with_score(
             query=query,
-            k=self.retrieval_top_k
+            k=top_k or self.retrieval_top_k
         )
         
         retrieved_docs = []
@@ -197,6 +212,21 @@ class VectorStore:
                 "source": chunk.metadata['source'],
                 "source_path": chunk.metadata['source_path'],
             }
+            for key in (
+                "content_type",
+                "faq_id",
+                "domain",
+                "priority",
+                "intent",
+                "risk_level",
+                "need_doctor",
+                "source_org",
+                "source_url",
+                "source_type",
+                "keywords",
+            ):
+                if key in chunk.metadata:
+                    doc_dict[key] = chunk.metadata[key]
             retrieved_docs.append(doc_dict)
             
             # # Extract picture references

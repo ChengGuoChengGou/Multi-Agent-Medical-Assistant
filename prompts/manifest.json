@@ -1,0 +1,24 @@
+{
+  "prompts": {
+    "rag.query_expansion": {
+      "description": "Expand a user query with medical terminology for retrieval.",
+      "active_version": "v1",
+      "versions": {
+        "v1": {
+          "path": "rag/query_expansion.v1.txt",
+          "notes": "Initial extracted prompt from QueryExpander."
+        }
+      }
+    },
+    "rag.response_generation": {
+      "description": "Generate a grounded RAG answer from retrieved medical context.",
+      "active_version": "v1",
+      "versions": {
+        "v1": {
+          "path": "rag/response_generation.v1.txt",
+          "notes": "Initial extracted prompt from ResponseGenerator."
+        }
+      }
+    }
+  }
+}

@@ -84,7 +84,7 @@ class SpeechRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the main HTML page"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 @app.get("/health")
 def health_check():
@@ -103,7 +103,7 @@ def chat(
         session_id = str(uuid.uuid4())
     
     try:
-        response_data = process_query(request.query)
+        response_data = process_query(request.query, thread_id=session_id)
         response_text = response_data['messages'][-1].content
         
         # Set session cookie
@@ -171,7 +171,7 @@ async def upload_image(
     
     try:
         query = {"text": text, "image": file_path}
-        response_data = process_query(query)
+        response_data = process_query(query, thread_id=session_id)
         response_text = response_data['messages'][-1].content
 
         # Set session cookie
@@ -223,7 +223,7 @@ def validate_medical_output(
         if comments:
             validation_query += f" Comments: {comments}"
         
-        response_data = process_query(validation_query)
+        response_data = process_query(validation_query, thread_id=session_id)
 
         if validation_result.lower() == 'yes':
             return {

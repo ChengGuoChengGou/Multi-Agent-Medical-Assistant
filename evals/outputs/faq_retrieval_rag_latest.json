@@ -1,0 +1,4173 @@
+{
+  "mode": "rag",
+  "top_k": 5,
+  "rows": [
+    {
+      "id": "faq-rag-001",
+      "query": "头痛就是脑肿瘤吗？",
+      "expected_faq_ids": [
+        "FAQ-BT-001"
+      ],
+      "expected_domain": "brain_tumor",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-BT-001",
+        "FAQ-BT-002",
+        "FAQ-BT-006",
+        "FAQ-GEN-005",
+        "FAQ-BT-005"
+      ],
+      "top_faq_id": "FAQ-BT-001",
+      "top_domain": "brain_tumor",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 6,
+            "confidence": 0.6187997061032395,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 27,
+            "confidence": 0.048848898796394674,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-002",
+      "query": "脑肿瘤有哪些危险症状需要马上看医生？",
+      "expected_faq_ids": [
+        "FAQ-BT-004",
+        "FAQ-BT-002"
+      ],
+      "expected_domain": "brain_tumor",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-BT-002",
+        "FAQ-BT-004",
+        "FAQ-DM-006",
+        "FAQ-CXR-003",
+        "FAQ-BT-006"
+      ],
+      "top_faq_id": "FAQ-BT-002",
+      "top_domain": "brain_tumor",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 15,
+            "confidence": 0.39170477815101806,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 27,
+            "confidence": 0.0,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-003",
+      "query": "查脑肿瘤 MRI 和 CT 应该选哪个？",
+      "expected_faq_ids": [
+        "FAQ-BT-008"
+      ],
+      "expected_domain": "brain_tumor",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "NCI"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-BT-008",
+        "FAQ-BT-007",
+        "FAQ-CXR-006",
+        "FAQ-BT-006",
+        "FAQ-BT-002"
+      ],
+      "top_faq_id": "FAQ-BT-008",
+      "top_domain": "brain_tumor",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": false,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 18,
+            "confidence": 0.8158653826544516,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 4,
+            "latency_ms": 56,
+            "confidence": 0.3927825142570934,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 20,
+            "confidence": 0.29522974896438275,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 19,
+            "after_count": 13
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 13,
+            "after_count": 13
+          }
+        ],
+        "initial_chunk_count": 19,
+        "final_chunk_count": 13,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-004",
+      "query": "脑肿瘤治疗后还要不要定期复查？",
+      "expected_faq_ids": [
+        "FAQ-BT-014"
+      ],
+      "expected_domain": "brain_tumor",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "NCI"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-BT-014",
+        "FAQ-BT-012",
+        "FAQ-BT-001",
+        "FAQ-BT-006",
+        "FAQ-BT-002"
+      ],
+      "top_faq_id": "FAQ-BT-014",
+      "top_domain": "brain_tumor",
+      "top_priority": "P1",
+      "top_source_org": "NCI",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 8,
+            "confidence": 0.5122494147197391,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 27,
+            "confidence": 0.02159498925293037,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-005",
+      "query": "AI 能不能根据我的症状直接判断有没有脑肿瘤？",
+      "expected_faq_ids": [
+        "FAQ-BT-020"
+      ],
+      "expected_domain": "brain_tumor",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-BT-020",
+        "FAQ-CXR-018",
+        "FAQ-GEN-008",
+        "FAQ-GEN-007",
+        "FAQ-SKIN-006"
+      ],
+      "top_faq_id": "FAQ-BT-020",
+      "top_domain": "brain_tumor",
+      "top_priority": "P2",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 16,
+            "confidence": 0.6944920938818832,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 25,
+            "confidence": 0.2719717466254899,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 10
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 10,
+            "after_count": 10
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 10,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-006",
+      "query": "胸片能不能确诊 COVID？",
+      "expected_faq_ids": [
+        "FAQ-CXR-001"
+      ],
+      "expected_domain": "chest_xray_covid",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "ACR"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-CXR-001",
+        "FAQ-CXR-004",
+        "FAQ-CXR-018",
+        "FAQ-CXR-020",
+        "FAQ-CXR-009"
+      ],
+      "top_faq_id": "FAQ-CXR-001",
+      "top_domain": "chest_xray_covid",
+      "top_priority": "P0",
+      "top_source_org": "ACR",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 6,
+            "confidence": 0.9468805788561155,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 10,
+            "latency_ms": 41,
+            "confidence": 0.4289692938891345,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 21,
+            "confidence": 0.27896929388913455,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 25,
+            "after_count": 12
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 12,
+            "after_count": 12
+          }
+        ],
+        "initial_chunk_count": 25,
+        "final_chunk_count": 12,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-007",
+      "query": "COVID 出现什么情况要去急诊？",
+      "expected_faq_ids": [
+        "FAQ-CXR-003"
+      ],
+      "expected_domain": "chest_xray_covid",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "CDC"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-CXR-003",
+        "FAQ-CXR-002",
+        "FAQ-CXR-008",
+        "FAQ-CXR-001",
+        "FAQ-CXR-004"
+      ],
+      "top_faq_id": "FAQ-CXR-003",
+      "top_domain": "chest_xray_covid",
+      "top_priority": "P0",
+      "top_source_org": "CDC",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 6,
+            "confidence": 0.6968162526916681,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 10,
+            "latency_ms": 30,
+            "confidence": 0.4289692938891345,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 17,
+            "confidence": 0.27896929388913455,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 25,
+            "after_count": 12
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 12,
+            "after_count": 12
+          }
+        ],
+        "initial_chunk_count": 25,
+        "final_chunk_count": 12,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-008",
+      "query": "胸片正常是不是就没有肺炎或新冠？",
+      "expected_faq_ids": [
+        "FAQ-CXR-004"
+      ],
+      "expected_domain": "chest_xray_covid",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "RadiologyInfo"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-CXR-004",
+        "FAQ-CXR-005",
+        "FAQ-CXR-011",
+        "FAQ-CXR-001",
+        "FAQ-CXR-006"
+      ],
+      "top_faq_id": "FAQ-CXR-004",
+      "top_domain": "chest_xray_covid",
+      "top_priority": "P0",
+      "top_source_org": "RadiologyInfo",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 13,
+            "confidence": 0.48932042868122805,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 22,
+            "confidence": 0.03605308575567912,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-009",
+      "query": "血氧低到多少需要就医？",
+      "expected_faq_ids": [
+        "FAQ-CXR-014"
+      ],
+      "expected_domain": "chest_xray_covid",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "CDC"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-CXR-014",
+        "FAQ-GEN-001",
+        "FAQ-GEN-015",
+        "FAQ-GEN-014",
+        "FAQ-BT-004"
+      ],
+      "top_faq_id": "FAQ-CXR-014",
+      "top_domain": "chest_xray_covid",
+      "top_priority": "P1",
+      "top_source_org": "CDC",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 10,
+            "confidence": 0.5405020134273945,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 26,
+            "confidence": 0.11275480427891887,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 14
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 14,
+            "after_count": 14
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 14,
+            "after_count": 14
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 14,
+            "after_count": 14
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 14,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-010",
+      "query": "AI 看胸片能直接判断是不是 COVID 吗？",
+      "expected_faq_ids": [
+        "FAQ-CXR-018"
+      ],
+      "expected_domain": "chest_xray_covid",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "ACR"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-CXR-018",
+        "FAQ-CXR-004",
+        "FAQ-CXR-001",
+        "FAQ-SKIN-006",
+        "FAQ-CXR-020"
+      ],
+      "top_faq_id": "FAQ-CXR-018",
+      "top_domain": "chest_xray_covid",
+      "top_priority": "P2",
+      "top_source_org": "ACR",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 6,
+            "confidence": 0.7930808065158773,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 6,
+            "latency_ms": 29,
+            "confidence": 0.4413994623735322,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 20,
+            "confidence": 0.2977429080668146,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 21,
+            "after_count": 14
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 14,
+            "after_count": 14
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 14,
+            "after_count": 14
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 14,
+            "after_count": 14
+          }
+        ],
+        "initial_chunk_count": 21,
+        "final_chunk_count": 14,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-011",
+      "query": "糖尿病会有哪些常见症状？",
+      "expected_faq_ids": [
+        "FAQ-DM-001"
+      ],
+      "expected_domain": "diabetes",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "ADA"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-DM-001",
+        "FAQ-BT-002",
+        "FAQ-CXR-002",
+        "FAQ-DM-002",
+        "FAQ-GEN-012"
+      ],
+      "top_faq_id": "FAQ-DM-001",
+      "top_domain": "diabetes",
+      "top_priority": "P0",
+      "top_source_org": "CDC",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": false,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 7,
+            "confidence": 0.5955336074283666,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 23,
+            "confidence": 0.03584847370231164,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-012",
+      "query": "A1C 是什么意思，能诊断糖尿病吗？",
+      "expected_faq_ids": [
+        "FAQ-DM-003"
+      ],
+      "expected_domain": "diabetes",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "ADA"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-DM-002",
+        "FAQ-DM-003",
+        "FAQ-DM-019",
+        "FAQ-DM-001",
+        "FAQ-DM-004"
+      ],
+      "top_faq_id": "FAQ-DM-002",
+      "top_domain": "diabetes",
+      "top_priority": "P0",
+      "top_source_org": "ADA",
+      "recall_at_1": 0.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 0.5,
+      "ndcg_at_5": 0.6309297535714575,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 6,
+            "confidence": 0.7339934689458296,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 4,
+            "latency_ms": 39,
+            "confidence": 0.3464174228470253,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 31,
+            "confidence": 0.24641742284702528,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 19,
+            "after_count": 11
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 11,
+            "after_count": 11
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 11,
+            "after_count": 11
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 11,
+            "after_count": 11
+          }
+        ],
+        "initial_chunk_count": 19,
+        "final_chunk_count": 11,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-013",
+      "query": "低血糖有什么表现？",
+      "expected_faq_ids": [
+        "FAQ-DM-005"
+      ],
+      "expected_domain": "diabetes",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "CDC"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-DM-005",
+        "FAQ-DM-007",
+        "FAQ-DM-006",
+        "FAQ-DM-002",
+        "FAQ-DM-008"
+      ],
+      "top_faq_id": "FAQ-DM-005",
+      "top_domain": "diabetes",
+      "top_priority": "P0",
+      "top_source_org": "CDC",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.5649624458637329,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 21,
+            "confidence": 0.09224355026062007,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 13
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 13,
+            "after_count": 13
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 13,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-014",
+      "query": "胰岛素剂量我可以自己调整吗？",
+      "expected_faq_ids": [
+        "FAQ-DM-007"
+      ],
+      "expected_domain": "diabetes",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-DM-007",
+        "FAQ-GEN-008",
+        "FAQ-DM-020",
+        "FAQ-GEN-011",
+        "FAQ-GEN-003"
+      ],
+      "top_faq_id": "FAQ-DM-007",
+      "top_domain": "diabetes",
+      "top_priority": "P0",
+      "top_source_org": "ADA",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": false,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.5166672441672938,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 20,
+            "confidence": 0.028942819376155542,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-015",
+      "query": "AI 能帮我制定糖尿病用药方案吗？",
+      "expected_faq_ids": [
+        "FAQ-DM-020"
+      ],
+      "expected_domain": "diabetes",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-DM-020",
+        "FAQ-GEN-008",
+        "FAQ-SKIN-006",
+        "FAQ-GEN-007",
+        "FAQ-BT-020"
+      ],
+      "top_faq_id": "FAQ-DM-020",
+      "top_domain": "diabetes",
+      "top_priority": "P2",
+      "top_source_org": "ADA",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": false,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 11,
+            "confidence": 0.7705945148738875,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 21,
+            "confidence": 0.2719717466254899,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 10
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 10,
+            "after_count": 10
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 10,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-016",
+      "query": "发烧到什么程度要去医院？",
+      "expected_faq_ids": [
+        "FAQ-GEN-001"
+      ],
+      "expected_domain": "general_medical",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-GEN-001",
+        "FAQ-GEN-002",
+        "FAQ-CXR-005",
+        "FAQ-CXR-011",
+        "FAQ-GEN-010"
+      ],
+      "top_faq_id": "FAQ-GEN-001",
+      "top_domain": "general_medical",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 3,
+            "confidence": 0.34156761579204403,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 16,
+            "confidence": 0.05138124093529748,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-017",
+      "query": "感冒需要自己买抗生素吃吗？",
+      "expected_faq_ids": [
+        "FAQ-GEN-004",
+        "FAQ-GEN-003"
+      ],
+      "expected_domain": "general_medical",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "CDC",
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-GEN-004",
+        "FAQ-GEN-003",
+        "FAQ-GEN-011",
+        "FAQ-CXR-015",
+        "FAQ-GEN-012"
+      ],
+      "top_faq_id": "FAQ-GEN-004",
+      "top_domain": "general_medical",
+      "top_priority": "P0",
+      "top_source_org": "CDC",
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.5564029255475934,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 15,
+            "confidence": 0.05189191898756116,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-018",
+      "query": "胸痛什么时候必须急诊？",
+      "expected_faq_ids": [
+        "FAQ-GEN-006"
+      ],
+      "expected_domain": "general_medical",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-GEN-006",
+        "FAQ-GEN-005",
+        "FAQ-GEN-001",
+        "FAQ-CXR-003",
+        "FAQ-CXR-008"
+      ],
+      "top_faq_id": "FAQ-GEN-006",
+      "top_domain": "general_medical",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 2,
+            "confidence": 0.5793535595633666,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 17,
+            "confidence": 0.017942654468008096,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-019",
+      "query": "AI 可以替代医生给我诊断开药吗？",
+      "expected_faq_ids": [
+        "FAQ-GEN-007",
+        "FAQ-GEN-008"
+      ],
+      "expected_domain": "general_medical",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-GEN-007",
+        "FAQ-GEN-008",
+        "FAQ-DM-020",
+        "FAQ-SKIN-006",
+        "FAQ-BT-020"
+      ],
+      "top_faq_id": "FAQ-GEN-007",
+      "top_domain": "general_medical",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 10,
+            "confidence": 0.7764062238643166,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 29,
+            "confidence": 0.2719717466254899,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 10
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 10,
+            "after_count": 10
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 10,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-020",
+      "query": "过敏反应什么情况比较危险？",
+      "expected_faq_ids": [
+        "FAQ-GEN-016"
+      ],
+      "expected_domain": "general_medical",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-GEN-016",
+        "FAQ-GEN-005",
+        "FAQ-SKIN-007",
+        "FAQ-DM-006",
+        "FAQ-GEN-012"
+      ],
+      "top_faq_id": "FAQ-GEN-016",
+      "top_domain": "general_medical",
+      "top_priority": "P1",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 4,
+            "confidence": 0.3956307802879571,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 21,
+            "confidence": 0.003950851352512512,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-021",
+      "query": "黑痣变大是不是黑色素瘤？",
+      "expected_faq_ids": [
+        "FAQ-SKIN-001"
+      ],
+      "expected_domain": "skin_lesion",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "AAD"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-SKIN-001",
+        "FAQ-SKIN-016",
+        "FAQ-SKIN-004",
+        "FAQ-SKIN-014",
+        "FAQ-SKIN-020"
+      ],
+      "top_faq_id": "FAQ-SKIN-001",
+      "top_domain": "skin_lesion",
+      "top_priority": "P0",
+      "top_source_org": "AAD",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 9,
+            "confidence": 0.6561005044279811,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 23,
+            "confidence": 0.011092480759027539,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-022",
+      "query": "ABCDE 法则怎么看可疑黑痣？",
+      "expected_faq_ids": [
+        "FAQ-SKIN-002"
+      ],
+      "expected_domain": "skin_lesion",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "AAD"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-SKIN-002",
+        "FAQ-SKIN-001",
+        "FAQ-SKIN-008",
+        "FAQ-SKIN-015",
+        "FAQ-SKIN-004"
+      ],
+      "top_faq_id": "FAQ-SKIN-002",
+      "top_domain": "skin_lesion",
+      "top_priority": "P0",
+      "top_source_org": "AAD",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.3669622094798986,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 22,
+            "confidence": 0.18382525590498433,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 12
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 12,
+            "after_count": 12
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 12,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-023",
+      "query": "哪些皮肤变化需要尽快看医生？",
+      "expected_faq_ids": [
+        "FAQ-SKIN-003"
+      ],
+      "expected_domain": "skin_lesion",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "AAD"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-SKIN-003",
+        "FAQ-BT-004",
+        "FAQ-SKIN-006",
+        "FAQ-GEN-007",
+        "FAQ-BT-002"
+      ],
+      "top_faq_id": "FAQ-SKIN-003",
+      "top_domain": "skin_lesion",
+      "top_priority": "P0",
+      "top_source_org": "AAD",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 13,
+            "confidence": 0.5515121998303755,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 20,
+            "confidence": 0.04448764638457226,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 13
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 13,
+            "after_count": 13
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 13,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-024",
+      "query": "皮肤镜检查是干什么的？",
+      "expected_faq_ids": [
+        "FAQ-SKIN-005"
+      ],
+      "expected_domain": "skin_lesion",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "AAD"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-SKIN-005",
+        "FAQ-SKIN-006",
+        "FAQ-SKIN-003",
+        "FAQ-BT-007",
+        "FAQ-CXR-008"
+      ],
+      "top_faq_id": "FAQ-SKIN-005",
+      "top_domain": "skin_lesion",
+      "top_priority": "P0",
+      "top_source_org": "AAD",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 6,
+            "confidence": 0.5264420792052142,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 19,
+            "confidence": 0.0,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 13
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 13,
+            "after_count": 13
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 13,
+            "after_count": 13
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 13,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-025",
+      "query": "拍皮肤照片给 AI 看就能诊断吗？",
+      "expected_faq_ids": [
+        "FAQ-SKIN-006"
+      ],
+      "expected_domain": "skin_lesion",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "AAD"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-SKIN-006",
+        "FAQ-GEN-008",
+        "FAQ-GEN-007",
+        "FAQ-CXR-018",
+        "FAQ-CARD-025"
+      ],
+      "top_faq_id": "FAQ-SKIN-006",
+      "top_domain": "skin_lesion",
+      "top_priority": "P0",
+      "top_source_org": "AAD",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 7,
+            "confidence": 0.7441249416271313,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 19,
+            "confidence": 0.23438588260888316,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 10
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 10,
+            "after_count": 10
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 10,
+            "after_count": 10
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 10,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-026",
+      "query": "I have chest pressure, sweating, and pain going into my jaw. Is this urgent?",
+      "expected_faq_ids": [
+        "FAQ-CARD-001",
+        "FAQ-CARD-002"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "AHA"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-001",
+        "FAQ-CARD-025",
+        "FAQ-CARD-024",
+        "FAQ-CARD-011",
+        "FAQ-CARD-006"
+      ],
+      "top_faq_id": "FAQ-CARD-001",
+      "top_domain": "cardiovascular",
+      "top_priority": "P0",
+      "top_source_org": "AHA",
+      "recall_at_1": 0.5,
+      "recall_at_3": 0.5,
+      "recall_at_5": 0.5,
+      "mrr": 1.0,
+      "ndcg_at_5": 0.6131471927654584,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 6,
+            "confidence": 0.4030305526731622,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 4,
+            "latency_ms": 31,
+            "confidence": 0.21387491854354723,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 17,
+            "confidence": 0.07762557501236785,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 19,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 19,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-027",
+      "query": "My mom's face is drooping and her speech sounds strange.",
+      "expected_faq_ids": [
+        "FAQ-CARD-004",
+        "FAQ-CARD-005"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "American Stroke Association"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-004",
+        "FAQ-CARD-005",
+        "FAQ-MED-001",
+        "FAQ-MED-008",
+        "FAQ-MED-011"
+      ],
+      "top_faq_id": "FAQ-CARD-004",
+      "top_domain": "cardiovascular",
+      "top_priority": "P0",
+      "top_source_org": "American Stroke Association",
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 2,
+            "confidence": 0.31653214314133093,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 19,
+            "confidence": 0.14725472731359104,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-028",
+      "query": "What does FAST mean if I suspect a stroke?",
+      "expected_faq_ids": [
+        "FAQ-CARD-005"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "American Stroke Association"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-005",
+        "FAQ-CARD-004",
+        "FAQ-MED-003",
+        "FAQ-CARD-017",
+        "FAQ-MED-013"
+      ],
+      "top_faq_id": "FAQ-CARD-005",
+      "top_domain": "cardiovascular",
+      "top_priority": "P0",
+      "top_source_org": "American Stroke Association",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 3,
+            "confidence": 0.4900851654214015,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 0,
+            "latency_ms": 25,
+            "confidence": 0.0,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 14,
+            "confidence": 0.06870559904798988,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-029",
+      "query": "My smartwatch says possible AFib. Can it diagnose heart disease?",
+      "expected_faq_ids": [
+        "FAQ-CARD-023",
+        "FAQ-CARD-017"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-023",
+        "FAQ-CARD-003",
+        "FAQ-MED-001",
+        "FAQ-CARD-002",
+        "FAQ-CARD-025"
+      ],
+      "top_faq_id": "FAQ-CARD-023",
+      "top_domain": "cardiovascular",
+      "top_priority": "P2",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 0.5,
+      "recall_at_3": 0.5,
+      "recall_at_5": 0.5,
+      "mrr": 1.0,
+      "ndcg_at_5": 0.6131471927654584,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 4,
+            "confidence": 0.38370513726905314,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 0,
+            "latency_ms": 33,
+            "confidence": 0.0,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 23,
+            "confidence": 0.048414522693836365,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-030",
+      "query": "Blood pressure is very high and I have blurry vision and chest tightness.",
+      "expected_faq_ids": [
+        "FAQ-CARD-009",
+        "FAQ-CARD-008"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-008",
+        "FAQ-CARD-007",
+        "FAQ-CARD-011",
+        "FAQ-CARD-009",
+        "FAQ-CARD-018"
+      ],
+      "top_faq_id": "FAQ-CARD-008",
+      "top_domain": "cardiovascular",
+      "top_priority": "P1",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 0.5,
+      "recall_at_3": 0.5,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 0.8772153153380493,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 4,
+            "confidence": 0.4009731349107842,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 3,
+            "latency_ms": 33,
+            "confidence": 0.2425635509246705,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 17,
+            "confidence": 0.09256355092467046,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 18,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 18,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-031",
+      "query": "My calf suddenly got puffy after a long flight and now breathing feels off.",
+      "expected_faq_ids": [
+        "FAQ-CARD-022"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-022",
+        "FAQ-MED-001",
+        "FAQ-CARD-011",
+        "FAQ-MED-018",
+        "FAQ-MED-011"
+      ],
+      "top_faq_id": "FAQ-CARD-022",
+      "top_domain": "cardiovascular",
+      "top_priority": "P2",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 2,
+            "confidence": 0.26416652287241754,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 18,
+            "confidence": 0.05419805772683939,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-032",
+      "query": "Can anxiety make my chest feel tight, or should I worry about my heart?",
+      "expected_faq_ids": [
+        "FAQ-CARD-018"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-018",
+        "FAQ-MED-005",
+        "FAQ-MED-001",
+        "FAQ-CARD-003",
+        "FAQ-CARD-025"
+      ],
+      "top_faq_id": "FAQ-CARD-018",
+      "top_domain": "cardiovascular",
+      "top_priority": "P1",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.38920209201446965,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 4,
+            "latency_ms": 32,
+            "confidence": 0.2396242727992677,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 20,
+            "confidence": 0.10523001339252618,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 19,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 19,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-033",
+      "query": "What is troponin used for in chest pain evaluation?",
+      "expected_faq_ids": [
+        "FAQ-CARD-020"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-001",
+        "FAQ-CARD-024",
+        "FAQ-CARD-025",
+        "FAQ-CARD-006",
+        "FAQ-CARD-020"
+      ],
+      "top_faq_id": "FAQ-CARD-001",
+      "top_domain": "cardiovascular",
+      "top_priority": "P0",
+      "top_source_org": "AHA",
+      "recall_at_1": 0.0,
+      "recall_at_3": 0.0,
+      "recall_at_5": 1.0,
+      "mrr": 0.2,
+      "ndcg_at_5": 0.38685280723454163,
+      "domain_hit": true,
+      "priority_hit": false,
+      "source_hit": false,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.46163027263534523,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 4,
+            "latency_ms": 35,
+            "confidence": 0.2694990303990236,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 20,
+            "confidence": 0.1194990303990236,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 19,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 19,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-034",
+      "query": "Should I chew aspirin if my chest hurts?",
+      "expected_faq_ids": [
+        "FAQ-CARD-024"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "AHA"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-024",
+        "FAQ-MED-003",
+        "FAQ-CARD-011",
+        "FAQ-MED-001",
+        "FAQ-CARD-001"
+      ],
+      "top_faq_id": "FAQ-CARD-024",
+      "top_domain": "cardiovascular",
+      "top_priority": "P2",
+      "top_source_org": "AHA",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 2,
+            "confidence": 0.4816573257444517,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 31,
+            "confidence": 0.2045544725589981,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 22,
+            "confidence": 0.0744368420143295,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-035",
+      "query": "I cannot catch my breath and my lips look blue.",
+      "expected_faq_ids": [
+        "FAQ-CARD-006"
+      ],
+      "expected_domain": "cardiovascular",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-006",
+        "FAQ-MED-001",
+        "FAQ-MED-011",
+        "FAQ-CARD-011",
+        "FAQ-CARD-002"
+      ],
+      "top_faq_id": "FAQ-CARD-006",
+      "top_domain": "cardiovascular",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 1,
+            "confidence": 0.37593092190884453,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 19,
+            "confidence": 0.10209345655406443,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-036",
+      "query": "Can I increase my prescribed dose because symptoms are worse?",
+      "expected_faq_ids": [
+        "FAQ-MED-001"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-MED-001",
+        "FAQ-CARD-011",
+        "FAQ-CARD-003",
+        "FAQ-CARD-002",
+        "FAQ-MED-004"
+      ],
+      "top_faq_id": "FAQ-MED-001",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 4,
+            "confidence": 0.45809237289496,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 28,
+            "confidence": 0.15783277320343841,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 19,
+            "confidence": 0.0744368420143295,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-037",
+      "query": "I took extra cold pills with Tylenol in them. Why is that dangerous?",
+      "expected_faq_ids": [
+        "FAQ-MED-008",
+        "FAQ-MED-003"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-MED-008",
+        "FAQ-MED-015",
+        "FAQ-MED-004",
+        "FAQ-CARD-003",
+        "FAQ-CARD-002"
+      ],
+      "top_faq_id": "FAQ-MED-008",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 0.5,
+      "recall_at_3": 0.5,
+      "recall_at_5": 0.5,
+      "mrr": 1.0,
+      "ndcg_at_5": 0.6131471927654584,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.33809480032870703,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 19,
+            "confidence": 0.07448037639015195,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-038",
+      "query": "What should I do if I may have overdosed on medicine?",
+      "expected_faq_ids": [
+        "FAQ-MED-003"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "FDA"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-MED-003",
+        "FAQ-MED-013",
+        "FAQ-MED-025",
+        "FAQ-MED-007",
+        "FAQ-CARD-011"
+      ],
+      "top_faq_id": "FAQ-MED-003",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "FDA",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.5480130951424879,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 35,
+            "confidence": 0.1345909868875627,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 22,
+            "confidence": 0.08999984099584855,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-039",
+      "query": "Can I give my leftover prescription to a friend with similar symptoms?",
+      "expected_faq_ids": [
+        "FAQ-MED-004"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "FDA"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-MED-004",
+        "FAQ-MED-001",
+        "FAQ-CARD-003",
+        "FAQ-MED-005",
+        "FAQ-CARD-008"
+      ],
+      "top_faq_id": "FAQ-MED-004",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "FDA",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 4,
+            "confidence": 0.38797693680275264,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 32,
+            "confidence": 0.1380450906325624,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 21,
+            "confidence": 0.07185568910757698,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-040",
+      "query": "Do I need to finish antibiotics after I feel normal again?",
+      "expected_faq_ids": [
+        "FAQ-MED-005"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "CDC"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-MED-005",
+        "FAQ-MED-006",
+        "FAQ-MED-003",
+        "FAQ-CARD-001",
+        "FAQ-MED-004"
+      ],
+      "top_faq_id": "FAQ-MED-005",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "CDC",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 1,
+            "confidence": 0.386208881595049,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 32,
+            "confidence": 0.17688648033134408,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 25,
+            "confidence": 0.13499976149377282,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-041",
+      "query": "Will antibiotics help a viral cold?",
+      "expected_faq_ids": [
+        "FAQ-MED-006"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P0",
+      "expected_source_orgs": [
+        "CDC"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-MED-006",
+        "FAQ-MED-005",
+        "FAQ-CARD-002",
+        "FAQ-CARD-009",
+        "FAQ-CARD-016"
+      ],
+      "top_faq_id": "FAQ-MED-006",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "CDC",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 3,
+            "confidence": 0.42921398060170973,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 4,
+            "latency_ms": 46,
+            "confidence": 0.09410587427655727,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 24,
+            "confidence": 0.06091038887881631,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 19,
+            "after_count": 18
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 18,
+            "after_count": 18
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 18,
+            "after_count": 18
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 18,
+            "after_count": 18
+          }
+        ],
+        "initial_chunk_count": 19,
+        "final_chunk_count": 18,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-042",
+      "query": "Two OTC products list the same active ingredient. Is that a problem?",
+      "expected_faq_ids": [
+        "FAQ-MED-009",
+        "FAQ-MED-007"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "FDA"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-MED-009",
+        "FAQ-MED-007",
+        "FAQ-MED-012",
+        "FAQ-MED-008",
+        "FAQ-CARD-009"
+      ],
+      "top_faq_id": "FAQ-MED-009",
+      "top_domain": "medication_safety",
+      "top_priority": "P1",
+      "top_source_org": "FDA",
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 3,
+            "confidence": 0.45453640176150173,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 34,
+            "confidence": 0.03737575972970056,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-043",
+      "query": "I missed a blood thinner dose. Should I double up?",
+      "expected_faq_ids": [
+        "FAQ-MED-013"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-MED-013",
+        "FAQ-CARD-011",
+        "FAQ-MED-001",
+        "FAQ-MED-007",
+        "FAQ-CARD-024"
+      ],
+      "top_faq_id": "FAQ-MED-013",
+      "top_domain": "medication_safety",
+      "top_priority": "P1",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 3,
+            "confidence": 0.5102753029017044,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 42,
+            "confidence": 0.14644856443408244,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 25,
+            "confidence": 0.10261560696629647,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-044",
+      "query": "Can I drink alcohol while taking sleeping pills or pain medicine?",
+      "expected_faq_ids": [
+        "FAQ-MED-014"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-MED-014",
+        "FAQ-MED-004",
+        "FAQ-MED-007",
+        "FAQ-MED-003",
+        "FAQ-MED-015"
+      ],
+      "top_faq_id": "FAQ-MED-014",
+      "top_domain": "medication_safety",
+      "top_priority": "P1",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 5,
+            "confidence": 0.4406261108310605,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 3,
+            "latency_ms": 38,
+            "confidence": 0.12915030566821442,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 22,
+            "confidence": 0.062463534469663407,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 18,
+            "after_count": 18
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 18,
+            "after_count": 18
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 18,
+            "after_count": 18
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 18,
+            "after_count": 18
+          }
+        ],
+        "initial_chunk_count": 18,
+        "final_chunk_count": 18,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-045",
+      "query": "Is it okay to crush an extended-release tablet?",
+      "expected_faq_ids": [
+        "FAQ-MED-015"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "FDA"
+      ],
+      "difficulty": "easy",
+      "retrieved_faq_ids": [
+        "FAQ-MED-015",
+        "FAQ-CARD-006",
+        "FAQ-MED-008",
+        "FAQ-MED-018",
+        "FAQ-CARD-013"
+      ],
+      "top_faq_id": "FAQ-MED-015",
+      "top_domain": "medication_safety",
+      "top_priority": "P1",
+      "top_source_org": "FDA",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 2,
+            "confidence": 0.3158807310462835,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 35,
+            "confidence": 0.04523840472279644,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-046",
+      "query": "My throat is tight and my face is swelling after a new pill.",
+      "expected_faq_ids": [
+        "FAQ-MED-018",
+        "FAQ-MED-002"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P1",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-MED-018",
+        "FAQ-CARD-022",
+        "FAQ-MED-011",
+        "FAQ-CARD-025",
+        "FAQ-CARD-016"
+      ],
+      "top_faq_id": "FAQ-MED-018",
+      "top_domain": "medication_safety",
+      "top_priority": "P1",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 0.5,
+      "recall_at_3": 0.5,
+      "recall_at_5": 0.5,
+      "mrr": 1.0,
+      "ndcg_at_5": 0.6131471927654584,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 3,
+            "confidence": 0.3345951937491633,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 21,
+            "confidence": 0.08694831608718884,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 15,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-047",
+      "query": "Why does my child need a different dose than me?",
+      "expected_faq_ids": [
+        "FAQ-MED-019"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "FDA"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-MED-001",
+        "FAQ-CARD-001",
+        "FAQ-MED-019",
+        "FAQ-CARD-011",
+        "FAQ-MED-013"
+      ],
+      "top_faq_id": "FAQ-MED-001",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 0.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 0.3333333333333333,
+      "ndcg_at_5": 0.5,
+      "domain_hit": true,
+      "priority_hit": false,
+      "source_hit": false,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 2,
+            "confidence": 0.3341322883169058,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 3,
+            "latency_ms": 34,
+            "confidence": 0.14148425736269452,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 24,
+            "confidence": 0.09449376360964246,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 18,
+            "after_count": 15
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 15,
+            "after_count": 15
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 15,
+            "after_count": 15
+          }
+        ],
+        "initial_chunk_count": 18,
+        "final_chunk_count": 15,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-048",
+      "query": "I'm pregnant and want to start an OTC medicine. What should I check?",
+      "expected_faq_ids": [
+        "FAQ-MED-020"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-MED-007",
+        "FAQ-MED-020",
+        "FAQ-MED-003",
+        "FAQ-MED-018",
+        "FAQ-CARD-011"
+      ],
+      "top_faq_id": "FAQ-MED-007",
+      "top_domain": "medication_safety",
+      "top_priority": "P0",
+      "top_source_org": "FDA",
+      "recall_at_1": 0.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 0.5,
+      "ndcg_at_5": 0.6309297535714575,
+      "domain_hit": true,
+      "priority_hit": false,
+      "source_hit": false,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 8,
+            "confidence": 0.42328920957847194,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 35,
+            "confidence": 0.12624928516630235,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 16,
+            "confidence": 0.09256137732250447,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-049",
+      "query": "Can an online AI prescribe medicine or change my dosage?",
+      "expected_faq_ids": [
+        "FAQ-MED-021"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "MedlinePlus"
+      ],
+      "difficulty": "hard",
+      "retrieved_faq_ids": [
+        "FAQ-MED-021",
+        "FAQ-CARD-025",
+        "FAQ-GEN-007",
+        "FAQ-SKIN-006",
+        "FAQ-GEN-008"
+      ],
+      "top_faq_id": "FAQ-MED-021",
+      "top_domain": "medication_safety",
+      "top_priority": "P2",
+      "top_source_org": "MedlinePlus",
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_5": 1.0,
+      "domain_hit": true,
+      "priority_hit": true,
+      "source_hit": true,
+      "p0_top1": false,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 4,
+            "confidence": 0.6983588207168828,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 3,
+            "latency_ms": 28,
+            "confidence": 0.12852692480615915,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 17,
+            "confidence": 0.12162946268278889,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 18,
+            "after_count": 12
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 12,
+            "after_count": 12
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 12,
+            "after_count": 12
+          }
+        ],
+        "initial_chunk_count": 18,
+        "final_chunk_count": 12,
+        "picture_reference_count": 0
+      }
+    },
+    {
+      "id": "faq-rag-050",
+      "query": "What does medication reconciliation mean after leaving hospital?",
+      "expected_faq_ids": [
+        "FAQ-MED-024"
+      ],
+      "expected_domain": "medication_safety",
+      "expected_priority": "P2",
+      "expected_source_orgs": [
+        "FDA"
+      ],
+      "difficulty": "medium",
+      "retrieved_faq_ids": [
+        "FAQ-CARD-005",
+        "FAQ-MED-024",
+        "FAQ-CARD-017",
+        "FAQ-MED-002",
+        "FAQ-CARD-001"
+      ],
+      "top_faq_id": "FAQ-CARD-005",
+      "top_domain": "cardiovascular",
+      "top_priority": "P0",
+      "top_source_org": "American Stroke Association",
+      "recall_at_1": 0.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 0.5,
+      "ndcg_at_5": 0.6309297535714575,
+      "domain_hit": false,
+      "priority_hit": false,
+      "source_hit": false,
+      "p0_top1": true,
+      "trace": {
+        "channels": [
+          {
+            "channel_name": "faq_keyword_search",
+            "channel_type": "FAQ_KEYWORD",
+            "chunk_count": 10,
+            "latency_ms": 3,
+            "confidence": 0.4907779884247368,
+            "error": null
+          },
+          {
+            "channel_name": "intent_directed_medical_search",
+            "channel_type": "INTENT_DIRECTED",
+            "chunk_count": 1,
+            "latency_ms": 35,
+            "confidence": 0.06990985629079123,
+            "error": null
+          },
+          {
+            "channel_name": "qdrant_global_search",
+            "channel_type": "VECTOR_HYBRID_GLOBAL",
+            "chunk_count": 5,
+            "latency_ms": 19,
+            "confidence": 0.05420621948853513,
+            "error": null
+          }
+        ],
+        "postprocessors": [
+          {
+            "name": "deduplication",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "faq_priority_boost",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "cross_encoder_rerank",
+            "before_count": 16,
+            "after_count": 16
+          },
+          {
+            "name": "confidence_calculator",
+            "before_count": 16,
+            "after_count": 16
+          }
+        ],
+        "initial_chunk_count": 16,
+        "final_chunk_count": 16,
+        "picture_reference_count": 0
+      }
+    }
+  ],
+  "summary": {
+    "samples": 50,
+    "recall_at_1": 0.8,
+    "recall_at_3": 0.93,
+    "recall_at_5": 0.96,
+    "mrr": 0.9406666666666667,
+    "ndcg_at_5": 0.9221889230869759,
+    "domain_top1_accuracy": 0.98,
+    "priority_top1_accuracy": 0.92,
+    "source_top1_accuracy": 0.84,
+    "p0_top1_rate": 0.66,
+    "by_difficulty": {
+      "easy": {
+        "samples": 19,
+        "recall_at_5": 0.9736842105263158,
+        "mrr": 0.9736842105263158
+      },
+      "hard": {
+        "samples": 10,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "medium": {
+        "samples": 21,
+        "recall_at_5": 0.9285714285714286,
+        "mrr": 0.8825396825396826
+      }
+    },
+    "by_domain": {
+      "brain_tumor": {
+        "samples": 5,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "cardiovascular": {
+        "samples": 10,
+        "recall_at_5": 0.9,
+        "mrr": 0.9199999999999999
+      },
+      "chest_xray_covid": {
+        "samples": 5,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "diabetes": {
+        "samples": 5,
+        "recall_at_5": 1.0,
+        "mrr": 0.9
+      },
+      "general_medical": {
+        "samples": 5,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "medication_safety": {
+        "samples": 15,
+        "recall_at_5": 0.9333333333333333,
+        "mrr": 0.888888888888889
+      },
+      "skin_lesion": {
+        "samples": 5,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      }
+    },
+    "channel_hit_count": {
+      "faq_keyword_search": 50,
+      "qdrant_global_search": 50,
+      "intent_directed_medical_search": 21
+    }
+  },
+  "failures": []
+}

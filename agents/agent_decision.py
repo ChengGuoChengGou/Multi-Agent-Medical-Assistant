@@ -6,7 +6,9 @@ It dynamically routes user queries to the appropriate agent based on content and
 """
 
 import json
+import re
 from typing import Dict, List, Optional, Any, Literal, TypedDict, Union, Annotated
+from uuid import uuid4
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -14,10 +16,12 @@ from langchain_core.runnables import RunnablePassthrough
 from langgraph.graph import MessagesState, StateGraph, END
 import os, getpass
 from dotenv import load_dotenv
-from agents.rag_agent import MedicalRAG
-from agents.web_search_processor_agent import WebSearchProcessorAgent
 from agents.image_analysis_agent import ImageAnalysisAgent
 from agents.guardrails.local_guardrails import LocalGuardrails
+from agents.router import IntentRouter
+from agents.tracing import AgentTrace
+from agents.tools import build_default_tool_registry
+from core import ConversationMemoryService
 
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -26,17 +30,81 @@ import numpy as np
 
 from config import Config
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Load configuration
 config = Config()
+conversation_memory = ConversationMemoryService(
+    storage_dir=config.memory_storage_dir,
+    window_size=config.memory_window_size,
+    summary_trigger=config.memory_summary_trigger,
+)
+
+
+def _has_prior_context(messages: List[BaseMessage]) -> bool:
+    for message in messages[:-1]:
+        content = getattr(message, "content", "")
+        if isinstance(message, SystemMessage) and "Conversation summary:" in content:
+            return True
+        if isinstance(message, (HumanMessage, AIMessage)) and str(content).strip():
+            return True
+    return False
+
+
+def _should_ask_clarification(input_text: str, messages: List[BaseMessage], route_decision) -> bool:
+    if _has_prior_context(messages):
+        return False
+    normalized = re.sub(r"\s+", "", (input_text or "").strip().lower())
+    if not normalized:
+        return True
+    vague_patterns = (
+        "怎么办",
+        "咋办",
+        "严重吗",
+        "要吃药吗",
+        "能好吗",
+        "这个怎么办",
+        "这个严重吗",
+        "whatshouldido",
+        "isitserious",
+        "shoulditakemedicine",
+        "whataboutthis",
+    )
+    if normalized in vague_patterns:
+        return True
+    if route_decision.needs_clarification:
+        return True
+    has_context_pointer = any(pointer in normalized for pointer in ("这个", "这个", "它", "this", "that", "it"))
+    return has_context_pointer and route_decision.confidence < 0.65
+
+
+def _is_contextless_clarification_query(input_text: str, messages: List[BaseMessage]) -> bool:
+    if _has_prior_context(messages):
+        return False
+    normalized = re.sub(r"\s+", "", (input_text or "").strip().lower())
+    return normalized in {
+        "怎么办",
+        "咋办",
+        "严重吗",
+        "要吃药吗",
+        "能好吗",
+        "这个怎么办",
+        "这个严重吗",
+        "whatshouldido",
+        "isitserious",
+        "shoulditakemedicine",
+        "whataboutthis",
+    }
+
+
+def _clarification_response() -> str:
+    return (
+        "我还需要一点上下文才能安全回答。请补充：你问的是哪种疾病/检查/症状，"
+        "症状持续多久、年龄段或基础病情况，以及你想了解原因、风险、检查还是处理建议。"
+    )
 
 # Initialize memory
 memory = MemorySaver()
-
-# Specify a thread
-thread_config = {"configurable": {"thread_id": "1"}}
-
 
 # Agent that takes the decision of routing the request further to correct task specific agent
 class AgentConfig:
@@ -67,7 +135,7 @@ class AgentConfig:
     Make your decision based on these guidelines:
     - If the user has not uploaded any image, always route to the conversation agent.
     - If the user uploads a medical image, decide which medical vision agent is appropriate based on the image type and the user's query. If the image is uploaded without a query, always route to the correct medical vision agent based on the image type.
-    - If the user asks about recent medical developments or current health situations, use the web search pocessor agent.
+    - If the user asks about recent medical developments or current health situations, use the web search processor agent.
     - If the user asks specific medical knowledge questions, use the RAG agent.
     - For general conversation, greetings, or non-medical questions, use the conversation agent. But if image is uploaded, always go to the medical vision agents first.
 
@@ -79,7 +147,13 @@ class AgentConfig:
     }}
     """
 
-    image_analyzer = ImageAnalysisAgent(config=config)
+    image_analyzer = None
+
+    @classmethod
+    def get_image_analyzer(cls):
+        if cls.image_analyzer is None:
+            cls.image_analyzer = ImageAnalysisAgent(config=config)
+        return cls.image_analyzer
 
 
 class AgentState(MessagesState):
@@ -94,6 +168,8 @@ class AgentState(MessagesState):
     retrieval_confidence: float  # Confidence in retrieval (for RAG agent)
     bypass_routing: bool  # Flag to bypass agent routing for guardrails
     insufficient_info: bool  # Flag indicating RAG response has insufficient information
+    route_decision: Optional[Dict[str, Any]]  # Explainable medical router decision
+    agent_trace: Optional[Dict[str, Any]]  # Thought/action/observation trace for this turn
 
 
 class AgentDecision(TypedDict):
@@ -108,6 +184,8 @@ def create_agent_graph():
 
     # Initialize guardrails with the same LLM used elsewhere
     guardrails = LocalGuardrails(config.rag.llm)
+    medical_intent_router = IntentRouter()
+    tool_registry = build_default_tool_registry()
 
     # LLM
     decision_model = config.agent_decision.llm
@@ -138,6 +216,21 @@ def create_agent_graph():
         elif isinstance(current_input, dict):
             input_text = current_input.get("text", "")
         
+        if input_text and _is_contextless_clarification_query(input_text, state.get("messages", [])):
+            return {
+                **state,
+                "messages": AIMessage(content=_clarification_response()),
+                "agent_name": "CONVERSATION_AGENT",
+                "has_image": False,
+                "image_type": None,
+                "bypass_routing": True,
+                "route_decision": {
+                    "needs_clarification": True,
+                    "clarification_question": _clarification_response(),
+                    "reason": "question_is_context_dependent_before_guardrails",
+                },
+            }
+
         # Check input through guardrails if text is present
         if input_text:
             is_allowed, message = guardrails.check_input(input_text)
@@ -157,7 +250,7 @@ def create_agent_graph():
         if isinstance(current_input, dict) and "image" in current_input:
             has_image = True
             image_path = current_input.get("image", None)
-            image_type_response = AgentConfig.image_analyzer.analyze_image(image_path)
+            image_type_response = AgentConfig.get_image_analyzer().analyze_image(image_path)
             image_type = image_type_response['image_type']
             print("ANALYZED IMAGE TYPE: ", image_type)
         
@@ -180,6 +273,7 @@ def create_agent_graph():
         current_input = state["current_input"]
         has_image = state["has_image"]
         image_type = state["image_type"]
+        trace = AgentTrace()
         
         # Prepare input for decision model
         input_text = ""
@@ -187,6 +281,108 @@ def create_agent_graph():
             input_text = current_input
         elif isinstance(current_input, dict):
             input_text = current_input.get("text", "")
+
+        route_decision = medical_intent_router.classify(
+            input_text,
+            has_image=has_image,
+            image_type=image_type,
+        )
+        tool_spec = tool_registry.get_spec(route_decision.tool_name)
+        trace.thought(
+            "medical-intent-routing",
+            route_decision.reason,
+            intent=route_decision.intent.value,
+            confidence=route_decision.confidence,
+            agent=route_decision.agent_name,
+            tool=route_decision.tool_name,
+            matched_keywords=route_decision.matched_keywords,
+        )
+        trace.observation(
+            "tool-registry-lookup",
+            "Resolved routed tool against MCP-like in-process registry.",
+            tool_id=route_decision.tool_name,
+            registered=tool_spec is not None,
+            tool_kind=tool_spec.kind if tool_spec else None,
+            tool_agent=tool_spec.agent_name if tool_spec else None,
+        )
+        route_payload = route_decision.to_dict()
+        route_payload["tool_registry"] = {
+            "registered": tool_spec is not None,
+            "tool_spec": tool_spec.to_dict() if tool_spec else None,
+            "registry_size": len(tool_registry.list_specs()),
+        }
+
+        if _should_ask_clarification(input_text, messages, route_decision):
+            clarification_message = AIMessage(content=_clarification_response())
+            trace.final(
+                "intent-clarification",
+                "The question is ambiguous and lacks usable conversation context.",
+                agent="CONVERSATION_AGENT",
+                confidence=route_decision.confidence,
+            )
+            return {
+                **state,
+                "output": clarification_message,
+                "agent_name": "CONVERSATION_AGENT",
+                "route_decision": {
+                    **route_payload,
+                    "clarification_question": _clarification_response(),
+                },
+                "agent_trace": trace.to_dict(),
+                "next": "check_validation",
+            }
+
+        if route_decision.agent_name == "INPUT_GUARDRAILS":
+            safety_content = guardrails.safety_response_for_intent(
+                route_decision.intent.value,
+                user_input=input_text,
+                reason=route_decision.reason,
+            ) or f"I cannot process this request safely. Reason: {route_decision.reason}"
+            guardrail_message = AIMessage(
+                content=safety_content
+            )
+            trace.final(
+                "guardrail-route",
+                "Safety intent routed directly to guardrails.",
+                agent=route_decision.agent_name,
+            )
+            return {
+                **state,
+                "output": guardrail_message,
+                "agent_name": "INPUT_GUARDRAILS",
+                "route_decision": route_payload,
+                "agent_trace": trace.to_dict(),
+                "next": "apply_guardrails",
+            }
+
+        if route_decision.confidence >= 0.70:
+            trace.action(
+                "route-to-agent",
+                f"Routing to {route_decision.agent_name} from deterministic medical intent router.",
+            )
+            trace.final(
+                "route-selected",
+                "High-confidence structured route selected.",
+                agent=route_decision.agent_name,
+            )
+            print(
+                f"Medical intent router decision: {route_decision.agent_name} "
+                f"({route_decision.intent.value}, confidence={route_decision.confidence})"
+            )
+            return {
+                **state,
+                "agent_name": route_decision.agent_name,
+                "needs_human_validation": route_decision.requires_human_validation,
+                "route_decision": route_payload,
+                "agent_trace": trace.to_dict(),
+                "next": route_decision.agent_name,
+            }
+
+        trace.observation(
+            "router-low-confidence",
+            "Deterministic router confidence is low; falling back to LLM decision chain.",
+            confidence=route_decision.confidence,
+        )
         
         # Create context from recent conversation history (last 3 messages)
         recent_context = ""
@@ -214,11 +410,19 @@ def create_agent_graph():
 
         # Decided agent
         print(f"Decision: {decision['agent']}")
+        trace.final(
+            "llm-route-selected",
+            decision.get("reasoning", "LLM router selected the next agent."),
+            agent=decision["agent"],
+            confidence=decision["confidence"],
+        )
         
         # Update state with decision
         updated_state = {
             **state,
             "agent_name": decision["agent"],
+            "route_decision": route_payload,
+            "agent_trace": trace.to_dict(),
         }
         
         # Route based on agent name and confidence
@@ -311,7 +515,7 @@ def create_agent_graph():
 
         response = config.conversation.llm.invoke(conversation_prompt)
 
-        # print("Conversation respone:", response)
+        # print("Conversation response:", response)
 
         # response = AIMessage(content="This would be handled by the conversation agent.")
 
@@ -323,6 +527,8 @@ def create_agent_graph():
     
     def run_rag_agent(state: AgentState) -> AgentState:
         """Handle medical knowledge queries using RAG."""
+        from agents.rag_agent.medical_rag import MedicalRAG
+
         # Initialize the RAG agent
 
         print(f"Selected agent: RAG_AGENT")
@@ -398,6 +604,7 @@ def create_agent_graph():
     # Web Search Processor Node
     def run_web_search_processor_agent(state: AgentState) -> AgentState:
         """Handles web search results, processes them with LLM, and generates a refined response."""
+        from agents.web_search_processor_agent import WebSearchProcessorAgent
 
         print(f"Selected agent: WEB_SEARCH_PROCESSOR_AGENT")
         print("[WEB_SEARCH_PROCESSOR_AGENT] Processing Web Search Results...")
@@ -470,7 +677,7 @@ def create_agent_graph():
         print(f"Selected agent: CHEST_XRAY_AGENT")
 
         # classify chest x-ray into covid or normal
-        predicted_class = AgentConfig.image_analyzer.classify_chest_xray(image_path)
+        predicted_class = AgentConfig.get_image_analyzer().classify_chest_xray(image_path)
 
         if predicted_class == "covid19":
             response = AIMessage(content="The analysis of the uploaded chest X-ray image indicates a **POSITIVE** result for **COVID-19**.")
@@ -497,7 +704,7 @@ def create_agent_graph():
         print(f"Selected agent: SKIN_LESION_AGENT")
 
         # classify chest x-ray into covid or normal
-        predicted_mask = AgentConfig.image_analyzer.segment_skin_lesion(image_path)
+        predicted_mask = AgentConfig.get_image_analyzer().segment_skin_lesion(image_path)
 
         if predicted_mask:
             response = AIMessage(content="Following is the analyzed **segmented** output of the uploaded skin lesion image:")
@@ -636,6 +843,8 @@ def create_agent_graph():
             "BRAIN_TUMOR_AGENT": "BRAIN_TUMOR_AGENT",
             "CHEST_XRAY_AGENT": "CHEST_XRAY_AGENT",
             "SKIN_LESION_AGENT": "SKIN_LESION_AGENT",
+            "check_validation": "check_validation",
+            "apply_guardrails": "apply_guardrails",
             "needs_validation": "RAG_AGENT"  # Default to RAG if confidence is low
         }
     )
@@ -679,17 +888,24 @@ def init_agent_state() -> AgentState:
         "needs_human_validation": False,
         "retrieval_confidence": 0.0,
         "bypass_routing": False,
-        "insufficient_info": False
+        "insufficient_info": False,
+        "route_decision": None,
+        "agent_trace": None
     }
 
 
-def process_query(query: Union[str, Dict], conversation_history: List[BaseMessage] = None) -> str:
+def process_query(
+    query: Union[str, Dict],
+    conversation_history: List[BaseMessage] = None,
+    thread_id: Optional[str] = None,
+) -> str:
     """
     Process a user query through the agent decision system.
     
     Args:
         query: User input (text string or dict with text and image)
         conversation_history: Optional list of previous messages, NOT NEEDED ANYMORE since the state saves the conversation history now
+        thread_id: Optional session-specific LangGraph checkpoint thread id.
         
     Returns:
         Response from the appropriate agent
@@ -705,8 +921,20 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     
     # Initialize state
     state = init_agent_state()
-    # if conversation_history:
-    #     state["messages"] = conversation_history
+
+    memory_snapshot = conversation_memory.load(thread_id)
+    if conversation_history:
+        state["messages"] = conversation_history
+    else:
+        loaded_messages = []
+        if memory_snapshot.summary.strip():
+            loaded_messages.append(SystemMessage(content=f"Conversation summary: {memory_snapshot.summary}"))
+        for memory_message in memory_snapshot.recent_messages:
+            if memory_message.role == "user":
+                loaded_messages.append(HumanMessage(content=memory_message.content))
+            elif memory_message.role == "assistant":
+                loaded_messages.append(AIMessage(content=memory_message.content))
+        state["messages"] = loaded_messages
     
     # Add the current query
     state["current_input"] = query
@@ -715,8 +943,9 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     if isinstance(query, dict):
         query = query.get("text", "") + ", user uploaded an image for diagnosis."
     
-    state["messages"] = [HumanMessage(content=query)]
+    state["messages"] = [*state["messages"], HumanMessage(content=query)]
 
+    thread_config = {"configurable": {"thread_id": thread_id or str(uuid4())}}
     # result = graph.invoke(state, thread_config)
     result = graph.invoke(state, thread_config)
     # print("######### DEBUG 4:", result)
@@ -729,6 +958,17 @@ def process_query(query: Union[str, Dict], conversation_history: List[BaseMessag
     # visualize conversation history in console
     for m in result["messages"]:
         m.pretty_print()
+
+    try:
+        output_message = result["messages"][-1]
+        output_text = output_message.content if hasattr(output_message, "content") else str(output_message)
+        conversation_memory.append(
+            thread_id,
+            user_content=query,
+            assistant_content=output_text,
+        )
+    except Exception as exc:
+        print(f"Conversation memory append failed: {exc}")
     
     # Add the response to conversation history
     return result

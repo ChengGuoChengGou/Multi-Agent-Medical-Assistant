@@ -3,7 +3,6 @@ import re
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
-from sentence_transformers import CrossEncoder
 
 class Reranker:
     """
@@ -18,17 +17,24 @@ class Reranker:
         """
         self.logger = logging.getLogger(__name__)
         
-        # Load the cross-encoder model for reranking
-        # For medical data, specialized models like 'pritamdeka/S-PubMedBert-MS-MARCO'
-        # would be ideal, but using a general one here for simplicity
+        self.model_name = config.rag.reranker_model
+        self.top_k = config.rag.reranker_top_k
+        self.model = None
+        self.available = False
+        if os.getenv("DISABLE_CROSS_ENCODER_RERANKER", "false").strip().lower() == "true":
+            self.logger.info("Cross-encoder reranker disabled by environment flag")
+            return
+
+        # Load the cross-encoder model for reranking. If the model cannot be
+        # loaded locally, retrieval falls back to vector/keyword ranking.
         try:
-            self.model_name = config.rag.reranker_model
+            from sentence_transformers import CrossEncoder
+
             self.logger.info(f"Loading reranker model: {self.model_name}")
             self.model = CrossEncoder(self.model_name)
-            self.top_k = config.rag.reranker_top_k
+            self.available = True
         except Exception as e:
-            self.logger.error(f"Error loading reranker model: {e}")
-            raise
+            self.logger.warning(f"Cross-encoder reranker unavailable, falling back to original ranking: {e}")
     
     def rerank(self, query: str, documents: Union[List[Dict[str, Any]], List[str]], parsed_content_dir: str) -> List[Dict[str, Any]]:
         """
@@ -43,7 +49,7 @@ class Reranker:
         """
         try:
             if not documents:
-                return []
+                return [], []
             
             # Handle different document formats and ensure consistent structure
             if documents:
@@ -74,6 +80,9 @@ class Reranker:
                                 doc["content"] = doc["text"]
                             else:
                                 doc["content"] = f"Document {i}"
+
+            if not self.available or self.model is None:
+                return documents, []
             
             # Create query-document pairs for scoring
             pairs = [(query, doc["content"]) for doc in documents]

@@ -1,6 +1,8 @@
 import logging
 from typing import List, Dict, Any, Optional, Union
 
+from core import ModelGateway, PromptRegistry
+
 class ResponseGenerator:
     """
     Generates responses based on retrieved context and user query.
@@ -16,6 +18,8 @@ class ResponseGenerator:
         self.logger = logging.getLogger(__name__)
         self.response_generator_model = config.rag.response_generator_model
         self.include_sources = getattr(config.rag, "include_sources", True)
+        self.model_gateway = ModelGateway()
+        self.prompt_registry = PromptRegistry()
 
     def _build_prompt(
             self,
@@ -35,56 +39,12 @@ class ResponseGenerator:
             Complete prompt string
         """
 
-        table_instructions = """
-        Some of the retrieved information is presented in table format. When using information from tables:
-        1. Present tabular data using proper markdown table formatting with headers, like this:
-            | Column1 | Column2 | Column3 |
-            |---------|---------|---------|
-            | Value1  | Value2  | Value3  |
-        2. Re-format the table structure to make it easier to read and understand
-        3. If any new component is introduced during re-formatting of the table, mention it explicitly
-        4. Clearly interpret the tabular data in your response
-        5. Reference the relevant table when presenting specific data points
-        6. If appropriate, summarize trends or patterns shown in the tables
-        7. If only reference numbers are mentioned and you can fetch the corresponding values like research paper title or authors from the context, replace the reference numbers with the actual values
-        """
-
-        response_format_instructions = """Instructions:
-        1. Answer the query based ONLY on the information provided in the context.
-        2. If the context doesn't contain relevant information to answer the query, state: "I don't have enough information to answer this question based on the provided context."
-        3. Do not use prior knowledge not contained in the context.
-        5. Be concise and accurate.
-        6. Provide a well-structured response with heading, sub-headings and tabular structure if required in markdown format based on retrieved knowledge. Keep the headings and sub-headings small sized.
-        7. Only provide sections that are meaningful to have in a chatbot reply. For example, do not explicitly mention references.
-        8. If values are involved, make sure to respond with perfect values present in context. Do not make up values.
-        9. Do not repeat the question in the answer or response."""
-            
-        # Build the prompt
-        prompt = f"""You are a medical assistant providing accurate information based on verified medical sources.
-
-        Here are the last few messages from our conversation:
-        
-        {chat_history}
-
-        The user has asked the following question:
-        {query}
-
-        I've retrieved the following information to help answer this question:
-
-        {context}
-
-        {table_instructions}
-
-        {response_format_instructions}
-
-        Based on the provided information, please answer the user's question thoroughly but concisely.
-        If the information doesn't contain the answer, acknowledge the limitations of the available information.
-
-        Do not provide any source link that is not present in the context. Do not make up any source link.
-
-        Medical Assistant Response:"""
-
-        return prompt
+        prompt_template = self.prompt_registry.get("rag.response_generation")
+        return prompt_template.render(
+            query=query,
+            context=context,
+            chat_history=chat_history or "",
+        )
 
     def generate_response(
             self,
@@ -113,10 +73,24 @@ class ResponseGenerator:
             context = "\n\n===DOCUMENT SECTION===\n\n".join(doc_texts)
             
             # Build the prompt
-            prompt = self._build_prompt(query, context, chat_history)
+            prompt_template = self.prompt_registry.get("rag.response_generation")
+            prompt = prompt_template.render(
+                query=query,
+                context=context,
+                chat_history=chat_history or "",
+            )
             
             # Generate response
-            response = self.response_generator_model.invoke(prompt)
+            model_call = self.model_gateway.invoke(
+                model=self.response_generator_model,
+                prompt=prompt,
+                model_id="rag-response-generator",
+                metadata={
+                    "stage": "rag_response_generation",
+                    **prompt_template.metadata(),
+                },
+            )
+            response = model_call.output
             
             # Extract sources for citation
             sources = self._extract_sources(retrieved_docs) if hasattr(self, 'include_sources') and self.include_sources else []
@@ -143,7 +117,18 @@ class ResponseGenerator:
             result = {
                 "response": response_with_source_and_picture_paths,
                 "sources": sources,
-                "confidence": confidence
+                "confidence": confidence,
+                "model_gateway": {
+                    "model_id": model_call.model_id,
+                    "latency_ms": model_call.latency_ms,
+                    "attempts": model_call.attempts,
+                    "metadata": model_call.metadata,
+                    "usage": {
+                        "prompt_tokens": model_call.usage.prompt_tokens,
+                        "completion_tokens": model_call.usage.completion_tokens,
+                        "total_tokens": model_call.usage.total_tokens,
+                    },
+                },
             }
             
             return result

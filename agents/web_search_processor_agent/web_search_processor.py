@@ -3,7 +3,7 @@ from .web_search_agent import WebSearchAgent
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 class WebSearchProcessor:
     """
